@@ -30,7 +30,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,7 +51,7 @@ fun PracticeChapterSelectScreen(
     onNext: (chapterIds: List<String>, topicIds: List<String>) -> Unit,
     viewModel: PracticeChapterSelectViewModel = koinViewModel(parameters = { parametersOf(subjectIds) })
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     ObserveErrors(

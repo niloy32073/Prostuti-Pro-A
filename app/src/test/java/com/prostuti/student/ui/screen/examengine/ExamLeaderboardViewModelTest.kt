@@ -1,12 +1,12 @@
 package com.prostuti.student.ui.screen.examengine
 
-import app.cash.turbine.test
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.repository.fake.FakeExamAttemptRepositoryForEngineTest
 import com.prostuti.student.domain.GetExamLeaderboardUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -17,6 +17,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/** Fakes return immediately, so the init load settles inside construction; tests assert the
+ * settled state rather than the conflated transient isLoading=true emission. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExamLeaderboardViewModelTest {
 
@@ -40,51 +42,44 @@ class ExamLeaderboardViewModelTest {
     @Test
     fun `load success exposes entries in server rank order and requests page 1`() = runTest {
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            val initial = awaitItem()
-            assertTrue(initial.isLoading)
-
-            val loaded = awaitItem()
-            assertFalse(loaded.isLoading)
-            assertFalse(loaded.notReadyYet)
-            assertEquals(listOf(1, 2, 3), loaded.leaderboard?.entries?.map { it.rank })
-            assertEquals(1, fakeRepo.getExamLeaderboardLastPage)
-        }
+        val loaded = viewModel.state.value
+        assertFalse(loaded.isLoading)
+        assertFalse(loaded.notReadyYet)
+        assertEquals(listOf(1, 2, 3), loaded.leaderboard?.entries?.map { it.rank })
+        assertEquals(1, fakeRepo.getExamLeaderboardLastPage)
     }
 
     @Test
     fun `a 404 is surfaced as notReadyYet, not as a real error`() = runTest {
         fakeRepo.getExamLeaderboardResult = ApiResponse.Failure(message = "Not found", errorCode = "404")
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            awaitItem() // initial loading
-            val state = awaitItem()
-            assertFalse(state.isLoading)
-            assertTrue(state.notReadyYet)
-            assertTrue(state.errors.isEmpty())
-        }
+        val state = viewModel.state.value
+        assertFalse(state.isLoading)
+        assertTrue(state.notReadyYet)
+        assertTrue(state.errors.isEmpty())
     }
 
     @Test
     fun `a non-404 failure is surfaced as a real LOAD error, not notReadyYet`() = runTest {
         fakeRepo.getExamLeaderboardResult = ApiResponse.Failure(message = "Server error", errorCode = "500")
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            awaitItem() // initial loading
-            val state = awaitItem()
-            assertFalse(state.notReadyYet)
-            assertEquals("Server error", state.errors["LOAD"])
-        }
+        val state = viewModel.state.value
+        assertFalse(state.notReadyYet)
+        assertEquals("Server error", state.errors["LOAD"])
     }
 
     @Test
     fun `clearError removes only the targeted tag`() = runTest {
         fakeRepo.getExamLeaderboardResult = ApiResponse.Failure(message = "boom", errorCode = "500")
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
+        assertEquals("boom", viewModel.state.value.errors["LOAD"])
 
         viewModel.clearError("LOAD")
         assertTrue(viewModel.state.value.errors.isEmpty())

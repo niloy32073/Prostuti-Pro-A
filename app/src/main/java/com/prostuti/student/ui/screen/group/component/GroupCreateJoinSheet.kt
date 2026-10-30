@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -38,9 +39,9 @@ fun GroupCreateJoinSheet(
     onJoin: (code: String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var tabIndex by remember { mutableIntStateOf(0) }
-    var name by remember { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
+    var tabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {

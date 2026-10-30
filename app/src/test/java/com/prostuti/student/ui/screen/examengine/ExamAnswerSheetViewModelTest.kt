@@ -1,12 +1,12 @@
 package com.prostuti.student.ui.screen.examengine
 
-import app.cash.turbine.test
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.repository.fake.FakeExamAttemptRepositoryForEngineTest
 import com.prostuti.student.domain.GetAttemptReviewUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -16,6 +16,8 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
+/** Fakes return immediately, so the init load settles inside construction; tests assert the
+ * settled state rather than the conflated transient isLoading=true emission. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExamAnswerSheetViewModelTest {
 
@@ -39,37 +41,31 @@ class ExamAnswerSheetViewModelTest {
     @Test
     fun `load success sorts questions by order and exposes correct wrong skipped counts`() = runTest {
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            val initial = awaitItem()
-            assertEquals(true, initial.isLoading)
-
-            val loaded = awaitItem()
-            assertEquals(false, loaded.isLoading)
-            assertEquals(listOf("mcq1", "mcq2", "mcq3"), loaded.questions.map { it.mcqId })
-            assertEquals(1, loaded.correctCount) // mcq1
-            assertEquals(1, loaded.wrongCount)    // mcq2
-            assertEquals(1, loaded.skippedCount)  // mcq3 (selectedOptionId == null)
-        }
+        val loaded = viewModel.state.value
+        assertEquals(false, loaded.isLoading)
+        assertEquals(listOf("mcq1", "mcq2", "mcq3"), loaded.questions.map { it.mcqId })
+        assertEquals(1, loaded.correctCount) // mcq1
+        assertEquals(1, loaded.wrongCount)    // mcq2
+        assertEquals(1, loaded.skippedCount)  // mcq3 (selectedOptionId == null)
     }
 
     @Test
     fun `load failure populates LOAD error`() = runTest {
         fakeRepo.getAttemptReviewResult = ApiResponse.Failure(message = "Review unavailable", errorCode = "403")
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            awaitItem() // initial loading
-            val errorState = awaitItem()
-            assertEquals(false, errorState.isLoading)
-            assertEquals("Review unavailable", errorState.errors["LOAD"])
-        }
+        val errorState = viewModel.state.value
+        assertEquals(false, errorState.isLoading)
+        assertEquals("Review unavailable", errorState.errors["LOAD"])
     }
 
     @Test
     fun `setFilter CORRECT narrows filteredQuestions and collapses any expanded card`() = runTest {
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
         viewModel.toggleExpanded("mcq1")
         assertEquals("mcq1", viewModel.state.value.expandedMcqId)
 
@@ -84,7 +80,7 @@ class ExamAnswerSheetViewModelTest {
     @Test
     fun `setFilter WRONG and SKIPPED each narrow to the right subset`() = runTest {
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         viewModel.setFilter(AnswerSheetFilter.WRONG)
         assertEquals(listOf("mcq2"), viewModel.state.value.filteredQuestions.map { it.mcqId })
@@ -99,7 +95,7 @@ class ExamAnswerSheetViewModelTest {
     @Test
     fun `toggleExpanded opens then collapses the same card`() = runTest {
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         viewModel.toggleExpanded("mcq2")
         assertEquals("mcq2", viewModel.state.value.expandedMcqId)
@@ -112,7 +108,7 @@ class ExamAnswerSheetViewModelTest {
     fun `clearError removes only the targeted tag`() = runTest {
         fakeRepo.getAttemptReviewResult = ApiResponse.Failure(message = "boom", errorCode = "500")
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         assertEquals("boom", viewModel.state.value.errors["LOAD"])
         viewModel.clearError("LOAD")

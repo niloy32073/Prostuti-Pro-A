@@ -2,7 +2,6 @@ package com.prostuti.student.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.room.Room
 import com.prostuti.student.BuildConfig
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.RefreshTokenResponse
@@ -20,7 +19,6 @@ import com.prostuti.student.data.repository.TimedExamRepository
 import com.prostuti.student.data.repository.fake.FakeGroupExamRepository
 import com.prostuti.student.data.repository.fake.FakeLiveExamRepository
 import com.prostuti.student.data.repository.fake.FakeTimedExamRepository
-import com.prostuti.student.data.service.local.AppDatabase
 import com.prostuti.student.data.service.remote.AuthApiService
 import com.prostuti.student.data.service.remote.CurriculumApiService
 import com.prostuti.student.data.service.remote.MCQExamApiService
@@ -131,12 +129,15 @@ import io.ktor.http.encodedPath
 import io.ktor.http.takeFrom
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CancellationException
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import timber.log.Timber
 
 val appModule = module {
+    includes(databaseModule)
+
     val baseUrl: String = BuildConfig.BASE_URL + "/api/v1/"
 
     single<HttpClient> {
@@ -213,6 +214,8 @@ val appModule = module {
                                     null
                                 }
                             }
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Timber.e(e, "Token refresh threw unexpectedly")
                             // Network/timeout errors should NOT log the user out
@@ -223,20 +226,6 @@ val appModule = module {
             }
         }
     }
-
-    single<AppDatabase> {
-        // No blanket fallbackToDestructiveMigration: GroupRoutineEntity, TimedExamAttemptEntity,
-        // DemoExamWindowEntity and CreatedGroupEntity hold user-generated data, not re-fetchable
-        // cache, so a future version bump must ship a real Migration(from, to) instead of wiping it.
-        // Downgrades (e.g. a dev reinstalling an older build) are still safe to wipe.
-        Room.databaseBuilder(androidContext(), AppDatabase::class.java, "prostuti-db")
-            .fallbackToDestructiveMigrationOnDowngrade(true)
-            .build()
-    }
-    single { get<AppDatabase>().subjectDao() }
-    single { get<AppDatabase>().chapterDao() }
-    single { get<AppDatabase>().topicDao() }
-    single { get<AppDatabase>().examDao() }
 
     single<TimeProvider> { SystemTimeProvider() }
 
@@ -261,8 +250,8 @@ val appModule = module {
 
     // Group/live exam — fake, Room-backed where the real backend doesn't exist yet. Swapping in
     // the real API later is a single-line change here, nothing above or below it.
-    single<TimedExamRepository> { FakeTimedExamRepository(get(), get()) }
-    single<GroupExamRepository> { FakeGroupExamRepository(get(), get(), get()) }
+    single<TimedExamRepository> { FakeTimedExamRepository(get(), get(), get(), get()) }
+    single<GroupExamRepository> { FakeGroupExamRepository(get(), get(), get(), get()) }
     single<LiveExamRepository> { FakeLiveExamRepository(get()) }
 
     factory { CheckUserUseCase(get()) }

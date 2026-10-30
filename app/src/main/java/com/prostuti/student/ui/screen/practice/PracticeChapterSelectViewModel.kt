@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class PracticeChapterGroup(
     val chapter: Chapter,
     val topics: List<Topic>,
@@ -73,7 +75,7 @@ class PracticeChapterSelectViewModel(
             val subjectsById = when (val r = fetchSubjectsUseCase().first()) {
                 is ApiResponse.Success -> r.data.associateBy { it.id }
                 is ApiResponse.Failure -> {
-                    _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                    _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
                     return@launch
                 }
             }

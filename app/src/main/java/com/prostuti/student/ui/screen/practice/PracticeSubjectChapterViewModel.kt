@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 /**
  * Backs the Medium/Expanded combined screen (subject list + the focused subject's chapter/topic
  * tree, side by side — SubjectChapterMedium/Expanded in the design) that replaces the compact
@@ -66,7 +68,7 @@ class PracticeSubjectChapterViewModel(
                 when (r) {
                     is ApiResponse.Success -> _state.update { it.copy(isLoadingSubjects = false, subjects = r.data) }
                     is ApiResponse.Failure -> _state.update {
-                        it.copy(isLoadingSubjects = false, errors = it.errors + ("LOAD" to r.message))
+                        it.copy(isLoadingSubjects = false, errors = it.errors + (ERR_LOAD to r.message))
                     }
                 }
             }

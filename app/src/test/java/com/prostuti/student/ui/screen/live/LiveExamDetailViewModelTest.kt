@@ -10,9 +10,12 @@ import com.prostuti.student.domain.AdvanceDemoStateUseCase
 import com.prostuti.student.domain.FetchLiveExamDetailUseCase
 import com.prostuti.student.domain.FetchMyTimedSubmissionUseCase
 import com.prostuti.student.util.FakeTimeProvider
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -27,7 +30,8 @@ import org.junit.Test
  * `advanceUntilIdle()` — with that ticker running on the same scheduler it would advance virtual
  * time forever and the test would hang. `runCurrent()` (runs only work already due at the
  * current virtual time, without advancing time) and Turbine's `awaitItem()` are used instead,
- * since `load()` itself has no `delay()` in it. */
+ * since `load()` itself has no `delay()` in it. `runTest` itself also advances until idle when
+ * its body returns, so [runVmTest] cancels every ViewModel's scope (and its ticker) first. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class LiveExamDetailViewModelTest {
 
@@ -35,6 +39,7 @@ class LiveExamDetailViewModelTest {
     private val fakeLiveExamRepository = FakeLiveExamRepositoryForTest()
     private val fakeTimedExamRepository = FakeTimedExamRepositoryForTest()
     private val fakeTimeProvider = FakeTimeProvider(now = 10_000L)
+    private val createdViewModels = mutableListOf<LiveExamDetailViewModel>()
 
     private fun viewModel(examId: String = "e1") = LiveExamDetailViewModel(
         examId,
@@ -42,7 +47,15 @@ class LiveExamDetailViewModelTest {
         FetchMyTimedSubmissionUseCase(fakeTimedExamRepository),
         AdvanceDemoStateUseCase(fakeTimedExamRepository),
         fakeTimeProvider
-    )
+    ).also { createdViewModels += it }
+
+    private fun runVmTest(body: suspend TestScope.() -> Unit) = runTest {
+        try {
+            body()
+        } finally {
+            createdViewModels.forEach { it.viewModelScope.cancel() }
+        }
+    }
 
     @Before
     fun setup() {
@@ -62,7 +75,7 @@ class LiveExamDetailViewModelTest {
     }
 
     @Test
-    fun loadSuccessPopulatesExamAndDerivesOpenNotSubmittedState() = runTest {
+    fun loadSuccessPopulatesExamAndDerivesOpenNotSubmittedState() = runVmTest {
         val exam = fakeTimedExam(examId = "e1", windowStartEpochMillis = 0L, windowEndEpochMillis = 20_000L)
         fakeLiveExamRepository.liveExamDetailResult = ApiResponse.Success(exam)
         fakeTimedExamRepository.mySubmissionResult = null
@@ -79,7 +92,7 @@ class LiveExamDetailViewModelTest {
     }
 
     @Test
-    fun loadFailurePopulatesErrorsMap() = runTest {
+    fun loadFailurePopulatesErrorsMap() = runVmTest {
         fakeLiveExamRepository.liveExamDetailResult = ApiResponse.Failure(message = "এক্সাম পাওয়া যায়নি", errorCode = "NOT_FOUND")
 
         val viewModel = viewModel("missing")
@@ -93,7 +106,7 @@ class LiveExamDetailViewModelTest {
     }
 
     @Test
-    fun examStateIsClosedWhenNowIsAtOrAfterWindowEnd() = runTest {
+    fun examStateIsClosedWhenNowIsAtOrAfterWindowEnd() = runVmTest {
         fakeTimeProvider.now = 20_000L
         val exam = fakeTimedExam(examId = "e1", windowStartEpochMillis = 0L, windowEndEpochMillis = 20_000L)
         fakeLiveExamRepository.liveExamDetailResult = ApiResponse.Success(exam)
@@ -107,7 +120,7 @@ class LiveExamDetailViewModelTest {
     }
 
     @Test
-    fun advanceDemoStateReloadsAfterAdvancing() = runTest {
+    fun advanceDemoStateReloadsAfterAdvancing() = runVmTest {
         val exam = fakeTimedExam(examId = "e1", windowStartEpochMillis = 0L, windowEndEpochMillis = 20_000L)
         fakeLiveExamRepository.liveExamDetailResult = ApiResponse.Success(exam)
 
@@ -126,7 +139,7 @@ class LiveExamDetailViewModelTest {
     }
 
     @Test
-    fun clearErrorRemovesTheTag() = runTest {
+    fun clearErrorRemovesTheTag() = runVmTest {
         fakeLiveExamRepository.liveExamDetailResult = ApiResponse.Failure(message = "err", errorCode = "NOT_FOUND")
         val viewModel = viewModel("e1")
         testDispatcher.scheduler.runCurrent()

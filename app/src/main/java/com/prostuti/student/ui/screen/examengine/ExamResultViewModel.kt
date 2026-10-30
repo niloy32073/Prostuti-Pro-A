@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class ExamResultUiState(
     val isLoading: Boolean = true,
     val result: ExamAttemptResultResponse? = null,
@@ -32,7 +34,7 @@ class ExamResultViewModel(
             when (val r = getExamAttemptUseCase(attemptId)) {
                 is ApiResponse.Success -> _state.update { it.copy(isLoading = false, result = r.data) }
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message))
+                    it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message))
                 }
             }
         }

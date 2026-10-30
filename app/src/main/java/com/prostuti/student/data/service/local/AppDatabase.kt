@@ -12,12 +12,15 @@ import com.prostuti.student.data.model.response.Topic
         GroupRoutineEntity::class, TimedExamAttemptEntity::class,
         DemoExamWindowEntity::class, CreatedGroupEntity::class
     ],
-    version = 3,
+    version = 1,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun subjectDao(): SubjectDao
     abstract fun chapterDao(): ChapterDao
     abstract fun topicDao(): TopicDao
-    abstract fun examDao(): ExamDao
+    abstract fun groupRoutineDao(): GroupRoutineDao
+    abstract fun timedExamAttemptDao(): TimedExamAttemptDao
+    abstract fun demoExamWindowDao(): DemoExamWindowDao
+    abstract fun createdGroupDao(): CreatedGroupDao
 }

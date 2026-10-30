@@ -5,8 +5,6 @@ import com.prostuti.student.data.model.enums.Level
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.MCQExam
 import com.prostuti.student.data.repository.MCQExamRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class FetchMCQExamsUseCase(private val repository: MCQExamRepository) {
     suspend operator fun invoke(
@@ -15,7 +13,5 @@ class FetchMCQExamsUseCase(private val repository: MCQExamRepository) {
         level: Level,
         page: Int = 1,
         limit: Int = 10
-    ): ApiResponse<List<MCQExam>> = withContext(Dispatchers.IO) {
-        repository.fetchMCQExams(subjectId, examType, level, page, limit)
-    }
+    ): ApiResponse<List<MCQExam>> = repository.fetchMCQExams(subjectId, examType, level, page, limit)
 }

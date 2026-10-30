@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 
+private const val ERR_LOAD = "LOAD"
+
 data class CalendarDay(val date: LocalDate, val weekdayLabelBn: String, val dayNumBn: String, val isExamDay: Boolean, val isToday: Boolean)
 
 data class GroupRoutineCalendarUiState(
@@ -58,7 +60,7 @@ class GroupRoutineCalendarViewModel(
                     val selected = days.indexOfFirst { it.isToday }.coerceAtLeast(0)
                     _state.update { it.copy(isLoading = false, group = r.data.group, routine = routine, weekDays = days, selectedIndex = selected) }
                 }
-                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
             }
         }
     }

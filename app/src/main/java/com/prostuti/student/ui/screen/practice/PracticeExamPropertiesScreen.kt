@@ -32,7 +32,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -65,7 +65,7 @@ fun PracticeExamPropertiesScreen(
     onExamGenerated: (attemptId: String, titleBn: String) -> Unit,
     viewModel: PracticeExamPropertiesViewModel = koinViewModel(parameters = { parametersOf(subjectIds, chapterIds, topicIds) })
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     ObserveErrors(

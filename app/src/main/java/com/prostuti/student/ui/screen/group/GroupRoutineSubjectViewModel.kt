@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class GroupRoutineSubjectUiState(
     val isLoading: Boolean = false,
     val subjects: List<Subject> = emptyList(),
@@ -36,7 +38,7 @@ class GroupRoutineSubjectViewModel(
             fetchSubjectsUseCase().collect { r ->
                 when (r) {
                     is ApiResponse.Success -> _state.update { it.copy(isLoading = false, subjects = r.data) }
-                    is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                    is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
                 }
             }
         }

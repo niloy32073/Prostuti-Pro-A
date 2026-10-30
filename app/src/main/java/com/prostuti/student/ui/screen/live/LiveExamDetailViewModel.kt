@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class LiveExamDetailUiState(
     val isLoading: Boolean = true,
     val exam: TimedExam? = null,
@@ -56,7 +58,7 @@ class LiveExamDetailViewModel(
                     val submission = fetchMyTimedSubmissionUseCase(examId)
                     _state.update { it.copy(isLoading = false, exam = r.data, mySubmission = submission, now = timeProvider.nowEpochMillis()) }
                 }
-                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
             }
         }
     }

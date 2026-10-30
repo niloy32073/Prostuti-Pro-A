@@ -256,16 +256,13 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                 )
             }
 
-            // ── Group exam ── every entry below is wrapped in AdaptiveWidthContainer: none of
-            // these screens has its own tablet design, so centering the phone layout with a
-            // capped width on medium/expanded windows is their whole "adaptive" story (P7).
+            // ── Group exam ── list screens fill the window and pick 1/2/3 columns from the window
+            // size class; detail/form/reading screens stay width-capped via AdaptiveWidthContainer.
             entry<GroupList> {
-                AdaptiveWidthContainer {
-                    GroupListScreen(
-                        onBack = { backStack.removeLastOrNull() },
-                        onNavigateToGroup = { groupId -> backStack.add(GroupDetail(groupId)) }
-                    )
-                }
+                GroupListScreen(
+                    onBack = { backStack.removeLastOrNull() },
+                    onNavigateToGroup = { groupId -> backStack.add(GroupDetail(groupId)) }
+                )
             }
             entry<GroupDetail> { route ->
                 AdaptiveWidthContainer {
@@ -284,14 +281,12 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                 }
             }
             entry<GroupRoutineSubjectSelect> { route ->
-                AdaptiveWidthContainer {
-                    AdminGate(groupId = route.groupId, requireRoutineNotYetCreated = true, onDenied = { backStack.removeLastOrNull() }) {
-                        GroupRoutineSubjectScreen(
-                            groupId = route.groupId,
-                            onBack = { backStack.removeLastOrNull() },
-                            onNext = { subjectIds -> backStack.add(GroupRoutineChapterSelect(route.groupId, subjectIds)) }
-                        )
-                    }
+                AdminGate(groupId = route.groupId, requireRoutineNotYetCreated = true, onDenied = { backStack.removeLastOrNull() }) {
+                    GroupRoutineSubjectScreen(
+                        groupId = route.groupId,
+                        onBack = { backStack.removeLastOrNull() },
+                        onNext = { subjectIds -> backStack.add(GroupRoutineChapterSelect(route.groupId, subjectIds)) }
+                    )
                 }
             }
             entry<GroupRoutineChapterSelect> { route ->
@@ -331,28 +326,22 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                 }
             }
             entry<GroupPastExams> { route ->
-                AdaptiveWidthContainer {
-                    GroupPastExamsScreen(
-                        groupId = route.groupId,
-                        onBack = { backStack.removeLastOrNull() },
-                        onOpenExam = { examId -> backStack.add(WindowRanking(examId, TimedExamKind.GROUP)) }
-                    )
-                }
+                GroupPastExamsScreen(
+                    groupId = route.groupId,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenExam = { examId -> backStack.add(WindowRanking(examId, TimedExamKind.GROUP)) }
+                )
             }
             entry<GroupMembers> { route ->
-                AdaptiveWidthContainer {
-                    GroupMembersScreen(groupId = route.groupId, onBack = { backStack.removeLastOrNull() })
-                }
+                GroupMembersScreen(groupId = route.groupId, onBack = { backStack.removeLastOrNull() })
             }
 
             // ── Live exam ──
             entry<LiveExamList> {
-                AdaptiveWidthContainer {
-                    LiveExamListScreen(
-                        onBack = { backStack.removeLastOrNull() },
-                        onNavigateToDetail = { examId -> backStack.add(LiveExamDetail(examId)) }
-                    )
-                }
+                LiveExamListScreen(
+                    onBack = { backStack.removeLastOrNull() },
+                    onNavigateToDetail = { examId -> backStack.add(LiveExamDetail(examId)) }
+                )
             }
             entry<LiveExamDetail> { route ->
                 AdaptiveWidthContainer {

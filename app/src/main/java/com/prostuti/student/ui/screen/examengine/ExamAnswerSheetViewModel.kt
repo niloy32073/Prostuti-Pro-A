@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 enum class AnswerSheetFilter { ALL, CORRECT, WRONG, SKIPPED }
 
 data class ExamAnswerSheetUiState(
@@ -51,7 +53,7 @@ class ExamAnswerSheetViewModel(
                     it.copy(isLoading = false, questions = r.data.questions.sortedBy { q -> q.order })
                 }
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message))
+                    it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message))
                 }
             }
         }

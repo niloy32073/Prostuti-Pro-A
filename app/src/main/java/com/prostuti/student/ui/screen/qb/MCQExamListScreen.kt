@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -41,7 +41,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -61,6 +61,7 @@ import com.prostuti.student.navigation.ExamAttempt
 import com.prostuti.student.navigation.QuestionReader
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.screen.examengine.ExamAttemptStore
 import com.prostuti.student.ui.screen.qb.component.ExamDetailDialog
 import com.prostuti.student.ui.screen.qb.component.ExamItem
@@ -80,7 +81,7 @@ fun MCQExamListScreen(
     onNavigateToChapterBrowse: (ChapterBrowse) -> Unit,
     viewModel: MCQExamListViewModel = koinViewModel(parameters = { parametersOf(subjectId) })
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val boardListState = rememberLazyGridState()
     val collegeListState = rememberLazyGridState()
@@ -125,21 +126,16 @@ fun MCQExamListScreen(
         }
     }
 
-    if (state.selectedExam != null) {
+    state.selectedExam?.let { exam ->
         ExamDetailDialog(
-            exam = state.selectedExam!!,
+            exam = exam,
             isAttempting = state.isAttempting,
             onDismiss = { viewModel.selectExam(null) },
             onRead = {
                 viewModel.selectExam(null)
-                onNavigateToReader(
-                    QuestionReader(
-                        examId = state.selectedExam!!.id,
-                        titleBn = state.selectedExam!!.titleBn
-                    )
-                )
+                onNavigateToReader(QuestionReader(examId = exam.id, titleBn = exam.titleBn))
             },
-            onStart = { viewModel.startExam(state.selectedExam!!) }
+            onStart = { viewModel.startExam(exam) }
         )
     }
 
@@ -147,17 +143,13 @@ fun MCQExamListScreen(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            val examColumns = when {
-                maxWidth >= 840.dp -> 3
-                maxWidth >= 600.dp -> 2
-                else -> 1
-            }
-            val tabRowWidthFraction = if (maxWidth >= 600.dp) 0.5f else 1f
+            val examColumns = adaptiveColumnCount()
+            val tabRowWidthCap = if (examColumns > 1) Modifier.widthIn(max = 480.dp) else Modifier
 
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
@@ -249,7 +241,8 @@ fun MCQExamListScreen(
                 ) {
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth(tabRowWidthFraction)
+                            .then(tabRowWidthCap)
+                            .fillMaxWidth()
                             .clip(RoundedCornerShape(50.dp))
                             .background(MaterialTheme.colorScheme.surfaceContainerLow)
                             .padding(4.dp),

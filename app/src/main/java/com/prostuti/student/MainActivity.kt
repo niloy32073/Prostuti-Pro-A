@@ -8,7 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import com.prostuti.student.navigation.Auth
 import com.prostuti.student.navigation.Intro
@@ -17,12 +17,10 @@ import com.prostuti.student.navigation.RootNavDisplay
 import com.prostuti.student.ui.screen.SharedViewModel
 import com.prostuti.student.ui.theme.ProstutiTheme
 import com.prostuti.student.util.LocaleManager
-import org.koin.android.ext.android.getKoin
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
-    private val sharedViewModel: SharedViewModel by lazy {
-        getKoin().get<SharedViewModel>()
-    }
+    private val sharedViewModel: SharedViewModel by viewModel()
 
     // The app's own language default (Bangla) is independent of the device's system locale.
     override fun attachBaseContext(newBase: Context) {
@@ -33,7 +31,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val state = sharedViewModel.state.collectAsState()
+            val state = sharedViewModel.state.collectAsStateWithLifecycle()
             ProstutiTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),

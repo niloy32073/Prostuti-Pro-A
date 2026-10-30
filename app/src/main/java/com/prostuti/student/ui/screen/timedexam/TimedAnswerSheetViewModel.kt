@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class TimedAnswerSheetUiState(
     val isLoading: Boolean = true,
     val sheet: TimedExamAnswerSheet? = null,
@@ -30,7 +32,7 @@ class TimedAnswerSheetViewModel(
             _state.update { it.copy(isLoading = true) }
             when (val r = fetchMyAnswerSheetUseCase(examId)) {
                 is ApiResponse.Success -> _state.update { it.copy(isLoading = false, sheet = r.data) }
-                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
             }
         }
     }

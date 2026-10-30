@@ -5,11 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.Subject
 import com.prostuti.student.domain.FetchSubjectsUseCase
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+private const val ERR_LOAD = "LOAD"
 
 data class SubjectListUiState(
     val isLoading: Boolean = false,
@@ -21,17 +24,20 @@ class SubjectListViewModel(private val fetchSubjectsUseCase: FetchSubjectsUseCas
     private val _state = MutableStateFlow(SubjectListUiState())
     val state: StateFlow<SubjectListUiState> = _state.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init { loadSubjects() }
 
     fun refresh() = loadSubjects(refresh = true)
 
     private fun loadSubjects(refresh: Boolean = false) {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             fetchSubjectsUseCase(refresh).collect { r ->
                 when (r) {
                     is ApiResponse.Success -> _state.update { it.copy(isLoading = false, subjects = r.data) }
-                    is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                    is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
                 }
             }
         }

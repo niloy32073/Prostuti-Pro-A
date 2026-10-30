@@ -1,8 +1,15 @@
+import java.time.Duration
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.room)
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 android {
@@ -43,6 +50,11 @@ android {
     }
 }
 
+// A ViewModel with an infinite ticker can spin runTest's virtual clock forever; fail instead of hanging.
+tasks.withType<Test>().configureEach {
+    timeout.set(Duration.ofMinutes(5))
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -55,6 +67,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.serialization.core)
     // Navigation3
     implementation(libs.androidx.navigation3.ui)
@@ -104,8 +117,4 @@ dependencies {
     androidTestImplementation(libs.androidx.room.testing)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-}
-
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
 }

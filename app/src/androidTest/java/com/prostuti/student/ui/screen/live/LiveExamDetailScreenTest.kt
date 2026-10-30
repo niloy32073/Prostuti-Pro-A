@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.prostuti.student.data.service.local.AppDatabase
@@ -69,7 +70,8 @@ class LiveExamDetailScreenTest {
         setScreen("live_math_mt02")
 
         waitForText("উচ্চতর গণিত — মডেল টেস্ট ০২")
-        composeTestRule.onNodeWithText("উইন্ডো শেষ").assertExists()
+        // Shown twice on a closed exam: the status badge and the window timeline label.
+        composeTestRule.onAllNodesWithText("উইন্ডো শেষ").onFirst().assertExists()
         composeTestRule.onNodeWithText("র‍্যাংকিং ও অ্যান্সার শিট দেখো").assertExists()
     }
 

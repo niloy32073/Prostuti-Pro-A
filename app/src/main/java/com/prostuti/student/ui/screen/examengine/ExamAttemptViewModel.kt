@@ -19,6 +19,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_REPORT = "REPORT"
+private const val ERR_RESUME = "RESUME"
+private const val ERR_SUBMIT = "SUBMIT"
+
 data class ExamAttemptUiState(
     val attemptId: String = "",
     val questions: List<Question> = emptyList(),
@@ -65,7 +69,7 @@ class ExamAttemptViewModel(
             when (val r = getAttemptQuestionsUseCase(attemptId)) {
                 is ApiResponse.Success -> applyAttemptData(r.data)
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(errors = it.errors + ("RESUME" to r.message))
+                    it.copy(errors = it.errors + (ERR_RESUME to r.message))
                 }
             }
         }
@@ -133,7 +137,7 @@ class ExamAttemptViewModel(
             when (val r = submitExamAttemptUseCase(attemptId)) {
                 is ApiResponse.Success -> _state.update { it.copy(isSubmitting = false, isSubmitted = true) }
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(isSubmitting = false, errors = it.errors + ("SUBMIT" to r.message))
+                    it.copy(isSubmitting = false, errors = it.errors + (ERR_SUBMIT to r.message))
                 }
             }
         }
@@ -156,7 +160,7 @@ class ExamAttemptViewModel(
                     it.copy(reportResultMessage = "প্রশ্নটি রিপোর্ট করা হয়েছে।")
                 }
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(errors = it.errors + ("REPORT" to r.message))
+                    it.copy(errors = it.errors + (ERR_REPORT to r.message))
                 }
             }
         }

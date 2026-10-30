@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_GENERATE = "GENERATE"
+
 const val QUESTION_COUNT_MIN = 5
 const val QUESTION_COUNT_MAX = 100
 val QUESTION_COUNT_PRESETS = listOf("25", "35", "40", "50", "100")
@@ -105,7 +107,7 @@ class PracticeExamPropertiesViewModel(
                     _state.update { it.copy(isGenerating = false, generatedAttemptId = r.data.attemptId) }
                 }
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(isGenerating = false, errors = it.errors + ("GENERATE" to r.message))
+                    it.copy(isGenerating = false, errors = it.errors + (ERR_GENERATE to r.message))
                 }
             }
         }

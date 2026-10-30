@@ -1,6 +1,5 @@
 package com.prostuti.student.ui.screen.qb
 
-import app.cash.turbine.test
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.Subject
 import com.prostuti.student.data.repository.fake.FakeQbCurriculumRepository
@@ -8,6 +7,7 @@ import com.prostuti.student.domain.FetchSubjectsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -18,6 +18,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/** The init load is queued on the StandardTestDispatcher; tests advance it and assert the
+ * settled state (the transient isLoading=true is conflated away by StateFlow). */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SubjectListViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
@@ -42,16 +44,12 @@ class SubjectListViewModelTest {
             subjectsResult = ApiResponse.Success(listOf(fakeSubject("s1"), fakeSubject("s2")))
         )
         val viewModel = SubjectListViewModel(FetchSubjectsUseCase(repo))
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            val loading = awaitItem()
-            assertTrue(loading.isLoading)
-
-            val loaded = awaitItem()
-            assertFalse(loaded.isLoading)
-            assertEquals(2, loaded.subjects.size)
-            assertEquals("s1", loaded.subjects[0].id)
-        }
+        val loaded = viewModel.state.value
+        assertFalse(loaded.isLoading)
+        assertEquals(2, loaded.subjects.size)
+        assertEquals("s1", loaded.subjects[0].id)
         assertEquals(false, repo.lastRefreshValue)
     }
 
@@ -59,26 +57,23 @@ class SubjectListViewModelTest {
     fun `initial load failure populates errors map under LOAD tag`() = runTest {
         val repo = FakeQbCurriculumRepository(subjectsResult = ApiResponse.Failure("নেটওয়ার্ক সমস্যা", "NETWORK_ERROR"))
         val viewModel = SubjectListViewModel(FetchSubjectsUseCase(repo))
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            skipItems(1) // loading
-            val errorState = awaitItem()
-            assertFalse(errorState.isLoading)
-            assertEquals("নেটওয়ার্ক সমস্যা", errorState.errors["LOAD"])
-        }
+        val errorState = viewModel.state.value
+        assertFalse(errorState.isLoading)
+        assertEquals("নেটওয়ার্ক সমস্যা", errorState.errors["LOAD"])
     }
 
     @Test
     fun `refresh passes refresh=true to the use case and reloads`() = runTest {
         val repo = FakeQbCurriculumRepository(subjectsResult = ApiResponse.Success(emptyList()))
         val viewModel = SubjectListViewModel(FetchSubjectsUseCase(repo))
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            skipItems(2) // initial loading + loaded, from init
-            viewModel.refresh()
-            skipItems(1) // loading again
-            awaitItem()
-        }
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.isLoading)
         assertEquals(true, repo.lastRefreshValue)
         assertEquals(2, repo.observeSubjectsCallCount)
     }
@@ -87,12 +82,8 @@ class SubjectListViewModelTest {
     fun `clearError removes only the given tag`() = runTest {
         val repo = FakeQbCurriculumRepository(subjectsResult = ApiResponse.Failure("err", "LOAD_FAIL"))
         val viewModel = SubjectListViewModel(FetchSubjectsUseCase(repo))
-
-        viewModel.state.test {
-            skipItems(1)
-            val errorState = awaitItem()
-            assertTrue(errorState.errors.containsKey("LOAD"))
-        }
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.errors.containsKey("LOAD"))
 
         viewModel.clearError("LOAD")
         assertTrue(viewModel.state.value.errors.isEmpty())

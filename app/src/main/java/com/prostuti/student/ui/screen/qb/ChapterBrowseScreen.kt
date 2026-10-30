@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -26,13 +26,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.ui.component.BackButton
+import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.screen.qb.component.ReadOnlyMcqCard
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
@@ -45,7 +46,7 @@ fun ChapterBrowseScreen(
     onBack: () -> Unit,
     viewModel: ChapterBrowseViewModel = koinViewModel(parameters = { parametersOf(subjectId) })
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
@@ -161,37 +162,28 @@ fun ChapterBrowseScreen(
                     )
                 }
             } else {
-                BoxWithConstraints(
+                val columns = adaptiveColumnCount()
+                val hPadding = if (columns > 1) 8.dp else 16.dp
+                LazyVerticalStaggeredGrid(
+                    columns = StaggeredGridCells.Fixed(columns),
+                    state = rememberLazyStaggeredGridState(),
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth()
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(start = hPadding, end = hPadding, bottom = 24.dp),
+                    verticalItemSpacing = 14.dp,
+                    horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 8.dp else 0.dp)
                 ) {
-                    val columns = when {
-                        maxWidth >= 840.dp -> 3
-                        maxWidth >= 600.dp -> 2
-                        else -> 1
-                    }
-                    val hPadding = if (columns > 1) 8.dp else 16.dp
-                    val hSpacing = if (columns > 1) 8.dp else 0.dp
-
-                    LazyVerticalStaggeredGrid(
-                        columns = StaggeredGridCells.Fixed(columns),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = hPadding, end = hPadding, bottom = 24.dp),
-                        verticalItemSpacing = 14.dp,
-                        horizontalArrangement = Arrangement.spacedBy(hSpacing)
-                    ) {
-                        itemsIndexed(questions) { index, question ->
-                            ReadOnlyMcqCard(
-                                index = index,
-                                question = question,
-                                isAnswerRevealed = question.id in state.revealedAnswers,
-                                isFavorite = question.id in state.favoriteIds,
-                                onToggleAnswer = { viewModel.toggleAnswer(question.id) },
-                                onToggleFavorite = { viewModel.toggleFavorite(question.id) },
-                                onSubmitReport = { reason, detail -> viewModel.submitReport(question.id, reason, detail) }
-                            )
-                        }
+                    itemsIndexed(questions, key = { _, question -> question.id }) { index, question ->
+                        ReadOnlyMcqCard(
+                            index = index,
+                            question = question,
+                            isAnswerRevealed = question.id in state.revealedAnswers,
+                            isFavorite = question.id in state.favoriteIds,
+                            onToggleAnswer = { viewModel.toggleAnswer(question.id) },
+                            onToggleFavorite = { viewModel.toggleFavorite(question.id) },
+                            onSubmitReport = { reason, detail -> viewModel.submitReport(question.id, reason, detail) }
+                        )
                     }
                 }
             }

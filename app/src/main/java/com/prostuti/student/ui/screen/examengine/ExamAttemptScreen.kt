@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -37,6 +36,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -47,10 +48,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlin.math.PI
 import kotlin.math.E
@@ -101,7 +103,7 @@ fun ExamAttemptScreen(
     onSubmitted: () -> Unit,
     viewModel: ExamAttemptViewModel = koinViewModel(parameters = { parametersOf(attemptId) })
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     ObserveErrors(
@@ -143,23 +145,24 @@ fun ExamAttemptScreen(
     val timeText = "%02d:%02d".format(minutes, seconds)
 
     // Right panel state — kept here so it survives tab switches and panel hide/show
-    var selectedTab by remember { mutableStateOf(0) }      // 0 = calculator, 1 = canvas
-    var isPanelVisible by remember { mutableStateOf(true) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }      // 0 = calculator, 1 = canvas
+    var isPanelVisible by rememberSaveable { mutableStateOf(true) }
     var canvasStrokes by remember { mutableStateOf(listOf<DrawStroke>()) }
-    var canvasIsErasing by remember { mutableStateOf(false) }
+    var canvasIsErasing by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        BoxWithConstraints(
+        val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
             when {
-                // Extended (≥840dp): 2-column questions + right panel always visible
-                maxWidth >= 840.dp -> {
+                // Expanded: 2-column questions + right panel always visible
+                windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
                     Row(modifier = Modifier.fillMaxSize()) {
                         ExamContent(
                             state = state,
@@ -189,8 +192,8 @@ fun ExamAttemptScreen(
                     }
                 }
 
-                // Medium (600–840dp): 1-col when panel visible, 2-col when hidden; hide/show toggle
-                maxWidth >= 600.dp -> {
+                // Medium: 1-col when panel visible, 2-col when hidden; hide/show toggle
+                windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> {
                     Row(modifier = Modifier.fillMaxSize()) {
                         ExamContent(
                             state = state,
@@ -239,7 +242,7 @@ fun ExamAttemptScreen(
                     }
                 }
 
-                // Compact (<600dp): single column, no side panel
+                // Compact: single column, no side panel
                 else -> {
                     ExamContent(
                         state = state,
@@ -620,10 +623,10 @@ private fun Double.formatCalc(): String {
 
 @Composable
 private fun CalculatorPanel(modifier: Modifier = Modifier) {
-    var display by remember { mutableStateOf("0") }
-    var firstOperand by remember { mutableStateOf(0.0) }
-    var pendingOp by remember { mutableStateOf<String?>(null) }
-    var shouldReset by remember { mutableStateOf(false) }
+    var display by rememberSaveable { mutableStateOf("0") }
+    var firstOperand by rememberSaveable { mutableStateOf(0.0) }
+    var pendingOp by rememberSaveable { mutableStateOf<String?>(null) }
+    var shouldReset by rememberSaveable { mutableStateOf(false) }
 
     fun onDigit(d: String) {
         if (display == "Error") { display = if (d == ".") "0." else d; shouldReset = false; return }
@@ -647,8 +650,9 @@ private fun CalculatorPanel(modifier: Modifier = Modifier) {
 
     fun onOperator(op: String) {
         val current = display.toDoubleOrNull() ?: 0.0
-        if (pendingOp != null && !shouldReset) {
-            val result = calculate(firstOperand, pendingOp!!, current)
+        val previousOp = pendingOp
+        if (previousOp != null && !shouldReset) {
+            val result = calculate(firstOperand, previousOp, current)
             display = result.formatCalc()
             firstOperand = result
         } else {

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
+/** Cache-first: Room is the single source of truth; a failed refresh keeps showing cached rows. */
 class CurriculumRepositoryImpl(
     private val apiService: CurriculumApiService,
     private val subjectDao: SubjectDao,
@@ -21,16 +22,12 @@ class CurriculumRepositoryImpl(
 ) : CurriculumRepository {
 
     override fun observeSubjects(refresh: Boolean): Flow<ApiResponse<List<Subject>>> = flow {
-        val shouldFetch = refresh || subjectDao.getAll().isEmpty()
-        if (shouldFetch) {
+        if (refresh || subjectDao.getAll().isEmpty()) {
             when (val api = apiService.fetchSubjects()) {
-                is ApiResponse.Success -> {
-                    subjectDao.deleteAll()
-                    subjectDao.insertAll(api.data)
-                }
+                is ApiResponse.Success -> subjectDao.replaceAll(api.data)
                 is ApiResponse.Failure -> {
                     emit(api)
-                    return@flow
+                    if (subjectDao.getAll().isEmpty()) return@flow
                 }
             }
         }
@@ -38,16 +35,12 @@ class CurriculumRepositoryImpl(
     }
 
     override fun observeChapters(subjectId: String, refresh: Boolean): Flow<ApiResponse<List<Chapter>>> = flow {
-        val shouldFetch = refresh || chapterDao.getBySubjectId(subjectId).isEmpty()
-        if (shouldFetch) {
+        if (refresh || chapterDao.getBySubjectId(subjectId).isEmpty()) {
             when (val api = apiService.fetchChapters(subjectId)) {
-                is ApiResponse.Success -> {
-                    chapterDao.deleteBySubjectId(subjectId)
-                    chapterDao.insertAll(api.data)
-                }
+                is ApiResponse.Success -> chapterDao.replaceBySubjectId(subjectId, api.data)
                 is ApiResponse.Failure -> {
                     emit(api)
-                    return@flow
+                    if (chapterDao.getBySubjectId(subjectId).isEmpty()) return@flow
                 }
             }
         }
@@ -55,16 +48,12 @@ class CurriculumRepositoryImpl(
     }
 
     override fun observeTopics(chapterId: String, refresh: Boolean): Flow<ApiResponse<List<Topic>>> = flow {
-        val shouldFetch = refresh || topicDao.getByChapterId(chapterId).isEmpty()
-        if (shouldFetch) {
+        if (refresh || topicDao.getByChapterId(chapterId).isEmpty()) {
             when (val api = apiService.fetchTopics(chapterId)) {
-                is ApiResponse.Success -> {
-                    topicDao.deleteByChapterId(chapterId)
-                    topicDao.insertAll(api.data)
-                }
+                is ApiResponse.Success -> topicDao.replaceByChapterId(chapterId, api.data)
                 is ApiResponse.Failure -> {
                     emit(api)
-                    return@flow
+                    if (topicDao.getByChapterId(chapterId).isEmpty()) return@flow
                 }
             }
         }

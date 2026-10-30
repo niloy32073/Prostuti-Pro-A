@@ -8,7 +8,7 @@ import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
@@ -57,7 +57,7 @@ fun MainNavDisplay(
 ) {
     val backStack = rememberNavBackStack(Home)
     val qbBackStack = rememberNavBackStack(SubjectList)
-    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
     val current = backStack.lastOrNull() as? MainRoute ?: Home
     val isInsideQB = current == QB && qbBackStack.size > 1
     val layoutType = when {

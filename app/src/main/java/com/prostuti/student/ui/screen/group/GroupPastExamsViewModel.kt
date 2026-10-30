@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class GroupPastExamsUiState(
     val isLoading: Boolean = true,
     val pastExams: List<GroupPastExam> = emptyList(),
@@ -29,7 +31,7 @@ class GroupPastExamsViewModel(
             _state.update { it.copy(isLoading = true) }
             when (val r = fetchGroupPastExamsUseCase(groupId)) {
                 is ApiResponse.Success -> _state.update { it.copy(isLoading = false, pastExams = r.data) }
-                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
             }
         }
     }

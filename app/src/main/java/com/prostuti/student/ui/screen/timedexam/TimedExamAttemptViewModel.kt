@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_SUBMIT = "SUBMIT"
+
 data class TimedExamAttemptUiState(
     val isLoading: Boolean = true,
     val questions: List<Question> = emptyList(),
@@ -105,7 +107,7 @@ class TimedExamAttemptViewModel(
             _state.update { it.copy(isSubmitting = true) }
             when (val r = submitTimedExamUseCase(examId, kind)) {
                 is ApiResponse.Success -> _state.update { it.copy(isSubmitting = false, isSubmitted = true, showSubmitDialog = false) }
-                is ApiResponse.Failure -> _state.update { it.copy(isSubmitting = false, errors = it.errors + ("SUBMIT" to r.message)) }
+                is ApiResponse.Failure -> _state.update { it.copy(isSubmitting = false, errors = it.errors + (ERR_SUBMIT to r.message)) }
             }
         }
     }

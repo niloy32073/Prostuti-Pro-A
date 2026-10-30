@@ -15,7 +15,7 @@ import com.prostuti.student.util.toBengaliDigits
  * All STATIC dummy content for group/live exams in one place — group names, members, the shared
  * MCQ bank, past-exam and ranking numbers. None of this is Room-backed: it never changes at
  * runtime. What a student actually *does* (routines they create, exams they submit, groups they
- * create/join) lives in Room instead (see `ExamDao`) so it survives the app restarting — this
+ * create/join) lives in Room instead (see `GroupRoutineDao` / `TimedExamAttemptDao` / `CreatedGroupDao` / `DemoExamWindowDao`) so it survives the app restarting — this
  * file only seeds the baseline a fresh install starts from.
  *
  * NOTE on declaration order: every `val` below that depends on another (e.g. [pastExamsByGroupId]

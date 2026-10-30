@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class ExamLeaderboardUiState(
     val isLoading: Boolean = true,
     val leaderboard: ExamLeaderboardData? = null,
@@ -41,7 +43,7 @@ class ExamLeaderboardViewModel(
                     if (r.errorCode == "404") {
                         it.copy(isLoading = false, notReadyYet = true)
                     } else {
-                        it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message))
+                        it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message))
                     }
                 }
             }

@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.prostuti.student.R
 import com.prostuti.student.data.repository.fake.FakeDataStoreStorageRepository
 import com.prostuti.student.domain.SaveBooleanToDataStoreUseCase
 import com.prostuti.student.ui.theme.ProstutiTheme
@@ -17,6 +19,10 @@ class OnboardingScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    // The default `values/` strings are Bangla and `values-en/` English; a plain test activity
+    // follows the device locale (MainActivity forces Bangla), so resolve text from resources.
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
     @Test
     fun onboardingScreen_displaysFirstCardAndSkipAction() {
         composeTestRule.setContent {
@@ -28,8 +34,8 @@ class OnboardingScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("হাজারো MCQ দিয়ে প্র্যাকটিস করো").assertIsDisplayed()
-        composeTestRule.onNodeWithText("স্কিপ").assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_card1_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_skip)).assertIsDisplayed()
     }
 
     @Test
@@ -44,7 +50,7 @@ class OnboardingScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("স্কিপ").performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_skip)).performClick()
         composeTestRule.waitUntil(timeoutMillis = 5_000) { finished }
     }
 }

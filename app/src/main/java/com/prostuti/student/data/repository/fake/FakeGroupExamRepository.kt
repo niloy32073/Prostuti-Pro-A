@@ -13,8 +13,9 @@ import com.prostuti.student.data.model.response.MyTimedExamSubmission
 import com.prostuti.student.data.model.response.TimedExam
 import com.prostuti.student.data.repository.GroupExamRepository
 import com.prostuti.student.data.repository.TimedExamRepository
+import com.prostuti.student.data.service.local.CreatedGroupDao
 import com.prostuti.student.data.service.local.CreatedGroupEntity
-import com.prostuti.student.data.service.local.ExamDao
+import com.prostuti.student.data.service.local.GroupRoutineDao
 import com.prostuti.student.data.service.local.GroupRoutineEntity
 import com.prostuti.student.util.TimeProvider
 import com.prostuti.student.util.toBengaliDigits
@@ -22,13 +23,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 class FakeGroupExamRepository(
-    private val dao: ExamDao,
+    private val createdGroupDao: CreatedGroupDao,
+    private val groupRoutineDao: GroupRoutineDao,
     private val timedExamRepository: TimedExamRepository,
     private val time: TimeProvider
 ) : GroupExamRepository {
 
     override fun myGroups(): Flow<ApiResponse<List<Group>>> = flow {
-        val created = dao.getCreatedGroups().map { it.toGroup() }
+        val created = createdGroupDao.getAll().map { it.toGroup() }
         emit(ApiResponse.Success(ExamDummyData.staticGroups + created))
     }
 
@@ -73,7 +75,7 @@ class FakeGroupExamRepository(
         }
 
         val now = time.nowEpochMillis()
-        dao.upsertRoutine(
+        groupRoutineDao.upsert(
             GroupRoutineEntity(
                 groupId = groupId,
                 subjectIdsCsv = request.subjectIds.joinToString(","),
@@ -106,7 +108,7 @@ class FakeGroupExamRepository(
         val id = "created_${time.nowEpochMillis()}"
         val code = generateJoinCode()
         val now = time.nowEpochMillis()
-        dao.upsertCreatedGroup(CreatedGroupEntity(id, nameBn, GroupRole.ADMIN.name, code, now))
+        createdGroupDao.upsert(CreatedGroupEntity(id, nameBn, GroupRole.ADMIN.name, code, now))
         return ApiResponse.Success(Group(id, nameBn, memberCount = 1, myRole = GroupRole.ADMIN, joinCode = code))
     }
 
@@ -114,13 +116,13 @@ class FakeGroupExamRepository(
         val normalized = code.trim().uppercase()
         if (normalized == ExamDummyData.PUBLIC_JOIN_CODE) {
             val id = "joined_public"
-            if (dao.getCreatedGroup(id) != null) {
+            if (createdGroupDao.getById(id) != null) {
                 return ApiResponse.Failure("তুমি আগেই এই গ্রুপে আছো", "ALREADY_MEMBER")
             }
-            dao.upsertCreatedGroup(CreatedGroupEntity(id, ExamDummyData.PUBLIC_JOIN_GROUP_NAME, GroupRole.MEMBER.name, normalized, time.nowEpochMillis()))
+            createdGroupDao.upsert(CreatedGroupEntity(id, ExamDummyData.PUBLIC_JOIN_GROUP_NAME, GroupRole.MEMBER.name, normalized, time.nowEpochMillis()))
             return ApiResponse.Success(Group(id, ExamDummyData.PUBLIC_JOIN_GROUP_NAME, memberCount = 24, myRole = GroupRole.MEMBER, joinCode = normalized))
         }
-        if (dao.findCreatedGroupByJoinCode(normalized) != null || ExamDummyData.staticGroups.any { it.joinCode == normalized }) {
+        if (createdGroupDao.findByJoinCode(normalized) != null || ExamDummyData.staticGroups.any { it.joinCode == normalized }) {
             return ApiResponse.Failure("তুমি আগেই এই গ্রুপে আছো", "ALREADY_MEMBER")
         }
         return ApiResponse.Failure("কোডটি সঠিক নয়", "INVALID_CODE")
@@ -136,11 +138,11 @@ class FakeGroupExamRepository(
     }
 
     private suspend fun findGroup(groupId: String): Group? =
-        ExamDummyData.staticGroups.find { it.id == groupId } ?: dao.getCreatedGroup(groupId)?.toGroup()
+        ExamDummyData.staticGroups.find { it.id == groupId } ?: createdGroupDao.getById(groupId)?.toGroup()
 
     private suspend fun resolveRoutine(groupId: String): GroupRoutineSummary? {
         ExamDummyData.staticRoutineByGroupId[groupId]?.let { return it }
-        val entity = dao.getRoutine(groupId) ?: return null
+        val entity = groupRoutineDao.getByGroupId(groupId) ?: return null
         return GroupRoutineSummary(
             subjectCount = entity.subjectIdsCsv.splitNonBlank().size,
             chapterCount = entity.chapterIdsCsv.splitNonBlank().size,

@@ -15,6 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_ATTEMPT = "ATTEMPT"
+private const val ERR_BOARD_LOAD = "BOARD_LOAD"
+private const val ERR_COLLEGE_LOAD = "COLLEGE_LOAD"
+
 enum class MCQListTab { BOARD, COLLEGE }
 
 data class MCQExamListUiState(
@@ -73,7 +77,7 @@ class MCQExamListViewModel(
                     )
                 }
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(isLoading = false, errors = it.errors + ("BOARD_LOAD" to r.message))
+                    it.copy(isLoading = false, errors = it.errors + (ERR_BOARD_LOAD to r.message))
                 }
             }
         }
@@ -92,7 +96,7 @@ class MCQExamListViewModel(
                     )
                 }
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(isLoading = false, errors = it.errors + ("COLLEGE_LOAD" to r.message))
+                    it.copy(isLoading = false, errors = it.errors + (ERR_COLLEGE_LOAD to r.message))
                 }
             }
         }
@@ -106,7 +110,7 @@ class MCQExamListViewModel(
                     it.copy(isAttempting = false, navigateToExam = Pair(r.data, exam))
                 }
                 is ApiResponse.Failure -> _state.update {
-                    it.copy(isAttempting = false, errors = it.errors + ("ATTEMPT" to r.message))
+                    it.copy(isAttempting = false, errors = it.errors + (ERR_ATTEMPT to r.message))
                 }
             }
         }

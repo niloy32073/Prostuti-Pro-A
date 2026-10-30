@@ -12,6 +12,7 @@ import com.prostuti.student.domain.FetchMyGroupsUseCase
 import com.prostuti.student.domain.JoinGroupUseCase
 import com.prostuti.student.domain.TimedExamStateDeriver
 import com.prostuti.student.util.TimeProvider
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -20,6 +21,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+private const val ERR_LOAD = "LOAD"
 
 enum class GroupListBadge { NONE, NO_ROUTINE, OPEN, SUBMITTED, CLOSED }
 
@@ -46,12 +49,15 @@ class GroupListViewModel(
     private val _state = MutableStateFlow(GroupListUiState())
     val state: StateFlow<GroupListUiState> = _state.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init { load() }
 
     fun refresh() = load()
 
     private fun load() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             fetchMyGroupsUseCase().collect { r ->
                 when (r) {
@@ -60,7 +66,7 @@ class GroupListViewModel(
                         _state.update { it.copy(isLoading = false, rows = rows) }
                     }
                     is ApiResponse.Failure -> _state.update {
-                        it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message))
+                        it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message))
                     }
                 }
             }

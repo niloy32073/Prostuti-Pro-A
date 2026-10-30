@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,8 +59,8 @@ fun ReadOnlyMcqCard(
     onSubmitReport: (reason: String, detail: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showExplanation by remember { mutableStateOf(false) }
-    var showReport by remember { mutableStateOf(false) }
+    var showExplanation by rememberSaveable { mutableStateOf(false) }
+    var showReport by rememberSaveable { mutableStateOf(false) }
 
     if (showExplanation) {
         ReadOnlyMcqExplanationDialog(question = question, onDismiss = { showExplanation = false })

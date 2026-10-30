@@ -9,7 +9,9 @@ import com.prostuti.student.data.model.response.RankRow
 import com.prostuti.student.data.model.response.TimedExamAnswerSheet
 import com.prostuti.student.data.model.response.WindowRanking
 import com.prostuti.student.data.repository.TimedExamRepository
-import com.prostuti.student.data.service.local.ExamDao
+import com.prostuti.student.data.service.local.DemoExamWindowDao
+import com.prostuti.student.data.service.local.GroupRoutineDao
+import com.prostuti.student.data.service.local.TimedExamAttemptDao
 import com.prostuti.student.data.service.local.TimedExamAttemptEntity
 import com.prostuti.student.domain.TimedExamStateDeriver
 import com.prostuti.student.util.TimeProvider
@@ -18,7 +20,9 @@ import com.prostuti.student.util.toBengaliDigits
 private data class ScoreResult(val correct: Int, val wrong: Int, val unanswered: Int, val marks: Float)
 
 class FakeTimedExamRepository(
-    private val dao: ExamDao,
+    private val attemptDao: TimedExamAttemptDao,
+    private val demoWindowDao: DemoExamWindowDao,
+    private val groupRoutineDao: GroupRoutineDao,
     private val time: TimeProvider
 ) : TimedExamRepository {
 
@@ -28,7 +32,7 @@ class FakeTimedExamRepository(
         if (examId.startsWith("grp_")) {
             val groupId = examId.removePrefix("grp_")
             ExamDummyData.staticRoutineByGroupId[groupId]?.let { return it.examDurationMinutes }
-            dao.getRoutine(groupId)?.let { return it.examDurationMinutes }
+            groupRoutineDao.getByGroupId(groupId)?.let { return it.examDurationMinutes }
         } else {
             ExamDummyData.liveExams.find { it.examId == examId }?.let { return it.examDurationMinutes }
         }
@@ -36,7 +40,7 @@ class FakeTimedExamRepository(
     }
 
     override suspend fun resolveWindow(examId: String): Pair<Long, Long> {
-        dao.getDemoWindow(examId)?.let { return it.windowStartEpochMillis to it.windowEndEpochMillis }
+        demoWindowDao.getByExamId(examId)?.let { return it.windowStartEpochMillis to it.windowEndEpochMillis }
         val baseline = ExamDummyData.windowBaselineByExamId[examId]
         val now = time.nowEpochMillis()
         val (start, end) = if (baseline != null) {
@@ -51,26 +55,26 @@ class FakeTimedExamRepository(
     }
 
     override suspend fun registerWindow(examId: String, windowStartEpochMillis: Long, windowEndEpochMillis: Long) {
-        dao.upsertDemoWindow(
+        demoWindowDao.upsert(
             com.prostuti.student.data.service.local.DemoExamWindowEntity(examId, windowStartEpochMillis, windowEndEpochMillis)
         )
     }
 
     override suspend fun mySubmission(examId: String): MyTimedExamSubmission? {
-        val row = dao.getAttempt(examId) ?: return null
+        val row = attemptDao.getByExamId(examId) ?: return null
         val submittedAt = row.submittedAtEpochMillis ?: return null
         return MyTimedExamSubmission(submittedAt, row.timeTakenSeconds, row.autoSubmitted)
     }
 
     override suspend fun inProgressAnswers(examId: String): Map<String, String> =
-        parseAnswers(dao.getAttempt(examId)?.answersCsv ?: "")
+        parseAnswers(attemptDao.getByExamId(examId)?.answersCsv ?: "")
 
     override suspend fun saveAnswer(examId: String, kind: TimedExamKind, mcqId: String, optionId: String) {
-        val existing = dao.getAttempt(examId)
+        val existing = attemptDao.getByExamId(examId)
         if (existing?.submittedAtEpochMillis != null) return // already submitted — nothing more to save
         val answers = parseAnswers(existing?.answersCsv ?: "").toMutableMap()
         answers[mcqId] = optionId
-        dao.upsertAttempt(
+        attemptDao.upsert(
             TimedExamAttemptEntity(
                 examId = examId,
                 kind = kind.name,
@@ -81,7 +85,7 @@ class FakeTimedExamRepository(
     }
 
     override suspend fun submit(examId: String, kind: TimedExamKind): ApiResponse<MyTimedExamSubmission> {
-        val existing = dao.getAttempt(examId)
+        val existing = attemptDao.getByExamId(examId)
         if (existing?.submittedAtEpochMillis != null) {
             return ApiResponse.Success(MyTimedExamSubmission(existing.submittedAtEpochMillis, existing.timeTakenSeconds, existing.autoSubmitted))
         }
@@ -91,7 +95,7 @@ class FakeTimedExamRepository(
         val (markPerQuestion, negativeMark) = resolveMarkingScheme(examId)
         val score = scoreAnswers(answers, markPerQuestion, negativeMark)
         val timeTakenSeconds = ((now - startedAt) / 1000).toInt().coerceAtLeast(0)
-        dao.upsertAttempt(
+        attemptDao.upsert(
             TimedExamAttemptEntity(
                 examId = examId, kind = kind.name, answersCsv = serializeAnswers(answers),
                 startedAtEpochMillis = startedAt, submittedAtEpochMillis = now,
@@ -103,14 +107,14 @@ class FakeTimedExamRepository(
     }
 
     override suspend fun autoSubmitAbandonedAttempt(examId: String, kind: TimedExamKind): MyTimedExamSubmission? {
-        val existing = dao.getAttempt(examId) ?: return null
+        val existing = attemptDao.getByExamId(examId) ?: return null
         if (existing.submittedAtEpochMillis != null) return null // nothing abandoned — already final
         val now = time.nowEpochMillis()
         val answers = parseAnswers(existing.answersCsv)
         val (markPerQuestion, negativeMark) = resolveMarkingScheme(examId)
         val score = scoreAnswers(answers, markPerQuestion, negativeMark)
         val timeTakenSeconds = ((now - existing.startedAtEpochMillis) / 1000).toInt().coerceAtLeast(0)
-        dao.upsertAttempt(
+        attemptDao.upsert(
             existing.copy(
                 submittedAtEpochMillis = now, correctCount = score.correct, wrongCount = score.wrong,
                 unansweredCount = score.unanswered, totalMarks = score.marks,
@@ -124,7 +128,7 @@ class FakeTimedExamRepository(
         val seed = ExamDummyData.rankingByExamId[examId]
             ?: return ApiResponse.Failure("এই এক্সামের র‍্যাংকিং পাওয়া যায়নি", "NOT_FOUND")
         val myRow = seed.myRank?.let { rank ->
-            val myScoreLabel = dao.getAttempt(examId)?.takeIf { it.submittedAtEpochMillis != null }
+            val myScoreLabel = attemptDao.getByExamId(examId)?.takeIf { it.submittedAtEpochMillis != null }
                 ?.let { "${it.correctCount.toBengaliDigits()}/২৫" }
                 ?: ExamDummyData.historicalScoreLabel
             RankRow(rank = rank, name = "নিফা রহমান", initial = "নি", scoreLabel = myScoreLabel, isMe = true)
@@ -140,7 +144,7 @@ class FakeTimedExamRepository(
     }
 
     override suspend fun myAnswerSheet(examId: String): ApiResponse<TimedExamAnswerSheet> {
-        val attempt = dao.getAttempt(examId)?.takeIf { it.submittedAtEpochMillis != null }
+        val attempt = attemptDao.getByExamId(examId)?.takeIf { it.submittedAtEpochMillis != null }
         val answers = attempt?.let { parseAnswers(it.answersCsv) } ?: ExamDummyData.historicalMockAnswers
         val (markPerQuestion, negativeMark) = resolveMarkingScheme(examId)
         val score = scoreAnswers(answers, markPerQuestion, negativeMark)
@@ -163,7 +167,7 @@ class FakeTimedExamRepository(
             TimedExamState.OPEN_NOT_SUBMITTED -> {
                 val (markPerQuestion, negativeMark) = resolveMarkingScheme(examId)
                 val score = scoreAnswers(ExamDummyData.historicalMockAnswers, markPerQuestion, negativeMark)
-                dao.upsertAttempt(
+                attemptDao.upsert(
                     TimedExamAttemptEntity(
                         examId = examId, kind = kind.name, answersCsv = serializeAnswers(ExamDummyData.historicalMockAnswers),
                         startedAtEpochMillis = now - 60_000, submittedAtEpochMillis = now,
@@ -174,8 +178,8 @@ class FakeTimedExamRepository(
             }
             TimedExamState.OPEN_SUBMITTED -> registerWindow(examId, start, now - 1_000)
             TimedExamState.CLOSED -> {
-                dao.deleteAttempt(examId)
-                dao.deleteDemoWindow(examId)
+                attemptDao.deleteByExamId(examId)
+                demoWindowDao.deleteByExamId(examId)
                 // Re-resolve against a fresh baseline so the cycle can repeat; a no-op for exams
                 // without a baseline (e.g. a routine the admin just created).
                 resolveWindow(examId)
@@ -189,7 +193,7 @@ class FakeTimedExamRepository(
             ExamDummyData.staticRoutineByGroupId[groupId]?.let {
                 return it.markPerQuestion to (if (it.negativeMarkingEnabled) it.negativeMark else 0f)
             }
-            dao.getRoutine(groupId)?.let {
+            groupRoutineDao.getByGroupId(groupId)?.let {
                 return it.markPerQuestion to (if (it.negativeMarkingEnabled) it.negativeMark else 0f)
             }
         } else {

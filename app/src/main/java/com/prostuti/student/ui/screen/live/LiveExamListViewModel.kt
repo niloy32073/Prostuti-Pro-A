@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class LiveExamRow(val exam: TimedExam, val state: TimedExamState)
 
 data class LiveExamListUiState(
@@ -48,7 +50,7 @@ class LiveExamListViewModel(
                     }
                     _state.update { it.copy(isLoading = false, rows = rows) }
                 }
-                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
             }
         }
     }

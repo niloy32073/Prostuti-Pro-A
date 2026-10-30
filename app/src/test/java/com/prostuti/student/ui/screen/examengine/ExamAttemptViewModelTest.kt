@@ -13,6 +13,7 @@ import com.prostuti.student.domain.SubmitMcqReportUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -24,6 +25,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/** Fakes return immediately, so the init load settles inside construction; tests assert the
+ * settled state rather than the conflated transient emissions. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExamAttemptViewModelTest {
 
@@ -55,29 +58,22 @@ class ExamAttemptViewModelTest {
     fun `resumeAttempt success loads questions and duration when nothing is stashed`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData(questions = listOf(fakeQuestion())))
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            val initial = awaitItem()
-            assertTrue(initial.questions.isEmpty())
-
-            val loaded = awaitItem()
-            assertEquals(1, loaded.questions.size)
-            assertEquals(600, loaded.totalDurationSeconds) // duration=10min -> 600s
-            assertEquals(600, loaded.timeRemainingSeconds)
-            assertEquals(1, fakeRepo.getAttemptQuestionsCallCount)
-        }
+        val loaded = viewModel.state.value
+        assertEquals(1, loaded.questions.size)
+        assertEquals(600, loaded.totalDurationSeconds) // duration=10min -> 600s
+        assertEquals(600, loaded.timeRemainingSeconds)
+        assertEquals(1, fakeRepo.getAttemptQuestionsCallCount)
     }
 
     @Test
     fun `resumeAttempt failure populates RESUME error`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Failure(message = "Attempt not found", errorCode = "404")
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            awaitItem() // initial
-            val errorState = awaitItem()
-            assertEquals("Attempt not found", errorState.errors["RESUME"])
-        }
+        assertEquals("Attempt not found", viewModel.state.value.errors["RESUME"])
     }
 
     @Test
@@ -96,7 +92,7 @@ class ExamAttemptViewModelTest {
     fun `selectAnswer records the answer locally and syncs it to the repository`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData(questions = listOf(fakeQuestion(mcqId = "mcq1"))))
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() } // drain initial + loaded
+        advanceUntilIdle()
 
         viewModel.selectAnswer("mcq1", "o1")
         testDispatcher.scheduler.advanceUntilIdle()
@@ -111,7 +107,7 @@ class ExamAttemptViewModelTest {
     fun `tickTimer decrements remaining time and opens the submit dialog at zero`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         // Drive the timer to zero one tick at a time using the real duration (10 min = 600s).
         repeat(600) { viewModel.tickTimer() }
@@ -125,7 +121,7 @@ class ExamAttemptViewModelTest {
     fun `tickTimer never goes below zero`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         repeat(650) { viewModel.tickTimer() } // 50 extra ticks past zero
         assertEquals(0, viewModel.state.value.timeRemainingSeconds)
@@ -136,7 +132,7 @@ class ExamAttemptViewModelTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         fakeRepo.submitAttemptResult = ApiResponse.Success(FakeExamAttemptRepositoryForEngineTest.defaultResult())
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
         viewModel.showSubmitDialog()
 
         viewModel.submitExam()
@@ -153,7 +149,7 @@ class ExamAttemptViewModelTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         fakeRepo.submitAttemptResult = ApiResponse.Failure(message = "Network error", errorCode = "NETWORK_ERROR")
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         viewModel.submitExam()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -169,7 +165,7 @@ class ExamAttemptViewModelTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         fakeRepo.submitAttemptResult = ApiResponse.Success(FakeExamAttemptRepositoryForEngineTest.defaultResult())
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         viewModel.submitExam()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -187,7 +183,7 @@ class ExamAttemptViewModelTest {
     fun `toggleFavorite adds then removes an mcq id`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         viewModel.toggleFavorite("mcq1")
         assertTrue("mcq1" in viewModel.state.value.favoriteMcqIds)
@@ -200,7 +196,7 @@ class ExamAttemptViewModelTest {
     fun `submitReport success sets a confirmation message`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         viewModel.submitReport("mcq1", reason = "wrong_answer", description = "")
         testDispatcher.scheduler.advanceUntilIdle()
@@ -216,7 +212,7 @@ class ExamAttemptViewModelTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         fakeRepo.reportMcqResult = ApiResponse.Failure(message = "Report failed", errorCode = "ERR")
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         viewModel.submitReport("mcq1", reason = "wrong_answer", description = "")
         testDispatcher.scheduler.advanceUntilIdle()
@@ -228,7 +224,7 @@ class ExamAttemptViewModelTest {
     fun `clearError removes only the targeted tag`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Failure(message = "boom", errorCode = "404")
         val viewModel = buildViewModel()
-        viewModel.state.test { awaitItem(); awaitItem() }
+        advanceUntilIdle()
 
         assertEquals("boom", viewModel.state.value.errors["RESUME"])
         viewModel.clearError("RESUME")
@@ -244,13 +240,10 @@ class ExamAttemptViewModelTest {
             com.prostuti.student.data.model.response.FetchPassageData(id = "p1", passageText = "passage body")
         )
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            awaitItem() // initial
-            awaitItem() // questions loaded
-            val withPassage = awaitItem()
-            assertEquals("passage body", withPassage.passages["p1"]?.passageText)
-        }
+        assertEquals("passage body", viewModel.state.value.passages["p1"]?.passageText)
+        assertEquals(1, viewModel.state.value.questions.size)
     }
 
     @Test
@@ -260,12 +253,9 @@ class ExamAttemptViewModelTest {
         )
         fakeRepo.fetchPassageResult = ApiResponse.Failure(message = "passage missing", errorCode = "404")
         val viewModel = buildViewModel()
+        advanceUntilIdle()
 
-        viewModel.state.test {
-            awaitItem() // initial
-            awaitItem() // questions loaded
-            val errorState = awaitItem()
-            assertEquals("passage missing", errorState.errors["PASSAGE_p1"])
-        }
+        assertEquals("passage missing", viewModel.state.value.errors["PASSAGE_p1"])
+        assertEquals(1, viewModel.state.value.questions.size)
     }
 }

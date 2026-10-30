@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,7 +29,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,6 +43,7 @@ import com.prostuti.student.data.model.response.MCQReviewQuestionResponse
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.MathText
 import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -56,7 +57,7 @@ fun ExamAnswerSheetScreen(
     onBack: () -> Unit,
     viewModel: ExamAnswerSheetViewModel = koinViewModel(parameters = { parametersOf(attemptId) })
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     ObserveErrors(
@@ -139,29 +140,22 @@ fun ExamAnswerSheetScreen(
                     )
                 }
             } else {
-                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val columns = when {
-                        maxWidth >= 840.dp -> 3
-                        maxWidth >= 600.dp -> 2
-                        else -> 1
-                    }
-                    val hPadding = if (columns > 1) 8.dp else 16.dp
-                    val hSpacing = if (columns > 1) 8.dp else 0.dp
-
-                    LazyVerticalStaggeredGrid(
-                        columns = StaggeredGridCells.Fixed(columns),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = hPadding, end = hPadding, bottom = 16.dp),
-                        verticalItemSpacing = 10.dp,
-                        horizontalArrangement = Arrangement.spacedBy(hSpacing)
-                    ) {
-                        items(filtered, key = { it.mcqId }) { question ->
-                            AnswerSheetItem(
-                                question = question,
-                                isExpanded = state.expandedMcqId == question.mcqId,
-                                onToggle = { viewModel.toggleExpanded(question.mcqId) }
-                            )
-                        }
+                val columns = adaptiveColumnCount()
+                val hPadding = if (columns > 1) 8.dp else 16.dp
+                LazyVerticalStaggeredGrid(
+                    columns = StaggeredGridCells.Fixed(columns),
+                    state = rememberLazyStaggeredGridState(),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = hPadding, end = hPadding, bottom = 16.dp),
+                    verticalItemSpacing = 10.dp,
+                    horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 8.dp else 0.dp)
+                ) {
+                    items(filtered, key = { it.mcqId }) { question ->
+                        AnswerSheetItem(
+                            question = question,
+                            isExpanded = state.expandedMcqId == question.mcqId,
+                            onToggle = { viewModel.toggleExpanded(question.mcqId) }
+                        )
                     }
                 }
             }

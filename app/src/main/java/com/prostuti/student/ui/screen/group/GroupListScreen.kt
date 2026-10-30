@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,7 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.prostuti.student.data.model.enums.GroupRole
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.screen.group.component.GroupCreateJoinSheet
 import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.util.toBengaliDigits
@@ -56,7 +57,7 @@ fun GroupListScreen(
     onNavigateToGroup: (String) -> Unit,
     viewModel: GroupListViewModel = koinViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val sheetState = rememberModalBottomSheetState()
 
@@ -127,24 +128,17 @@ fun GroupListScreen(
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else {
-                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val columns = when {
-                        maxWidth >= 840.dp -> 3
-                        maxWidth >= 600.dp -> 2
-                        else -> 1
-                    }
-                    val hSpacing = if (columns > 1) 10.dp else 0.dp
-
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(columns),
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(hSpacing)
-                    ) {
-                        items(state.rows, key = { it.group.id }) { row ->
-                            GroupListCard(row = row, onClick = { onNavigateToGroup(row.group.id) })
-                        }
+                val columns = adaptiveColumnCount()
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    state = rememberLazyGridState(),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 10.dp else 0.dp)
+                ) {
+                    items(state.rows, key = { it.group.id }) { row ->
+                        GroupListCard(row = row, onClick = { onNavigateToGroup(row.group.id) })
                     }
                 }
             }

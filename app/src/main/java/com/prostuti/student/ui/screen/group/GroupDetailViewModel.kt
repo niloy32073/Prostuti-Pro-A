@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_LOAD = "LOAD"
+
 data class GroupDetailUiState(
     val isLoading: Boolean = true,
     val detail: GroupDetail? = null,
@@ -51,7 +53,7 @@ class GroupDetailViewModel(
             _state.update { it.copy(isLoading = true) }
             when (val r = fetchGroupDetailUseCase(groupId)) {
                 is ApiResponse.Success -> _state.update { it.copy(isLoading = false, detail = r.data, now = timeProvider.nowEpochMillis()) }
-                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + ("LOAD" to r.message)) }
+                is ApiResponse.Failure -> _state.update { it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message)) }
             }
         }
     }
