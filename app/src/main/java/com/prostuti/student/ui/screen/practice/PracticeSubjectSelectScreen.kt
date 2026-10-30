@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,8 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -93,17 +95,28 @@ fun PracticeSubjectSelectScreen(
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                ) {
-                    items(state.subjects, key = { it.id }) { subject ->
-                        PracticeSubjectCheckRow(
-                            subject = subject,
-                            checked = subject.id in state.selectedIds,
-                            onToggle = { viewModel.toggleSubject(subject.id) },
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
+                BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    val columns = when {
+                        maxWidth >= 840.dp -> 3
+                        maxWidth >= 600.dp -> 2
+                        else -> 1
+                    }
+                    val hSpacing = if (columns > 1) 8.dp else 0.dp
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(columns),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(hSpacing)
+                    ) {
+                        items(state.subjects, key = { it.id }) { subject ->
+                            PracticeSubjectCheckRow(
+                                subject = subject,
+                                checked = subject.id in state.selectedIds,
+                                onToggle = { viewModel.toggleSubject(subject.id) },
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
                     }
                 }
             }

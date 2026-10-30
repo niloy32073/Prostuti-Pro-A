@@ -225,8 +225,12 @@ val appModule = module {
     }
 
     single<AppDatabase> {
+        // No blanket fallbackToDestructiveMigration: GroupRoutineEntity, TimedExamAttemptEntity,
+        // DemoExamWindowEntity and CreatedGroupEntity hold user-generated data, not re-fetchable
+        // cache, so a future version bump must ship a real Migration(from, to) instead of wiping it.
+        // Downgrades (e.g. a dev reinstalling an older build) are still safe to wipe.
         Room.databaseBuilder(androidContext(), AppDatabase::class.java, "prostuti-db")
-            .fallbackToDestructiveMigration(true)
+            .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
     }
     single { get<AppDatabase>().subjectDao() }

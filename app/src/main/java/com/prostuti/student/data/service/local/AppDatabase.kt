@@ -13,7 +13,7 @@ import com.prostuti.student.data.model.response.Topic
         DemoExamWindowEntity::class, CreatedGroupEntity::class
     ],
     version = 3,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun subjectDao(): SubjectDao
