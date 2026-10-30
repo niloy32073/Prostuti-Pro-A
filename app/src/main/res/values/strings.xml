@@ -1,0 +1,185 @@
+<resources>
+    <string name="app_name">Prostuti</string>
+
+    <!-- Shared / common -->
+    <string name="back">পেছনে যাও</string>
+    <string name="change">পরিবর্তন করো</string>
+    <string name="or_divider">অথবা</string>
+    <string name="continue_action">চালিয়ে যাও</string>
+    <string name="email_or_phone_label">ইমেইল বা মোবাইল নম্বর</string>
+    <string name="email_or_phone_placeholder">ইমেইল অথবা মোবাইল নম্বর লিখো</string>
+    <string name="password_label">পাসওয়ার্ড</string>
+    <string name="password_placeholder">পাসওয়ার্ড লিখো</string>
+    <string name="new_password_placeholder">নতুন পাসওয়ার্ড লিখো</string>
+    <string name="confirm_password_placeholder">পাসওয়ার্ড আবার লিখো</string>
+    <string name="password_show">পাসওয়ার্ড দেখাও</string>
+    <string name="password_hide">পাসওয়ার্ড লুকাও</string>
+    <string name="password_rules_hint">কমপক্ষে ৮ ক্যারেক্টার, অন্তত ১টা সংখ্যা থাকতে হবে</string>
+    <string name="otp_label">ভেরিফিকেশন কোড</string>
+    <string name="otp_placeholder">৬ ডিজিটের কোড</string>
+    <string name="otp_resend_question">কোড পাওনি?</string>
+    <string name="otp_resend_countdown">%1$d সেকেন্ড পর আবার পাঠাও</string>
+    <string name="otp_resend_action">আবার পাঠাও</string>
+    <string name="otp_verify_action">যাচাই করো</string>
+
+    <!-- Validation error messages -->
+    <string name="error_identifier_required">ইমেইল বা মোবাইল নম্বর লিখো</string>
+    <string name="error_invalid_email">সঠিক ইমেইল ঠিকানা লিখো</string>
+    <string name="error_invalid_phone">সঠিক মোবাইল নম্বর লিখো (০১XXXXXXXXX)</string>
+    <string name="error_password_min_6">পাসওয়ার্ড কমপক্ষে ৬ ক্যারেক্টার হতে হবে</string>
+    <string name="error_password_min_8">কমপক্ষে ৮ ক্যারেক্টার হতে হবে</string>
+    <string name="error_password_needs_digit">অন্তত ১টা সংখ্যা থাকতে হবে</string>
+    <string name="error_name_min_2">নাম কমপক্ষে ২ ক্যারেক্টার হতে হবে</string>
+    <string name="error_confirm_password_required">পাসওয়ার্ড আবার লিখো</string>
+    <string name="error_passwords_dont_match">পাসওয়ার্ড মিলছে না</string>
+    <string name="error_otp_required">৬ ডিজিটের কোড লিখো</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">স্কিপ</string>
+    <string name="onboarding_next">এগিয়ে যাও</string>
+    <string name="onboarding_start">শুরু করো</string>
+    <string name="onboarding_card1_title">হাজারো MCQ দিয়ে প্র্যাকটিস করো</string>
+    <string name="onboarding_card1_desc">চ্যাপ্টার ও টপিক ভিত্তিক প্র্যাকটিস, সাথে হিন্ট আর বিস্তারিত ব্যাখ্যা।</string>
+    <string name="onboarding_card2_title">বন্ধুদের সাথে গ্রুপ ও লাইভ এক্সামে লড়াই করো</string>
+    <string name="onboarding_card2_desc">গ্রুপ এক্সাম, ব্যাটেল, সারভাইভাল মোড আর লিডারবোর্ড — একসাথে প্রতিযোগিতা।</string>
+    <string name="onboarding_card3_title">রুটিন বানাও, অ্যাডমিশন ডেডলাইন ট্র্যাক করো</string>
+    <string name="onboarding_card3_desc">নিজের রুটিন সাজাও আর ভর্তি পরীক্ষার প্রতিটা ধাপের রিমাইন্ডার পাও।</string>
+    <string name="onboarding_card4_title">কনসেপ্ট থেকে প্রশ্ন ব্যাংক — সব এক জায়গায়</string>
+    <string name="onboarding_card4_desc">কনসেপ্ট ক্লারিটি, বোর্ড-কলেজ প্রশ্ন ব্যাংক আর ম্যাথ সমাধান একসাথে।</string>
+    <string name="onboarding_card5_title">তোমার প্রস্তুতি, তোমার গতিতে</string>
+    <string name="onboarding_card5_desc">চলো শুরু করি — তোমার HSC প্রস্তুতি আরও সহজ করে তুলি।</string>
+
+    <!-- AuthStart -->
+    <string name="auth_exit_title">অ্যাপ থেকে বের হতে চাও?</string>
+    <string name="auth_exit_yes">হ্যাঁ</string>
+    <string name="auth_exit_no">না</string>
+    <string name="auth_start_title">চলো শুরু করি</string>
+    <string name="auth_start_subtitle">ইমেইল বা মোবাইল নম্বর দিয়ে চালিয়ে যাও</string>
+    <string name="auth_continue_with_google">Google দিয়ে চালিয়ে যাও</string>
+    <string name="auth_continue_with_facebook">Facebook দিয়ে চালিয়ে যাও</string>
+    <string name="auth_social_coming_soon_google">Google সাইন-ইন শীঘ্রই আসছে</string>
+    <string name="auth_social_coming_soon_facebook">Facebook সাইন-ইন শীঘ্রই আসছে</string>
+    <string name="auth_terms_notice">চালিয়ে যাওয়ার মাধ্যমে তুমি আমাদের শর্তাবলী ও প্রাইভেসি পলিসিতে সম্মত হচ্ছ।</string>
+    <!-- Shown in the detail pane on medium/expanded screens before a login/signup step is chosen -->
+    <string name="auth_detail_placeholder_title">তোমার তথ্য দিয়ে শুরু করো</string>
+    <string name="auth_detail_placeholder_subtitle">ইমেইল বা মোবাইল নম্বর দিলে পরের ধাপ এই পাশে দেখাবো।</string>
+
+    <!-- AuthLogin -->
+    <string name="auth_login_welcome_named">ওয়েলকাম, %1$s 👋</string>
+    <string name="auth_login_welcome">ওয়েলকাম 👋</string>
+    <string name="auth_login_subtitle">আবার লগ ইন করতে পাসওয়ার্ড দাও</string>
+    <string name="auth_forgot_password">পাসওয়ার্ড ভুলে গেছো?</string>
+
+    <!-- AuthSignup -->
+    <string name="auth_signup_title">অ্যাকাউন্ট তৈরি করো</string>
+    <string name="auth_signup_subtitle">তোমার তথ্য দিয়ে প্রোফাইল তৈরি করো</string>
+    <string name="first_name_label">ফার্স্ট নেম</string>
+    <string name="first_name_placeholder">নিফা</string>
+    <string name="last_name_label">লাস্ট নেম</string>
+    <string name="last_name_placeholder">রহমান</string>
+    <string name="auth_signup_action">সাইন আপ করো</string>
+
+    <!-- AuthVerifyOtp -->
+    <string name="auth_verify_otp_title">তোমার নম্বর ভেরিফাই করো</string>
+    <string name="auth_verify_otp_subtitle">একটা ৬ ডিজিটের ভেরিফিকেশন কোড পাঠানো হয়েছে — %1$s নম্বরে।</string>
+    <string name="auth_verify_otp_info_note">নম্বর বা ইমেইল ভুল হলে পেছনে গিয়ে ঠিক করে নিতে পারো — ভেরিফাই না হওয়া পর্যন্ত অ্যাকাউন্ট সক্রিয় হবে না।</string>
+
+    <!-- AuthResetRequest -->
+    <string name="auth_reset_request_subtitle">যে ইমেইল বা মোবাইল নম্বর দিয়ে অ্যাকাউন্ট খুলেছিলে সেটা লিখো — আমরা একটা ভেরিফিকেশন কোড পাঠাবো।</string>
+    <string name="auth_send_code">কোড পাঠাও</string>
+
+    <!-- AuthResetOtp -->
+    <string name="auth_reset_otp_title">কোড ভেরিফাই করো</string>
+    <string name="auth_reset_otp_subtitle">পাসওয়ার্ড রিসেট করার জন্য একটা ৬ ডিজিটের কোড পাঠানো হয়েছে — %1$s নম্বরে।</string>
+
+    <!-- AuthResetNewPassword -->
+    <string name="auth_reset_new_password_title">নতুন পাসওয়ার্ড দাও</string>
+    <string name="auth_reset_new_password_subtitle">কোড ভেরিফাই হয়েছে — এখন তোমার নতুন পাসওয়ার্ড সেট করো</string>
+    <string name="new_password_label">নতুন পাসওয়ার্ড</string>
+    <string name="confirm_password_label">পাসওয়ার্ড আবার লিখো</string>
+    <string name="auth_reset_password_action">পাসওয়ার্ড পরিবর্তন করো</string>
+
+    <!-- Bottom nav / rail -->
+    <string name="nav_home">হোম</string>
+    <string name="nav_question_bank">প্রশ্ন ব্যাংক</string>
+    <string name="nav_leaderboard">লিডারবোর্ড</string>
+    <string name="nav_routine">রুটিন</string>
+    <string name="nav_settings">সেটিংস</string>
+
+    <!-- Generic -->
+    <string name="feature_coming_soon">এই ফিচারটা শীঘ্রই আসছে</string>
+
+    <!-- Home -->
+    <string name="home_greeting_demo">হ্যালো, নিফা 👋</string>
+    <string name="home_batch_stream_demo">HSC ২০২৭ · বিজ্ঞান বিভাগ</string>
+    <string name="notifications">নোটিফিকেশন</string>
+    <string name="profile">প্রোফাইল</string>
+    <string name="home_live_exam_badge_demo">লাইভ এক্সাম · আগামীকাল ৮:০০ PM</string>
+    <string name="home_live_exam_title_demo">পদার্থবিজ্ঞান — মডেল টেস্ট ০৪</string>
+    <string name="home_live_exam_subtitle_demo">সম্পূর্ণ স্ট্রিমের সাথে একসাথে</string>
+    <string name="home_group_exam_badge_demo">গ্রুপ এক্সাম · ইনভাইট</string>
+    <string name="home_group_exam_title_demo">HSC ব্যাচ ২৭ · সাপ্তাহিক টেস্ট</string>
+    <string name="home_group_exam_subtitle_demo">উইন্ডো খোলা আছে আরও ৩ ঘণ্টা</string>
+    <string name="home_admission_title_demo">ঢাবি ক-ইউনিট ভর্তি ফরম</string>
+    <string name="home_admission_subtitle_demo">শেষ তারিখ আর ৫ দিন বাকি</string>
+    <string name="home_leaderboard_title">লিডারবোর্ড</string>
+    <string name="home_see_all">পুরোটা দেখো</string>
+    <string name="home_rank2_name_demo">রাফি</string>
+    <string name="home_rank2_initial_demo">র</string>
+    <string name="home_rank1_name_demo">সাদিয়া</string>
+    <string name="home_rank1_initial_demo">সা</string>
+    <string name="home_rank3_name_demo">ইমন</string>
+    <string name="home_rank3_initial_demo">ই</string>
+    <string name="home_my_rank_initial_demo">নি</string>
+    <string name="home_my_rank_label_demo">তুমি · নিফা</string>
+    <string name="home_my_rating_demo">রেটিং ১৪৮২</string>
+    <string name="home_my_rank_number_demo">#১৮</string>
+    <string name="home_quick_menu_title">কুইক মেনু</string>
+    <string name="qm_practice">প্র্যাকটিস</string>
+    <string name="qm_group">গ্রুপ</string>
+    <string name="qm_survival">সারভাইভাল</string>
+    <string name="qm_battle">ব্যাটেল</string>
+    <string name="qm_question_bank">প্রশ্ন ব্যাংক</string>
+    <string name="qm_math">ম্যাথ</string>
+    <string name="qm_concepts">কনসেপ্টস</string>
+    <string name="qm_routine">রুটিন</string>
+    <string name="qm_admission">অ্যাডমিশন</string>
+    <string name="qm_playground">প্লেগ্রাউন্ড</string>
+    <string name="qm_magazine">ম্যাগাজিন</string>
+    <string name="qm_ebook">ইবুক</string>
+    <string name="home_magazine_ebook_note">ম্যাগাজিন ও ইবুক শীঘ্রই আসছে</string>
+    <string name="home_continue_title_demo">চালিয়ে যাও</string>
+    <string name="home_continue_subtitle_demo">রসায়ন ২য় পত্র — ১৩/২৫ প্রশ্ন বাকি</string>
+    <string name="ai_chat_coming_soon">AI চ্যাট — শীঘ্রই আসছে</string>
+
+    <!-- Settings -->
+    <string name="settings_title">সেটিংস</string>
+    <string name="settings_logout">লগ আউট করো</string>
+    <string name="settings_language">ভাষা</string>
+    <string name="settings_language_bangla">বাংলা</string>
+    <string name="settings_language_english">English</string>
+
+    <!-- Generic tab placeholder -->
+    <string name="tab_coming_soon_body">এই সেকশনটা শীঘ্রই আসছে।</string>
+
+    <!-- Question Bank -->
+    <string name="qb_select_type">ধরন বেছে নাও</string>
+    <string name="qb_type_ka">জ্ঞানমূলক (ক)</string>
+    <string name="qb_type_kha">অনুধাবনমূলক (খ)</string>
+    <string name="qb_type_cq">সৃজনশীল প্রশ্ন</string>
+    <string name="qb_type_math">গণিত</string>
+    <string name="qb_type_mcq">MCQ</string>
+    <string name="qb_tab_board">বোর্ড প্রশ্ন</string>
+    <string name="qb_tab_college">কলেজ প্রশ্ন</string>
+    <string name="qb_search_placeholder">পরীক্ষার নাম খোঁজো…</string>
+    <string name="qb_start_exam">পরীক্ষা শুরু করো</string>
+    <string name="qb_exam_questions">প্রশ্ন সংখ্যা</string>
+    <string name="qb_exam_duration">সময়</string>
+    <string name="qb_exam_mark_per_q">প্রতি প্রশ্নের নম্বর</string>
+    <string name="qb_exam_negative_mark">নেগেটিভ মার্ক</string>
+    <string name="qb_exam_year">পরীক্ষার বছর</string>
+    <string name="qb_next">পরের প্রশ্ন</string>
+    <string name="qb_submit">সাবমিট করো</string>
+    <string name="qb_submit_confirm_title">পরীক্ষা শেষ করবে?</string>
+    <string name="qb_exam_submitted">পরীক্ষা সম্পন্ন হয়েছে!</string>
+</resources>
