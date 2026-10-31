@@ -33,8 +33,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -60,7 +58,7 @@ import com.prostuti.student.navigation.ChapterBrowse
 import com.prostuti.student.navigation.ExamAttempt
 import com.prostuti.student.navigation.QuestionReader
 import com.prostuti.student.ui.component.BackButton
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.screen.examengine.ExamAttemptStore
 import com.prostuti.student.ui.screen.qb.component.ExamDetailDialog
@@ -82,15 +80,8 @@ fun MCQExamListScreen(
     viewModel: MCQExamListViewModel = koinViewModel(parameters = { parametersOf(subjectId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val boardListState = rememberLazyGridState()
     val collegeListState = rememberLazyGridState()
-
-    ObserveErrors(
-        errors = state.errors,
-        snackbarHostState = snackbarHostState,
-        onConsumed = viewModel::clearError
-    )
 
     LaunchedEffect(state.navigateToExam) {
         state.navigateToExam?.let { (attemptData, exam) ->
@@ -140,198 +131,204 @@ fun MCQExamListScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
         ) {
-            val examColumns = adaptiveColumnCount()
-            val tabRowWidthCap = if (examColumns > 1) Modifier.widthIn(max = 480.dp) else Modifier
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                val examColumns = adaptiveColumnCount()
+                val tabRowWidthCap = if (examColumns > 1) Modifier.widthIn(max = 480.dp) else Modifier
 
-            Column(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BackButton(onClick = onBack)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = nameBn,
-                            style = ProstutiTypography.bnTitleMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "MCQ প্রশ্ন ব্যাংক",
-                            style = ProstutiTypography.enLabelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
-                }
-
-                OutlinedButton(
-                    onClick = { onNavigateToChapterBrowse(ChapterBrowse(subjectId, nameBn)) },
-                    shape = RoundedCornerShape(50.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                ) {
-                    Text(
-                        text = "অধ্যায়-ভিত্তিক প্রশ্ন দেখো  →",
-                        style = ProstutiTypography.bnLabelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    TextField(
-                        value = state.searchQuery,
-                        onValueChange = viewModel::updateSearch,
-                        placeholder = {
-                            Text(
-                                text = "বোর্ড, কলেজ বা মডেল টেস্টের নাম খুঁজো...",
-                                style = ProstutiTypography.bnLabelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        ),
-                        textStyle = ProstutiTypography.bnBodyMedium,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                Column(modifier = Modifier.fillMaxSize()) {
                     Row(
                         modifier = Modifier
-                            .then(tabRowWidthCap)
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                            .padding(horizontal = 16.dp, vertical = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val boardSelected = state.selectedTab == MCQListTab.BOARD
-                        Button(
-                            onClick = { viewModel.selectTab(MCQListTab.BOARD) },
-                            modifier = Modifier.weight(1f).height(38.dp),
-                            shape = RoundedCornerShape(50.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (boardSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                contentColor = if (boardSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            elevation = null
-                        ) {
-                            Text(text = "বোর্ডের প্রশ্ন", style = ProstutiTypography.bnLabelLarge)
-                        }
-                        Button(
-                            onClick = { viewModel.selectTab(MCQListTab.COLLEGE) },
-                            modifier = Modifier.weight(1f).height(38.dp),
-                            shape = RoundedCornerShape(50.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (!boardSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                contentColor = if (!boardSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            elevation = null
-                        ) {
-                            Text(text = "কলেজের প্রশ্ন", style = ProstutiTypography.bnLabelLarge)
+                        BackButton(onClick = onBack)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = nameBn,
+                                style = ProstutiTypography.bnTitleMedium,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "MCQ প্রশ্ন ব্যাংক",
+                                style = ProstutiTypography.enLabelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = { onNavigateToChapterBrowse(ChapterBrowse(subjectId, nameBn)) },
+                        shape = RoundedCornerShape(50.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Text(
+                            text = "অধ্যায়-ভিত্তিক প্রশ্ন দেখো  →",
+                            style = ProstutiTypography.bnLabelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
-                val filteredBoard = if (state.searchQuery.isBlank()) state.boardExams
-                else state.boardExams.filter { it.titleBn.contains(state.searchQuery, ignoreCase = true) || it.titleEn.contains(state.searchQuery, ignoreCase = true) }
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                val filteredCollege = if (state.searchQuery.isBlank()) state.collegeExams
-                else state.collegeExams.filter { it.titleBn.contains(state.searchQuery, ignoreCase = true) || it.titleEn.contains(state.searchQuery, ignoreCase = true) }
-
-                val examHSpacing = if (examColumns > 1) 8.dp else 0.dp
-
-                if (state.selectedTab == MCQListTab.BOARD) {
-                    if (state.isLoading && filteredBoard.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        }
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(examColumns),
-                            state = boardListState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(examHSpacing)
-                        ) {
-                            items(filteredBoard, key = { it.id }) { exam ->
-                                ExamItem(
-                                    exam = exam,
-                                    onClick = { viewModel.selectExam(exam) }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                            .padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        TextField(
+                            value = state.searchQuery,
+                            onValueChange = viewModel::updateSearch,
+                            placeholder = {
+                                Text(
+                                    text = "বোর্ড, কলেজ বা মডেল টেস্টের নাম খুঁজো...",
+                                    style = ProstutiTypography.bnLabelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                            },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            ),
+                            textStyle = ProstutiTypography.bnBodyMedium,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .then(tabRowWidthCap)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(50.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(0.dp)
+                        ) {
+                            val boardSelected = state.selectedTab == MCQListTab.BOARD
+                            Button(
+                                onClick = { viewModel.selectTab(MCQListTab.BOARD) },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(50.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (boardSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    contentColor = if (boardSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                elevation = null
+                            ) {
+                                Text(text = "বোর্ডের প্রশ্ন", style = ProstutiTypography.bnLabelLarge)
+                            }
+                            Button(
+                                onClick = { viewModel.selectTab(MCQListTab.COLLEGE) },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(50.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (!boardSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    contentColor = if (!boardSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                elevation = null
+                            ) {
+                                Text(text = "কলেজের প্রশ্ন", style = ProstutiTypography.bnLabelLarge)
                             }
                         }
                     }
-                } else {
-                    if (state.isLoading && filteredCollege.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    val filteredBoard = if (state.searchQuery.isBlank()) state.boardExams
+                    else state.boardExams.filter { it.titleBn.contains(state.searchQuery, ignoreCase = true) || it.titleEn.contains(state.searchQuery, ignoreCase = true) }
+
+                    val filteredCollege = if (state.searchQuery.isBlank()) state.collegeExams
+                    else state.collegeExams.filter { it.titleBn.contains(state.searchQuery, ignoreCase = true) || it.titleEn.contains(state.searchQuery, ignoreCase = true) }
+
+                    val examHSpacing = if (examColumns > 1) 8.dp else 0.dp
+
+                    if (state.selectedTab == MCQListTab.BOARD) {
+                        if (state.isLoading && filteredBoard.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            }
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(examColumns),
+                                state = boardListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(examHSpacing)
+                            ) {
+                                items(filteredBoard, key = { it.id }) { exam ->
+                                    ExamItem(
+                                        exam = exam,
+                                        onClick = { viewModel.selectExam(exam) }
+                                    )
+                                }
+                            }
                         }
                     } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(examColumns),
-                            state = collegeListState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(examHSpacing)
-                        ) {
-                            items(filteredCollege, key = { it.id }) { exam ->
-                                ExamItem(
-                                    exam = exam,
-                                    onClick = { viewModel.selectExam(exam) }
-                                )
+                        if (state.isLoading && filteredCollege.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            }
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(examColumns),
+                                state = collegeListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(examHSpacing)
+                            ) {
+                                items(filteredCollege, key = { it.id }) { exam ->
+                                    ExamItem(
+                                        exam = exam,
+                                        onClick = { viewModel.selectExam(exam) }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
+    
         }
     }
 }

@@ -5,6 +5,10 @@ import com.prostuti.student.data.model.response.ExamAttemptResultResponse
 import com.prostuti.student.data.repository.MCQExamRepository
 
 class ListMyExamAttemptsUseCase(private val repository: MCQExamRepository) {
-    suspend operator fun invoke(examId: String? = null, page: Int = 1, limit: Int = 20): ApiResponse<List<ExamAttemptResultResponse>> =
-        repository.listMyAttempts(examId, page, limit)
+    suspend operator fun invoke(
+        examId: String? = null,
+        unfinished: Boolean = false,
+        page: Int = 1,
+        limit: Int = 20
+    ): ApiResponse<List<ExamAttemptResultResponse>> = repository.listMyAttempts(examId, unfinished, page, limit)
 }

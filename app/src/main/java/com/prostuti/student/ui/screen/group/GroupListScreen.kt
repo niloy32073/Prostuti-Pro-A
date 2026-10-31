@@ -27,15 +27,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,7 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.data.model.enums.GroupRole
 import com.prostuti.student.ui.component.BackButton
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.screen.group.component.GroupCreateJoinSheet
 import com.prostuti.student.ui.theme.ProstutiTypography
@@ -58,14 +55,11 @@ fun GroupListScreen(
     viewModel: GroupListViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val sheetState = rememberModalBottomSheetState()
 
     // Catches up on badges (e.g. a group's exam got submitted or closed) after returning from
     // a GroupDetail visit — the retained ViewModel doesn't otherwise reload on its own.
     LaunchedEffect(Unit) { viewModel.refresh() }
-
-    ObserveErrors(errors = state.errors, snackbarHostState = snackbarHostState, onConsumed = viewModel::clearError)
 
     LaunchedEffect(state.navigateToGroupId) {
         state.navigateToGroupId?.let {
@@ -86,62 +80,71 @@ fun GroupListScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 18.dp, start = 16.dp, end = 16.dp, bottom = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BackButton(onClick = onBack)
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "আমার গ্রুপ", style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface)
-                    Text(
-                        text = "${state.rows.size.toBengaliDigits()}টি গ্রুপে আছো",
-                        style = ProstutiTypography.enBodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable(onClick = viewModel::openCreateJoinSheet),
-                    contentAlignment = Alignment.Center
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding,
+            pullToRefreshEnabled = true,
+            isRefreshing = state.isLoading && state.rows.isNotEmpty(),
+            onRefresh = viewModel::refresh
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 18.dp, start = 16.dp, end = 16.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = viewModel::openCreateJoinSheet) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = "নতুন গ্রুপ তৈরি/জয়েন করো",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    BackButton(onClick = onBack)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "আমার গ্রুপ", style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            text = "${state.rows.size.toBengaliDigits()}টি গ্রুপে আছো",
+                            style = ProstutiTypography.enBodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable(onClick = viewModel::openCreateJoinSheet),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(onClick = viewModel::openCreateJoinSheet) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = "নতুন গ্রুপ তৈরি/জয়েন করো",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
                 }
-            }
 
-            if (state.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else {
-                val columns = adaptiveColumnCount()
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(columns),
-                    state = rememberLazyGridState(),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 10.dp else 0.dp)
-                ) {
-                    items(state.rows, key = { it.group.id }) { row ->
-                        GroupListCard(row = row, onClick = { onNavigateToGroup(row.group.id) })
+                if (state.isLoading && state.rows.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else {
+                    val columns = adaptiveColumnCount()
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(columns),
+                        state = rememberLazyGridState(),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 10.dp else 0.dp)
+                    ) {
+                        items(state.rows, key = { it.group.id }) { row ->
+                            GroupListCard(row = row, onClick = { onNavigateToGroup(row.group.id) })
+                        }
                     }
                 }
             }
+    
         }
     }
 }

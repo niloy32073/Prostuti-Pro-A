@@ -89,6 +89,9 @@ import kotlinx.serialization.Serializable
     val topicIds: List<String>
 ) : GroupAdminRoute
 
+// ── Profile ── root-level, full-screen, opened from Home's avatar. Shows GET auth/me.
+@Serializable data object Profile : RootRoute
+
 // ── Live exam ──
 @Serializable data object LiveExamList : RootRoute
 @Serializable data class LiveExamDetail(val liveExamId: String) : RootRoute
@@ -101,3 +104,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class WindowRanking(val examId: String, val kind: TimedExamKind) : RootRoute
 // Always my own answer sheet — no participantId, see the no-peeking-at-others'-answers decision.
 @Serializable data class TimedAnswerSheet(val examId: String, val kind: TimedExamKind) : RootRoute
+
+// ── Playground ── root-level, full-screen, opened from Home's quick menu. The graph builder is
+// its first tool.
+@Serializable data object PlaygroundHub : RootRoute
+@Serializable data object GraphBuilder : RootRoute

@@ -12,6 +12,7 @@ import com.prostuti.student.data.model.response.ExamAttemptResultResponse
 import com.prostuti.student.data.model.response.ExamAttemptReviewData
 import com.prostuti.student.data.model.response.ExamLeaderboardData
 import com.prostuti.student.data.model.response.ExamResponseAckResponse
+import com.prostuti.student.data.model.response.ExamSummary
 import com.prostuti.student.data.model.response.FetchPassageData
 import com.prostuti.student.data.model.response.IntegrityEventResponse
 import com.prostuti.student.data.model.response.MCQExam
@@ -30,10 +31,18 @@ class FakeExamAttemptRepositoryForEngineTest(
     var getAttemptReviewResult: ApiResponse<ExamAttemptReviewData> = ApiResponse.Success(defaultReview()),
     var getExamLeaderboardResult: ApiResponse<ExamLeaderboardData> = ApiResponse.Success(defaultLeaderboard()),
     var fetchPassageResult: ApiResponse<FetchPassageData> = ApiResponse.Success(FetchPassageData(id = "p1")),
-    var reportMcqResult: ApiResponse<McqReportResponse> = ApiResponse.Success(McqReportResponse(id = "rep1", mcqId = "m1", reportedBy = "u1"))
+    var reportMcqResult: ApiResponse<McqReportResponse> = ApiResponse.Success(McqReportResponse(id = "rep1", mcqId = "m1", reportedBy = "u1")),
+    var startAttemptResult: ApiResponse<ExamAttemptData>? = null,
+    var listMyAttemptsResult: ApiResponse<List<ExamAttemptResultResponse>> = ApiResponse.Success(emptyList()),
+    var attemptResponsesResult: ApiResponse<List<ExamResponseAckResponse>> = ApiResponse.Success(emptyList()),
+    var getExamResult: ApiResponse<ExamSummary> = ApiResponse.Failure(message = "not configured", errorCode = "NOT_FOUND")
 ) : MCQExamRepository {
 
     var lastSubmittedResponses: ExamResponseSubmitRequest? = null
+    val allSubmittedResponses = mutableListOf<ExamResponseSubmitRequest>()
+    var lastListArgs: Pair<String?, Boolean>? = null
+    var lastQuestionsAttemptId: String? = null
+    val submittedAttemptIds = mutableListOf<String>()
     var getAttemptQuestionsCallCount = 0
     var getExamLeaderboardLastPage: Int? = null
 
@@ -42,24 +51,40 @@ class FakeExamAttemptRepositoryForEngineTest(
 
     override suspend fun generateExam(request: ExamGenerateRequest): ApiResponse<ExamAttemptData> = attemptQuestionsResult
 
-    override suspend fun attemptMCQExam(examId: String): ApiResponse<ExamAttemptData> = attemptQuestionsResult
+    override suspend fun attemptMCQExam(examId: String): ApiResponse<ExamAttemptData> = startAttemptResult ?: attemptQuestionsResult
 
     override suspend fun getAttemptQuestions(attemptId: String): ApiResponse<ExamAttemptData> {
         getAttemptQuestionsCallCount++
+        lastQuestionsAttemptId = attemptId
         return attemptQuestionsResult
     }
 
     override suspend fun submitResponses(attemptId: String, request: ExamResponseSubmitRequest): ApiResponse<List<ExamResponseAckResponse>> {
         lastSubmittedResponses = request
+        allSubmittedResponses += request
         return submitResponsesResult
     }
 
-    override suspend fun submitAttempt(attemptId: String): ApiResponse<ExamAttemptResultResponse> = submitAttemptResult
+    override suspend fun submitAttempt(attemptId: String): ApiResponse<ExamAttemptResultResponse> {
+        submittedAttemptIds += attemptId
+        return submitAttemptResult
+    }
 
     override suspend fun getAttempt(attemptId: String): ApiResponse<ExamAttemptResultResponse> = getAttemptResult
 
-    override suspend fun listMyAttempts(examId: String?, page: Int, limit: Int): ApiResponse<List<ExamAttemptResultResponse>> =
-        ApiResponse.Success(emptyList())
+    override suspend fun listMyAttempts(
+        examId: String?,
+        unfinished: Boolean,
+        page: Int,
+        limit: Int
+    ): ApiResponse<List<ExamAttemptResultResponse>> {
+        lastListArgs = examId to unfinished
+        return listMyAttemptsResult
+    }
+
+    override suspend fun getAttemptResponses(attemptId: String): ApiResponse<List<ExamResponseAckResponse>> = attemptResponsesResult
+
+    override suspend fun getExam(examId: String): ApiResponse<ExamSummary> = getExamResult
 
     override suspend fun submitIntegrityEvents(attemptId: String, request: IntegrityEventSubmitRequest): ApiResponse<List<IntegrityEventResponse>> =
         ApiResponse.Success(emptyList())
@@ -76,8 +101,14 @@ class FakeExamAttemptRepositoryForEngineTest(
     override suspend fun reportMcq(mcqId: String, request: McqReportRequest): ApiResponse<McqReportResponse> = reportMcqResult
 
     companion object {
-        fun defaultAttemptData(questions: List<com.prostuti.student.data.model.response.Question> = listOf(fakeQuestion())) =
-            ExamAttemptData(attemptId = "attempt1", duration = 10, examId = "exam1", questions = questions, startAt = "2026-01-01T00:00:00Z")
+        const val DEFAULT_START_AT = "2026-01-01T00:00:00Z"
+        const val DEFAULT_START_AT_MILLIS = 1_767_225_600_000L // DEFAULT_START_AT as epoch millis
+
+        fun defaultAttemptData(
+            questions: List<com.prostuti.student.data.model.response.Question> = listOf(fakeQuestion()),
+            startAt: String = DEFAULT_START_AT,
+            mode: com.prostuti.student.data.model.enums.AttemptMode = com.prostuti.student.data.model.enums.AttemptMode.PRACTICE
+        ) = ExamAttemptData(attemptId = "attempt1", duration = 10, examId = "exam1", questions = questions, startAt = startAt, mode = mode)
 
         fun fakeQuestion(
             mcqId: String = "mcq1",

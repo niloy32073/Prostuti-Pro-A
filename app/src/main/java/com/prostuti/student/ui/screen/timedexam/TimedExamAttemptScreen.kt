@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -53,7 +54,8 @@ import com.prostuti.student.data.model.enums.TimedExamKind
 import com.prostuti.student.data.model.response.Option
 import com.prostuti.student.data.model.response.Question
 import com.prostuti.student.ui.component.MathText
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
+import com.prostuti.student.ui.screen.examengine.component.DISABLED_OPTION_ALPHA
 import com.prostuti.student.ui.theme.ProstutiTypography
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,8 +76,6 @@ fun TimedExamAttemptScreen(
     val scope = rememberCoroutineScope()
     val comingSoon = stringResource(R.string.feature_coming_soon)
     var showLeaveDialog by rememberSaveable { mutableStateOf(false) }
-
-    ObserveErrors(errors = state.errors, snackbarHostState = snackbarHostState, onConsumed = viewModel::clearError)
 
     LaunchedEffect(state.timeRemainingSeconds, state.isSubmitted, state.isLoading) {
         if (!state.isLoading && state.timeRemainingSeconds > 0 && !state.isSubmitted) {
@@ -126,64 +126,71 @@ fun TimedExamAttemptScreen(
     }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background, snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
-            return@Scaffold
-        }
-
-        val progress = if (state.totalDurationSeconds > 0) state.timeRemainingSeconds.toFloat() / state.totalDurationSeconds else 0f
-        val minutes = state.timeRemainingSeconds / 60
-        val seconds = state.timeRemainingSeconds % 60
-        val timeText = "%d:%02d".format(minutes, seconds)
-        val kindLabel = if (kind == TimedExamKind.LIVE) "লাইভ এক্সাম" else "গ্রুপ এক্সাম"
-
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${state.answers.size.toString()}/${state.questions.size} উত্তর দেওয়া হয়েছে",
-                        style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(text = timeText, style = ProstutiTypography.enTitleMedium, color = MaterialTheme.colorScheme.primary)
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
+        ) {
+            if (state.isLoading) {
+                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
-                LinearProgressIndicator(
-                    progress = { progress.coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(4.dp),
-                    color = MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                )
-                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "$kindLabel · ১বারই সুযোগ — সাবমিটের পর ফেরা যাবে না",
-                        style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
+                return@PullToRefreshErrorOverlayWrapper
+            }
+
+            val progress = if (state.totalDurationSeconds > 0) state.timeRemainingSeconds.toFloat() / state.totalDurationSeconds else 0f
+            val minutes = state.timeRemainingSeconds / 60
+            val seconds = state.timeRemainingSeconds % 60
+            val timeText = "%d:%02d".format(minutes, seconds)
+            val kindLabel = if (kind == TimedExamKind.LIVE) "লাইভ এক্সাম" else "গ্রুপ এক্সাম"
+
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${state.answers.size.toString()}/${state.questions.size} উত্তর দেওয়া হয়েছে",
+                            style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(text = timeText, style = ProstutiTypography.enTitleMedium, color = MaterialTheme.colorScheme.primary)
+                    }
+                    LinearProgressIndicator(
+                        progress = { progress.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(4.dp),
+                        color = MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                     )
-                    IconButton(onClick = { scope.launch { snackbarHostState.showSnackbar(comingSoon) } }) {
-                        Icon(Icons.Outlined.Calculate, contentDescription = "ক্যালকুলেটর ও স্ক্র্যাচ ক্যানভাস খোলো", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "$kindLabel · ১বারই সুযোগ — সাবমিটের পর ফেরা যাবে না",
+                            style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { scope.launch { snackbarHostState.showSnackbar(comingSoon) } }) {
+                            Icon(Icons.Outlined.Calculate, contentDescription = "ক্যালকুলেটর ও স্ক্র্যাচ ক্যানভাস খোলো", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
-            }
 
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                items(state.questions, key = { it.mcqId }) { question ->
-                    val index = state.questions.indexOf(question)
-                    TimedMcqCard(index = index, question = question, selectedOptionId = state.answers[question.mcqId], onOptionSelected = { viewModel.selectAnswer(question.mcqId, it) })
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(state.questions, key = { it.mcqId }) { question ->
+                        val index = state.questions.indexOf(question)
+                        TimedMcqCard(index = index, question = question, selectedOptionId = state.answers[question.mcqId], onOptionSelected = { viewModel.selectAnswer(question.mcqId, it) })
+                    }
+                }
+
+                Button(
+                    onClick = viewModel::showSubmitDialog,
+                    shape = RoundedCornerShape(50.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(50.dp)
+                ) {
+                    Text(text = "এক্সাম সাবমিট করো", style = ProstutiTypography.bnBodyLarge)
                 }
             }
-
-            Button(
-                onClick = viewModel::showSubmitDialog,
-                shape = RoundedCornerShape(50.dp),
-                modifier = Modifier.fillMaxWidth().padding(16.dp).height(50.dp)
-            ) {
-                Text(text = "এক্সাম সাবমিট করো", style = ProstutiTypography.bnBodyLarge)
-            }
+    
         }
     }
 }
@@ -202,7 +209,9 @@ private fun TimedMcqCard(index: Int, question: Question, selectedOptionId: Strin
             question.options.sortedBy { it.order }.forEachIndexed { optIndex, option ->
                 TimedMcqOption(
                     label = mcqOptionLabels.getOrElse(optIndex) { (optIndex + 1).toString() },
-                    option = option, isSelected = option.id == selectedOptionId, onClick = { onOptionSelected(option.id) }
+                    option = option, isSelected = option.id == selectedOptionId,
+                    // One pick per question: once answered, every option is locked.
+                    enabled = selectedOptionId == null, onClick = { onOptionSelected(option.id) }
                 )
             }
         }
@@ -210,15 +219,17 @@ private fun TimedMcqCard(index: Int, question: Question, selectedOptionId: Strin
 }
 
 @Composable
-private fun TimedMcqOption(label: String, option: Option, isSelected: Boolean, onClick: () -> Unit) {
+private fun TimedMcqOption(label: String, option: Option, isSelected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val bgColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
     val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
     val badgeBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
     val badgeText = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
 
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(bgColor)
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 11.dp),
+        modifier = Modifier.fillMaxWidth().alpha(if (enabled || isSelected) 1f else DISABLED_OPTION_ALPHA)
+            .clip(RoundedCornerShape(10.dp)).background(bgColor)
+            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp)).clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(badgeBg), contentAlignment = Alignment.Center) {

@@ -21,13 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,7 +34,7 @@ import com.prostuti.student.data.model.response.Question
 import com.prostuti.student.data.model.response.TimedExamAnswerSheet
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.MathText
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.util.toBengaliDigits
 import org.koin.compose.viewmodel.koinViewModel
@@ -53,36 +50,40 @@ fun TimedAnswerSheetScreen(
     viewModel: TimedAnswerSheetViewModel = koinViewModel(parameters = { parametersOf(examId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    ObserveErrors(errors = state.errors, snackbarHostState = snackbarHostState, onConsumed = viewModel::clearError)
-
-    Scaffold(containerColor = MaterialTheme.colorScheme.background, snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
+        ) {
+            if (state.isLoading) {
+                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+                return@PullToRefreshErrorOverlayWrapper
             }
-            return@Scaffold
-        }
-        val sheet = state.sheet ?: return@Scaffold
+            val sheet = state.sheet ?: return@PullToRefreshErrorOverlayWrapper
 
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp)) {
-                BackButton(onClick = onBack)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(text = "অ্যান্সার শিট", style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onBackground)
-            }
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp)) {
+                    BackButton(onClick = onBack)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(text = "অ্যান্সার শিট", style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onBackground)
+                }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item { SummaryRow(sheet) }
-                items(sheet.questions, key = { it.mcqId }) { question ->
-                    val index = sheet.questions.indexOf(question)
-                    AnswerSheetCard(index = index, question = question, sheet = sheet)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item { SummaryRow(sheet) }
+                    items(sheet.questions, key = { it.mcqId }) { question ->
+                        val index = sheet.questions.indexOf(question)
+                        AnswerSheetCard(index = index, question = question, sheet = sheet)
+                    }
                 }
             }
+    
         }
     }
 }

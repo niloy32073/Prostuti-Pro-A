@@ -23,20 +23,17 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.data.model.response.Subject
 import com.prostuti.student.ui.component.BackButton
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
@@ -48,94 +45,93 @@ fun PracticeSubjectSelectScreen(
     viewModel: PracticeSubjectSelectViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    ObserveErrors(
-        errors = state.errors,
-        snackbarHostState = snackbarHostState,
-        onConsumed = viewModel::clearError
-    )
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BackButton(onClick = onBack)
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "সাবজেক্ট বেছে নাও",
-                        style = ProstutiTypography.bnTitleMedium,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "প্র্যাকটিস এক্সাম · ধাপ ১/৩",
-                        style = ProstutiTypography.enLabelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-            }
-
-            Text(
-                text = "একাধিক সাবজেক্ট বেছে নেওয়া যাবে। পরের ধাপে নির্দিষ্ট অধ্যায়/টপিক বাছাই করতে পারবে।",
-                style = ProstutiTypography.bnBodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
-            if (state.isLoading && state.subjects.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else {
-                val columns = adaptiveColumnCount()
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(columns),
-                    state = rememberLazyGridState(),
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 8.dp else 0.dp)
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(state.subjects, key = { it.id }) { subject ->
-                        PracticeSubjectCheckRow(
-                            subject = subject,
-                            checked = subject.id in state.selectedIds,
-                            onToggle = { viewModel.toggleSubject(subject.id) },
-                            modifier = Modifier.padding(bottom = 4.dp)
+                    BackButton(onClick = onBack)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "সাবজেক্ট বেছে নাও",
+                            style = ProstutiTypography.bnTitleMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "প্র্যাকটিস এক্সাম · ধাপ ১/৩",
+                            style = ProstutiTypography.enLabelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
                 }
-            }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Text(
-                    text = "${state.selectedIds.size}টি সাবজেক্ট নির্বাচিত",
-                    style = ProstutiTypography.bnLabelLarge,
+                    text = "একাধিক সাবজেক্ট বেছে নেওয়া যাবে। পরের ধাপে নির্দিষ্ট অধ্যায়/টপিক বাছাই করতে পারবে।",
+                    style = ProstutiTypography.bnBodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-                Button(
-                    onClick = { onNext(state.selectedIds.toList()) },
-                    enabled = state.selectedIds.isNotEmpty(),
-                    shape = RoundedCornerShape(50.dp),
-                    modifier = Modifier.height(46.dp)
+
+                if (state.isLoading && state.subjects.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else {
+                    val columns = adaptiveColumnCount()
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(columns),
+                        state = rememberLazyGridState(),
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 8.dp else 0.dp)
+                    ) {
+                        items(state.subjects, key = { it.id }) { subject ->
+                            PracticeSubjectCheckRow(
+                                subject = subject,
+                                checked = subject.id in state.selectedIds,
+                                onToggle = { viewModel.toggleSubject(subject.id) },
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "পরবর্তী", style = ProstutiTypography.bnBodyLarge)
+                    Text(
+                        text = "${state.selectedIds.size}টি সাবজেক্ট নির্বাচিত",
+                        style = ProstutiTypography.bnLabelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = { onNext(state.selectedIds.toList()) },
+                        enabled = state.selectedIds.isNotEmpty(),
+                        shape = RoundedCornerShape(50.dp),
+                        modifier = Modifier.height(46.dp)
+                    ) {
+                        Text(text = "পরবর্তী", style = ProstutiTypography.bnBodyLarge)
+                    }
                 }
             }
+    
         }
     }
 }

@@ -34,7 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.R
 import com.prostuti.student.ui.component.AuthHeader
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.OrDivider
 import com.prostuti.student.ui.component.OutlinedPillButton
 import com.prostuti.student.ui.component.PrimaryButton
@@ -81,8 +81,6 @@ fun AuthStartScreen(
         )
     }
 
-    ObserveErrors(state.errors, snackbarHostState, viewModel::clearError)
-
     LaunchedEffect(state.accountExists) {
         when (state.accountExists) {
             true -> {
@@ -101,67 +99,74 @@ fun AuthStartScreen(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 24.dp)
-                    .padding(top = 44.dp),
-                verticalArrangement = Arrangement.spacedBy(28.dp)
-            ) {
-                AuthHeader(
-                    title = stringResource(R.string.auth_start_title),
-                    subtitle = stringResource(R.string.auth_start_subtitle)
-                )
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 24.dp)
+                        .padding(top = 44.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp)
+                ) {
+                    AuthHeader(
+                        title = stringResource(R.string.auth_start_title),
+                        subtitle = stringResource(R.string.auth_start_subtitle)
+                    )
 
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    ProstutiTextField(
-                        value = state.identifier,
-                        onValueChange = viewModel::updateIdentifier,
-                        label = stringResource(R.string.email_or_phone_label),
-                        placeholder = stringResource(R.string.email_or_phone_placeholder),
-                        isError = state.identifierError != null,
-                        errorText = state.identifierError?.let { stringResource(it) },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Done
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        ProstutiTextField(
+                            value = state.identifier,
+                            onValueChange = viewModel::updateIdentifier,
+                            label = stringResource(R.string.email_or_phone_label),
+                            placeholder = stringResource(R.string.email_or_phone_placeholder),
+                            isError = state.identifierError != null,
+                            errorText = state.identifierError?.let { stringResource(it) },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Done
+                            )
                         )
-                    )
-                    PrimaryButton(
-                        text = stringResource(R.string.continue_action),
-                        onClick = viewModel::continueClicked,
-                        loading = state.isLoading
+                        PrimaryButton(
+                            text = stringResource(R.string.continue_action),
+                            onClick = viewModel::continueClicked,
+                            loading = state.isLoading
+                        )
+                    }
+
+                    OrDivider()
+
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val googleComingSoon = stringResource(R.string.auth_social_coming_soon_google)
+                        OutlinedPillButton(
+                            text = stringResource(R.string.auth_continue_with_google),
+                            onClick = {
+                                scope.launch { snackbarHostState.showSnackbar(googleComingSoon) }
+                            }
+                        )
+                        val facebookComingSoon = stringResource(R.string.auth_social_coming_soon_facebook)
+                        OutlinedPillButton(
+                            text = stringResource(R.string.auth_continue_with_facebook),
+                            onClick = {
+                                scope.launch { snackbarHostState.showSnackbar(facebookComingSoon) }
+                            }
+                        )
+                    }
+
+                    Text(
+                        text = stringResource(R.string.auth_terms_notice),
+                        style = ProstutiTypography.bnLabelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-
-                OrDivider()
-
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val googleComingSoon = stringResource(R.string.auth_social_coming_soon_google)
-                    OutlinedPillButton(
-                        text = stringResource(R.string.auth_continue_with_google),
-                        onClick = {
-                            scope.launch { snackbarHostState.showSnackbar(googleComingSoon) }
-                        }
-                    )
-                    val facebookComingSoon = stringResource(R.string.auth_social_coming_soon_facebook)
-                    OutlinedPillButton(
-                        text = stringResource(R.string.auth_continue_with_facebook),
-                        onClick = {
-                            scope.launch { snackbarHostState.showSnackbar(facebookComingSoon) }
-                        }
-                    )
-                }
-
-                Text(
-                    text = stringResource(R.string.auth_terms_notice),
-                    style = ProstutiTypography.bnLabelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
+    
         }
     }
 }

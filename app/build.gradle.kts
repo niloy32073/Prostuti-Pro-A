@@ -86,6 +86,9 @@ dependencies {
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.compose)
     implementation(libs.koin.compose.viewmodel)
+    // Images
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.ktor3)
     // Google font
     implementation(libs.androidx.compose.ui.text.google.fonts)
     // Logging

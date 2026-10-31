@@ -12,6 +12,7 @@ import com.prostuti.student.data.model.response.ExamAttemptResultResponse
 import com.prostuti.student.data.model.response.ExamAttemptReviewData
 import com.prostuti.student.data.model.response.ExamLeaderboardData
 import com.prostuti.student.data.model.response.ExamResponseAckResponse
+import com.prostuti.student.data.model.response.ExamSummary
 import com.prostuti.student.data.model.response.FetchPassageData
 import com.prostuti.student.data.model.response.IntegrityEventResponse
 import com.prostuti.student.data.model.response.MCQExam
@@ -68,6 +69,16 @@ class MCQExamApiService(private val client: HttpClient) {
         }
     }
 
+    /** Answers already saved for an in-progress attempt (selected_option_id = null means skipped). */
+    suspend fun getAttemptResponses(attemptId: String): ApiResponse<List<ExamResponseAckResponse>> = safeApiCall {
+        client.get("exams/attempts/$attemptId/responses")
+    }
+
+    /** Exam metadata only (title, duration, …) — no questions. */
+    suspend fun getExam(examId: String): ApiResponse<ExamSummary> = safeApiCall {
+        client.get("exams/$examId")
+    }
+
     suspend fun submitAttempt(attemptId: String): ApiResponse<ExamAttemptResultResponse> = safeApiCall {
         client.post("exams/attempts/$attemptId/submit")
     }
@@ -78,11 +89,13 @@ class MCQExamApiService(private val client: HttpClient) {
 
     suspend fun listMyAttempts(
         examId: String? = null,
+        unfinished: Boolean = false,
         page: Int = 1,
         limit: Int = 20
     ): ApiResponse<List<ExamAttemptResultResponse>> = safeApiCall {
         client.get("exams/attempts/manage") {
             examId?.let { parameter("exam_id", it) }
+            if (unfinished) parameter("unfinished", true)
             parameter("page", page)
             parameter("limit", limit)
         }

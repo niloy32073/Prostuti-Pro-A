@@ -53,7 +53,9 @@ fun MainNavDisplay(
     onNavigateToPractice: () -> Unit,
     onNavigateToGroupList: () -> Unit,
     onNavigateToLiveExamList: () -> Unit,
-    onNavigateToGroupDetail: (groupId: String) -> Unit
+    onNavigateToGroupDetail: (groupId: String) -> Unit,
+    onNavigateToProfile: () -> Unit,
+    onNavigateToPlayground: () -> Unit
 ) {
     val backStack = rememberNavBackStack(Home)
     val qbBackStack = rememberNavBackStack(SubjectList)
@@ -103,7 +105,12 @@ fun MainNavDisplay(
                         onNavigateToPractice = onNavigateToPractice,
                         onNavigateToGroupList = onNavigateToGroupList,
                         onNavigateToLiveExamList = onNavigateToLiveExamList,
-                        onNavigateToGroupDetail = onNavigateToGroupDetail
+                        onNavigateToGroupDetail = onNavigateToGroupDetail,
+                        onContinueAttempt = { attemptId, titleBn ->
+                            onNavigateToExamEngine(ExamAttempt(attemptId = attemptId, titleBn = titleBn))
+                        },
+                        onNavigateToProfile = onNavigateToProfile,
+                        onNavigateToPlayground = onNavigateToPlayground
                     )
                 }
                 entry<QB> { QBNavDisplay(qbBackStack, onNavigateToExamEngine = onNavigateToExamEngine) }

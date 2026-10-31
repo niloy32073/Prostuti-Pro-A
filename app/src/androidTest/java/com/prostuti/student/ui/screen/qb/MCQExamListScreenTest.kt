@@ -9,7 +9,7 @@ import com.prostuti.student.data.model.enums.Level
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.MCQExam
 import com.prostuti.student.data.repository.fake.FakeQbMcqExamRepository
-import com.prostuti.student.domain.AttemptMCQExamUseCase
+import com.prostuti.student.domain.StartOrResumeExamAttemptUseCase
 import com.prostuti.student.domain.FetchMCQExamsUseCase
 import com.prostuti.student.ui.theme.ProstutiTheme
 import org.junit.Rule
@@ -53,7 +53,7 @@ class MCQExamListScreenTest {
                     onNavigateToExamEngine = {},
                     onNavigateToReader = {},
                     onNavigateToChapterBrowse = {},
-                    viewModel = MCQExamListViewModel("phy", FetchMCQExamsUseCase(repo), AttemptMCQExamUseCase(repo))
+                    viewModel = MCQExamListViewModel("phy", FetchMCQExamsUseCase(repo), StartOrResumeExamAttemptUseCase(repo))
                 )
             }
         }
@@ -65,7 +65,7 @@ class MCQExamListScreenTest {
     }
 
     @Test
-    fun loadFailureSurfacesTheErrorMessageInASnackbar() {
+    fun loadFailureSurfacesTheErrorMessageInTheErrorOverlay() {
         val repo = FakeQbMcqExamRepository(fetchResult = { ApiResponse.Failure("লোড করা যায়নি", "LOAD_FAIL") })
         composeTestRule.setContent {
             ProstutiTheme {
@@ -77,7 +77,7 @@ class MCQExamListScreenTest {
                     onNavigateToExamEngine = {},
                     onNavigateToReader = {},
                     onNavigateToChapterBrowse = {},
-                    viewModel = MCQExamListViewModel("phy", FetchMCQExamsUseCase(repo), AttemptMCQExamUseCase(repo))
+                    viewModel = MCQExamListViewModel("phy", FetchMCQExamsUseCase(repo), StartOrResumeExamAttemptUseCase(repo))
                 )
             }
         }
@@ -98,7 +98,7 @@ class MCQExamListScreenTest {
                     onNavigateToExamEngine = {},
                     onNavigateToReader = {},
                     onNavigateToChapterBrowse = {},
-                    viewModel = MCQExamListViewModel("phy", FetchMCQExamsUseCase(repo), AttemptMCQExamUseCase(repo))
+                    viewModel = MCQExamListViewModel("phy", FetchMCQExamsUseCase(repo), StartOrResumeExamAttemptUseCase(repo))
                 )
             }
         }

@@ -8,6 +8,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.prostuti.student.R
 import com.prostuti.student.data.repository.fake.FakeDataStoreStorageRepository
+import com.prostuti.student.data.repository.fake.FakeUserRepository
+import com.prostuti.student.domain.ClearCachedMeUseCase
 import com.prostuti.student.domain.ClearDataStoreUseCase
 import com.prostuti.student.ui.theme.ProstutiTheme
 import org.junit.Rule
@@ -29,7 +31,7 @@ class SettingsScreenTest {
             ProstutiTheme {
                 SettingsScreen(
                     onLoggedOut = {},
-                    viewModel = SettingsViewModel(ClearDataStoreUseCase(FakeDataStoreStorageRepository()))
+                    viewModel = SettingsViewModel(ClearDataStoreUseCase(FakeDataStoreStorageRepository()), ClearCachedMeUseCase(FakeUserRepository()))
                 )
             }
         }
@@ -45,7 +47,7 @@ class SettingsScreenTest {
             ProstutiTheme {
                 SettingsScreen(
                     onLoggedOut = { loggedOut = true },
-                    viewModel = SettingsViewModel(ClearDataStoreUseCase(FakeDataStoreStorageRepository()))
+                    viewModel = SettingsViewModel(ClearDataStoreUseCase(FakeDataStoreStorageRepository()), ClearCachedMeUseCase(FakeUserRepository()))
                 )
             }
         }

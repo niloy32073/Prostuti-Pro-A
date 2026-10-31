@@ -1,5 +1,6 @@
 package com.prostuti.student.util
 
+import com.prostuti.student.BuildConfig
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.BaseResponse
 import io.ktor.client.call.body
@@ -18,10 +19,12 @@ suspend inline fun <reified T> safeApiCall(
 ): ApiResponse<T> {
     return try {
         val response = execute()
-        // Status/path only — response bodies carry tokens and personal data.
-        Timber.d("API %s %s", response.status.value, response.call.request.url.encodedPath)
+        // Raw JSON first, so a body that fails to decode below is still visible in the log.
+        // Debug only: bodies carry personal data (tokens are masked).
+        if (BuildConfig.DEBUG) ApiLog.response(response)
         if (response.status.isSuccess()) {
             val baseResponse = response.body<BaseResponse<T>>()
+            if (BuildConfig.DEBUG) ApiLog.decoded(response.call.request.url.toString(), baseResponse)
 
             if (baseResponse.success && baseResponse.data != null) {
                 ApiResponse.Success(
@@ -63,7 +66,7 @@ suspend inline fun <reified T> safeApiCall(
             is SerializationException -> "Mapping Error: Check your data classes" to "SERIALIZATION_ERROR"
             else -> (e.message ?: "Unknown error") to "UNKNOWN_ERROR"
         }
-        Timber.e(e, "safeApiCall failed: %s", errorCode)
+        Timber.tag(ApiLog.TAG).e(e, "safeApiCall failed: %s", errorCode)
 
         ApiResponse.Failure(
             message = errorMessage,

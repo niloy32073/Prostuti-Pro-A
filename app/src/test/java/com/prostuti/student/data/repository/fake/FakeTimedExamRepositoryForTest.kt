@@ -20,6 +20,7 @@ class FakeTimedExamRepositoryForTest(
     var advanceDemoStateCallCount = 0
     var lastAdvanceDemoStateExamId: String? = null
     var lastMySubmissionExamId: String? = null
+    val savedAnswers = mutableListOf<Pair<String, String>>()   // (mcqId, optionId)
 
     override suspend fun questions(): List<Question> = emptyList()
 
@@ -36,7 +37,9 @@ class FakeTimedExamRepositoryForTest(
 
     override suspend fun inProgressAnswers(examId: String): Map<String, String> = emptyMap()
 
-    override suspend fun saveAnswer(examId: String, kind: TimedExamKind, mcqId: String, optionId: String) = Unit
+    override suspend fun saveAnswer(examId: String, kind: TimedExamKind, mcqId: String, optionId: String) {
+        savedAnswers += mcqId to optionId
+    }
 
     override suspend fun submit(examId: String, kind: TimedExamKind): ApiResponse<MyTimedExamSubmission> =
         ApiResponse.Failure(message = "not stubbed", errorCode = "NOT_STUBBED")

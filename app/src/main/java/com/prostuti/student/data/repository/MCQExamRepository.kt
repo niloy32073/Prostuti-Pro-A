@@ -12,6 +12,7 @@ import com.prostuti.student.data.model.response.ExamAttemptResultResponse
 import com.prostuti.student.data.model.response.ExamAttemptReviewData
 import com.prostuti.student.data.model.response.ExamLeaderboardData
 import com.prostuti.student.data.model.response.ExamResponseAckResponse
+import com.prostuti.student.data.model.response.ExamSummary
 import com.prostuti.student.data.model.response.FetchPassageData
 import com.prostuti.student.data.model.response.IntegrityEventResponse
 import com.prostuti.student.data.model.response.MCQExam
@@ -32,7 +33,9 @@ interface MCQExamRepository {
     suspend fun submitResponses(attemptId: String, request: ExamResponseSubmitRequest): ApiResponse<List<ExamResponseAckResponse>>
     suspend fun submitAttempt(attemptId: String): ApiResponse<ExamAttemptResultResponse>
     suspend fun getAttempt(attemptId: String): ApiResponse<ExamAttemptResultResponse>
-    suspend fun listMyAttempts(examId: String?, page: Int, limit: Int): ApiResponse<List<ExamAttemptResultResponse>>
+    suspend fun listMyAttempts(examId: String?, unfinished: Boolean, page: Int, limit: Int): ApiResponse<List<ExamAttemptResultResponse>>
+    suspend fun getAttemptResponses(attemptId: String): ApiResponse<List<ExamResponseAckResponse>>
+    suspend fun getExam(examId: String): ApiResponse<ExamSummary>
     suspend fun submitIntegrityEvents(attemptId: String, request: IntegrityEventSubmitRequest): ApiResponse<List<IntegrityEventResponse>>
     suspend fun getAttemptReview(attemptId: String): ApiResponse<ExamAttemptReviewData>
     suspend fun getExamLeaderboard(examId: String, page: Int): ApiResponse<ExamLeaderboardData>

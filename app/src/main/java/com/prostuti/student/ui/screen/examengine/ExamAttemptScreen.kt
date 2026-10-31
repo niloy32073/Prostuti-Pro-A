@@ -1,9 +1,7 @@
 package com.prostuti.student.ui.screen.examengine
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,8 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AlertDialog
@@ -48,47 +44,37 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.currentStateAsState
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import kotlin.math.PI
-import kotlin.math.E
-import kotlin.math.cos
-import kotlin.math.log10
-import kotlin.math.sin
-import kotlin.math.sqrt
-import kotlin.math.tan
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.R
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
+import com.prostuti.student.ui.screen.examengine.calculator.CalculatorPanel
 import com.prostuti.student.ui.screen.examengine.component.McqCard
 import com.prostuti.student.ui.screen.examengine.component.McqGridItem
 import com.prostuti.student.ui.screen.examengine.component.PassageCard
 import com.prostuti.student.ui.screen.examengine.component.groupQuestionsByPassage
+import com.prostuti.student.ui.screen.examengine.scratchpad.ScratchpadPanel
 import com.prostuti.student.ui.theme.ProstutiTypography
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
-
-data class DrawStroke(
-    val points: List<Offset>,
-    val color: Color = Color.Black,
-    val strokeWidthPx: Float = 6f
-)
 
 /**
  * The shared attempt (question-answering) screen for every exam mode — practice, live and group
@@ -106,12 +92,6 @@ fun ExamAttemptScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    ObserveErrors(
-        errors = state.errors,
-        snackbarHostState = snackbarHostState,
-        onConsumed = viewModel::clearError
-    )
-
     LaunchedEffect(state.reportResultMessage) {
         val message = state.reportResultMessage
         if (message != null) {
@@ -120,8 +100,24 @@ fun ExamAttemptScreen(
         }
     }
 
-    LaunchedEffect(state.timeRemainingSeconds, state.isSubmitted) {
-        if (state.timeRemainingSeconds > 0 && !state.isSubmitted) {
+    // Live: re-read the clock against start_at on return (ticks stop while in the background).
+    LifecycleResumeEffect(Unit) {
+        viewModel.resyncTimer()
+        onPauseOrDispose { }
+    }
+
+    // Leaving a live exam submits it; practice saves the time used. Calls / screen lock don't count.
+    val context = LocalContext.current
+    val activity = LocalActivity.current
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        viewModel.onBackgrounded(leftApp = isLeavingExam(context, activity))
+    }
+
+    // The clock only runs while the exam is on screen — that is what pauses practice time.
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    val isOnScreen = lifecycleState.isAtLeast(Lifecycle.State.STARTED)
+    LaunchedEffect(state.timeRemainingSeconds, state.isSubmitted, state.isLoading, isOnScreen) {
+        if (isOnScreen && !state.isLoading && state.timeRemainingSeconds > 0 && !state.isSubmitted) {
             delay(1000L)
             viewModel.tickTimer()
         }
@@ -147,113 +143,108 @@ fun ExamAttemptScreen(
     // Right panel state — kept here so it survives tab switches and panel hide/show
     var selectedTab by rememberSaveable { mutableStateOf(0) }      // 0 = calculator, 1 = canvas
     var isPanelVisible by rememberSaveable { mutableStateOf(true) }
-    var canvasStrokes by remember { mutableStateOf(listOf<DrawStroke>()) }
-    var canvasIsErasing by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
         ) {
-            when {
-                // Expanded: 2-column questions + right panel always visible
-                windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        ExamContent(
-                            state = state,
-                            viewModel = viewModel,
-                            progress = progress,
-                            timeText = timeText,
-                            questionColumns = 2,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                        )
-                        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        RightPanel(
-                            selectedTab = selectedTab,
-                            onTabSelect = { selectedTab = it },
-                            canvasStrokes = canvasStrokes,
-                            canvasIsErasing = canvasIsErasing,
-                            onStrokeFinished = { canvasStrokes = canvasStrokes + it },
-                            onEraserToggle = { canvasIsErasing = !canvasIsErasing },
-                            onCanvasClear = { canvasStrokes = emptyList() },
-                            showHideButton = false,
-                            onHide = {},
-                            modifier = Modifier
-                                .width(300.dp)
-                                .fillMaxHeight()
-                        )
-                    }
-                }
-
-                // Medium: 1-col when panel visible, 2-col when hidden; hide/show toggle
-                windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        ExamContent(
-                            state = state,
-                            viewModel = viewModel,
-                            progress = progress,
-                            timeText = timeText,
-                            questionColumns = if (isPanelVisible) 1 else 2,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                        )
-                        if (isPanelVisible) {
+            val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                when {
+                    // Expanded: 2-column questions + right panel always visible
+                    windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            ExamContent(
+                                state = state,
+                                viewModel = viewModel,
+                                progress = progress,
+                                timeText = timeText,
+                                questionColumns = 2,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
                             VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             RightPanel(
                                 selectedTab = selectedTab,
                                 onTabSelect = { selectedTab = it },
-                                canvasStrokes = canvasStrokes,
-                                canvasIsErasing = canvasIsErasing,
-                                onStrokeFinished = { canvasStrokes = canvasStrokes + it },
-                                onEraserToggle = { canvasIsErasing = !canvasIsErasing },
-                                onCanvasClear = { canvasStrokes = emptyList() },
-                                showHideButton = true,
-                                onHide = { isPanelVisible = false },
+                                showHideButton = false,
+                                onHide = {},
                                 modifier = Modifier
-                                    .width(260.dp)
+                                    .width(340.dp)
                                     .fillMaxHeight()
                             )
-                        } else {
-                            // Strip to reveal the panel again
-                            Box(
+                        }
+                    }
+
+                    // Medium: 1-col when panel visible, 2-col when hidden; hide/show toggle
+                    windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> {
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            ExamContent(
+                                state = state,
+                                viewModel = viewModel,
+                                progress = progress,
+                                timeText = timeText,
+                                questionColumns = if (isPanelVisible) 1 else 2,
                                 modifier = Modifier
-                                    .width(40.dp)
+                                    .weight(1f)
                                     .fillMaxHeight()
-                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                    .clickable { isPanelVisible = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowRight,
-                                    contentDescription = "প্যানেল দেখাও",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
+                            )
+                            if (isPanelVisible) {
+                                VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                RightPanel(
+                                    selectedTab = selectedTab,
+                                    onTabSelect = { selectedTab = it },
+                                    showHideButton = true,
+                                    onHide = { isPanelVisible = false },
+                                    modifier = Modifier
+                                        .width(300.dp)
+                                        .fillMaxHeight()
                                 )
+                            } else {
+                                // Strip to reveal the panel again
+                                Box(
+                                    modifier = Modifier
+                                        .width(40.dp)
+                                        .fillMaxHeight()
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                        .clickable { isPanelVisible = true },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowRight,
+                                        contentDescription = "প্যানেল দেখাও",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                // Compact: single column, no side panel
-                else -> {
-                    ExamContent(
-                        state = state,
-                        viewModel = viewModel,
-                        progress = progress,
-                        timeText = timeText,
-                        questionColumns = 1,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    // Compact: single column, no side panel
+                    else -> {
+                        ExamContent(
+                            state = state,
+                            viewModel = viewModel,
+                            progress = progress,
+                            timeText = timeText,
+                            questionColumns = 1,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
+    
         }
     }
 }
@@ -339,7 +330,26 @@ private fun ExamContent(
             groupQuestionsByPassage(state.questions, state.passages)
         }
 
-        LazyVerticalStaggeredGrid(
+        if (state.isLoading || state.questions.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (state.isLoading) {
+                    CircularProgressIndicator()
+                } else {
+                    Text(
+                        text = stringResource(R.string.exam_attempt_no_questions),
+                        style = ProstutiTypography.bnBodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(questionColumns),
             modifier = Modifier
                 .weight(1f)
@@ -411,11 +421,6 @@ private fun ExamContent(
 private fun RightPanel(
     selectedTab: Int,
     onTabSelect: (Int) -> Unit,
-    canvasStrokes: List<DrawStroke>,
-    canvasIsErasing: Boolean,
-    onStrokeFinished: (DrawStroke) -> Unit,
-    onEraserToggle: () -> Unit,
-    onCanvasClear: () -> Unit,
     showHideButton: Boolean,
     onHide: () -> Unit,
     modifier: Modifier = Modifier
@@ -436,7 +441,7 @@ private fun RightPanel(
                     onClick = { onTabSelect(0) },
                     text = {
                         Text(
-                            text = "ক্যালকুলেটর",
+                            text = stringResource(R.string.exam_tool_calculator),
                             style = ProstutiTypography.bnLabelMedium
                         )
                     }
@@ -446,7 +451,7 @@ private fun RightPanel(
                     onClick = { onTabSelect(1) },
                     text = {
                         Text(
-                            text = "ক্যানভাস",
+                            text = stringResource(R.string.exam_tool_canvas),
                             style = ProstutiTypography.bnLabelMedium
                         )
                     }
@@ -469,333 +474,12 @@ private fun RightPanel(
             }
         }
 
+        // Each tool has its own ViewModel (scoped to this exam's navigation entry), so its state
+        // survives tab switches and hiding the panel without touching ExamAttemptViewModel.
         when (selectedTab) {
             0 -> CalculatorPanel(modifier = Modifier.weight(1f).fillMaxWidth())
-            else -> InfinityCanvas(
-                strokes = canvasStrokes,
-                isErasing = canvasIsErasing,
-                onStrokeFinished = onStrokeFinished,
-                onEraserToggle = onEraserToggle,
-                onClear = onCanvasClear,
-                modifier = Modifier.weight(1f).fillMaxWidth()
-            )
+            else -> ScratchpadPanel(modifier = Modifier.weight(1f).fillMaxWidth())
         }
-    }
-}
-
-// ── Infinity canvas ──────────────────────────────────────────────────────────
-
-@Composable
-private fun InfinityCanvas(
-    strokes: List<DrawStroke>,
-    isErasing: Boolean,
-    onStrokeFinished: (DrawStroke) -> Unit,
-    onEraserToggle: () -> Unit,
-    onClear: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // Current stroke tracked internally; it's ephemeral and need not survive tab changes
-    var currentStrokePoints by remember { mutableStateOf(listOf<Offset>()) }
-
-    Column(modifier = modifier) {
-        // Toolbar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Pen button
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (!isErasing) MaterialTheme.colorScheme.secondaryContainer
-                        else Color.Transparent
-                    )
-                    .clickable { if (isErasing) onEraserToggle() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "পেন",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-            // Eraser button
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isErasing) MaterialTheme.colorScheme.secondaryContainer
-                        else Color.Transparent
-                    )
-                    .clickable { if (!isErasing) onEraserToggle() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "E",
-                    style = ProstutiTypography.enLabelLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            // Clear button
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onClear),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "সব মুছো",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        // Drawing surface
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .background(Color.White)
-                .pointerInput(isErasing) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            currentStrokePoints = listOf(offset)
-                        },
-                        onDrag = { change, _ ->
-                            change.consume()
-                            currentStrokePoints = currentStrokePoints + change.position
-                        },
-                        onDragEnd = {
-                            if (currentStrokePoints.size >= 2 && !isErasing) {
-                                onStrokeFinished(DrawStroke(currentStrokePoints))
-                            }
-                            currentStrokePoints = emptyList()
-                        },
-                        onDragCancel = { currentStrokePoints = emptyList() }
-                    )
-                }
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val strokeStyle = Stroke(
-                    width = 6f,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
-                )
-                strokes.forEach { stroke ->
-                    if (stroke.points.size >= 2) {
-                        val path = Path()
-                        path.moveTo(stroke.points[0].x, stroke.points[0].y)
-                        stroke.points.drop(1).forEach { pt -> path.lineTo(pt.x, pt.y) }
-                        drawPath(path, color = stroke.color, style = strokeStyle)
-                    }
-                }
-                if (currentStrokePoints.size >= 2 && !isErasing) {
-                    val path = Path()
-                    path.moveTo(currentStrokePoints[0].x, currentStrokePoints[0].y)
-                    currentStrokePoints.drop(1).forEach { pt -> path.lineTo(pt.x, pt.y) }
-                    drawPath(path, color = Color.Black, style = strokeStyle)
-                }
-            }
-        }
-    }
-}
-
-// ── Calculator panel ──────────────────────────────────────────────────────────
-
-private fun Double.formatCalc(): String {
-    if (isNaN() || isInfinite()) return "Error"
-    val long = toLong()
-    return if (this == long.toDouble()) long.toString()
-    else "%.10g".format(this).trimEnd('0').trimEnd('.')
-}
-
-@Composable
-private fun CalculatorPanel(modifier: Modifier = Modifier) {
-    var display by rememberSaveable { mutableStateOf("0") }
-    var firstOperand by rememberSaveable { mutableStateOf(0.0) }
-    var pendingOp by rememberSaveable { mutableStateOf<String?>(null) }
-    var shouldReset by rememberSaveable { mutableStateOf(false) }
-
-    fun onDigit(d: String) {
-        if (display == "Error") { display = if (d == ".") "0." else d; shouldReset = false; return }
-        if (shouldReset) {
-            display = if (d == ".") "0." else d
-            shouldReset = false
-        } else {
-            if (d == "." && display.contains(".")) return
-            display = if (display == "0" && d != ".") d else display + d
-        }
-        if (display.length > 14) display = display.dropLast(1)
-    }
-
-    fun calculate(a: Double, op: String, b: Double): Double = when (op) {
-        "+" -> a + b
-        "−" -> a - b
-        "×" -> a * b
-        "÷" -> if (b != 0.0) a / b else Double.NaN
-        else -> b
-    }
-
-    fun onOperator(op: String) {
-        val current = display.toDoubleOrNull() ?: 0.0
-        val previousOp = pendingOp
-        if (previousOp != null && !shouldReset) {
-            val result = calculate(firstOperand, previousOp, current)
-            display = result.formatCalc()
-            firstOperand = result
-        } else {
-            firstOperand = current
-        }
-        pendingOp = op
-        shouldReset = true
-    }
-
-    fun onEquals() {
-        val current = display.toDoubleOrNull() ?: 0.0
-        val result = calculate(firstOperand, pendingOp ?: "=", current)
-        display = result.formatCalc()
-        pendingOp = null
-        shouldReset = true
-    }
-
-    fun onScientific(fn: String) {
-        val v = display.toDoubleOrNull() ?: 0.0
-        val result = when (fn) {
-            "sin"  -> sin(Math.toRadians(v))
-            "cos"  -> cos(Math.toRadians(v))
-            "tan"  -> tan(Math.toRadians(v))
-            "log"  -> if (v > 0) log10(v) else Double.NaN
-            "√"    -> if (v >= 0) sqrt(v) else Double.NaN
-            "x²"   -> v * v
-            "π"    -> PI
-            "e"    -> E
-            else   -> v
-        }
-        display = result.formatCalc()
-        shouldReset = true
-    }
-
-    val operatorKeys = setOf("÷", "×", "−", "+")
-
-    Column(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        // Scientific rows
-        listOf(
-            listOf("sin", "cos", "tan", "log"),
-            listOf("√", "x²", "π", "e")
-        ).forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                row.forEach { key ->
-                    CalcKey(label = key, modifier = Modifier.weight(1f), isSecondary = true,
-                        onClick = { onScientific(key) })
-                }
-            }
-        }
-
-        // Display
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            Text(
-                text = display,
-                style = MaterialTheme.typography.headlineMedium,
-                color = if (display == "Error") MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-        }
-
-        // Main rows
-        listOf(
-            listOf("AC", "±", "%", "÷"),
-            listOf("7", "8", "9", "×"),
-            listOf("4", "5", "6", "−"),
-            listOf("1", "2", "3", "+")
-        ).forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                row.forEach { key ->
-                    CalcKey(
-                        label = key,
-                        modifier = Modifier.weight(1f),
-                        isOperator = key in operatorKeys,
-                        onClick = {
-                            when {
-                                key == "AC" -> { display = "0"; firstOperand = 0.0; pendingOp = null; shouldReset = false }
-                                key == "±"  -> { val v = display.toDoubleOrNull() ?: 0.0; display = (-v).formatCalc() }
-                                key == "%"  -> { val v = display.toDoubleOrNull() ?: 0.0; display = (v / 100.0).formatCalc(); shouldReset = true }
-                                key in operatorKeys -> onOperator(key)
-                                else -> onDigit(key)
-                            }
-                        }
-                    )
-                }
-            }
-        }
-
-        // Bottom row
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            CalcKey(label = "0", modifier = Modifier.weight(2f), onClick = { onDigit("0") })
-            CalcKey(label = ".", modifier = Modifier.weight(1f), onClick = { onDigit(".") })
-            CalcKey(label = "=", modifier = Modifier.weight(1f), isPrimary = true, onClick = { onEquals() })
-        }
-    }
-}
-
-@Composable
-private fun CalcKey(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    isPrimary: Boolean = false,
-    isOperator: Boolean = false,
-    isSecondary: Boolean = false
-) {
-    val bg = when {
-        isPrimary  -> MaterialTheme.colorScheme.primary
-        isOperator -> MaterialTheme.colorScheme.secondaryContainer
-        isSecondary -> MaterialTheme.colorScheme.surfaceContainerHigh
-        else       -> MaterialTheme.colorScheme.surface
-    }
-    val textColor = when {
-        isPrimary  -> MaterialTheme.colorScheme.onPrimary
-        isOperator -> MaterialTheme.colorScheme.onSecondaryContainer
-        else       -> MaterialTheme.colorScheme.onSurface
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(bg)
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            style = ProstutiTypography.enLabelLarge,
-            color = textColor
-        )
     }
 }
 

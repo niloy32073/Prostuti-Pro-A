@@ -20,14 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.data.model.enums.TimedExamState
 import com.prostuti.student.ui.component.BackButton
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.util.toBengaliDigits
@@ -49,42 +46,50 @@ fun LiveExamListScreen(
     viewModel: LiveExamListViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    ObserveErrors(errors = state.errors, snackbarHostState = snackbarHostState, onConsumed = viewModel::clearError)
     LaunchedEffect(Unit) { viewModel.refresh() }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background, snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp)) {
-                BackButton(onClick = onBack)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(text = "লাইভ এক্সাম", style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface)
-            }
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding,
+            pullToRefreshEnabled = true,
+            isRefreshing = state.isLoading && state.rows.isNotEmpty(),
+            onRefresh = viewModel::refresh
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp)) {
+                    BackButton(onClick = onBack)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(text = "লাইভ এক্সাম", style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface)
+                }
 
-            when {
-                state.isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-                state.rows.isEmpty() -> Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "এখন কোনো লাইভ এক্সাম নেই", style = ProstutiTypography.bnBodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center
-                    )
-                }
-                else -> {
-                    val columns = adaptiveColumnCount()
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(columns),
-                        state = rememberLazyGridState(),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 10.dp else 0.dp)
-                    ) {
-                        items(state.rows, key = { it.exam.examId }) { row -> LiveExamRowCard(row = row, onClick = { onNavigateToDetail(row.exam.examId) }) }
+                when {
+                    state.isLoading && state.rows.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                    state.rows.isEmpty() -> Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "এখন কোনো লাইভ এক্সাম নেই", style = ProstutiTypography.bnBodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center
+                        )
+                    }
+                    else -> {
+                        val columns = adaptiveColumnCount()
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(columns),
+                            state = rememberLazyGridState(),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 10.dp else 0.dp)
+                        ) {
+                            items(state.rows, key = { it.exam.examId }) { row -> LiveExamRowCard(row = row, onClick = { onNavigateToDetail(row.exam.examId) }) }
+                        }
                     }
                 }
             }
+    
         }
     }
 }

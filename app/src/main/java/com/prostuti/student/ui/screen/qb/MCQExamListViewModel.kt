@@ -7,7 +7,7 @@ import com.prostuti.student.data.model.enums.Level
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.ExamAttemptData
 import com.prostuti.student.data.model.response.MCQExam
-import com.prostuti.student.domain.AttemptMCQExamUseCase
+import com.prostuti.student.domain.StartOrResumeExamAttemptUseCase
 import com.prostuti.student.domain.FetchMCQExamsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +40,7 @@ data class MCQExamListUiState(
 class MCQExamListViewModel(
     val subjectId: String,
     private val fetchMCQExamsUseCase: FetchMCQExamsUseCase,
-    private val attemptMCQExamUseCase: AttemptMCQExamUseCase
+    private val startOrResumeExamAttemptUseCase: StartOrResumeExamAttemptUseCase
 ) : ViewModel() {
     private val _state = MutableStateFlow(MCQExamListUiState())
     val state: StateFlow<MCQExamListUiState> = _state.asStateFlow()
@@ -105,7 +105,7 @@ class MCQExamListViewModel(
     fun startExam(exam: MCQExam) {
         viewModelScope.launch {
             _state.update { it.copy(isAttempting = true, selectedExam = null) }
-            when (val r = attemptMCQExamUseCase(exam.id)) {
+            when (val r = startOrResumeExamAttemptUseCase(exam.id)) {
                 is ApiResponse.Success -> _state.update {
                     it.copy(isAttempting = false, navigateToExam = Pair(r.data, exam))
                 }

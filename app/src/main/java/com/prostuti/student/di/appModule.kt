@@ -7,10 +7,14 @@ import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.RefreshTokenResponse
 import com.prostuti.student.data.repository.AuthRepository
 import com.prostuti.student.data.repository.AuthRepositoryImpl
+import com.prostuti.student.data.repository.UserRepository
+import com.prostuti.student.data.repository.UserRepositoryImpl
 import com.prostuti.student.data.repository.CurriculumRepository
 import com.prostuti.student.data.repository.CurriculumRepositoryImpl
 import com.prostuti.student.data.repository.GroupExamRepository
 import com.prostuti.student.data.repository.LiveExamRepository
+import com.prostuti.student.data.repository.AttemptProgressRepository
+import com.prostuti.student.data.repository.AttemptProgressRepositoryImpl
 import com.prostuti.student.data.repository.MCQExamRepository
 import com.prostuti.student.data.repository.MCQExamRepositoryImpl
 import com.prostuti.student.data.repository.StorageRepository
@@ -26,10 +30,18 @@ import com.prostuti.student.dataStore.DATA_STORE_FILE_NAME
 import com.prostuti.student.dataStore.PrefKeys
 import com.prostuti.student.dataStore.createDataStore
 import com.prostuti.student.domain.AdvanceDemoStateUseCase
-import com.prostuti.student.domain.AttemptMCQExamUseCase
+import com.prostuti.student.domain.calculator.EquationSolver
+import com.prostuti.student.domain.calculator.ExpressionEvaluator
+import com.prostuti.student.domain.scratchpad.StrokeEraser
+import com.prostuti.student.domain.graph.GraphCompiler
+import com.prostuti.student.domain.graph.plot.GraphPlotter
+import com.prostuti.student.ui.screen.playground.graph.GraphBuilderViewModel
+import com.prostuti.student.domain.StartOrResumeExamAttemptUseCase
 import com.prostuti.student.domain.AutoSubmitAbandonedAttemptUseCase
 import com.prostuti.student.domain.CheckUserUseCase
+import com.prostuti.student.domain.ClearCachedMeUseCase
 import com.prostuti.student.domain.ClearDataStoreUseCase
+import com.prostuti.student.domain.GetMeUseCase
 import com.prostuti.student.domain.CreateGroupRoutineUseCase
 import com.prostuti.student.domain.CreateGroupUseCase
 import com.prostuti.student.domain.FetchChaptersUseCase
@@ -52,6 +64,11 @@ import com.prostuti.student.domain.FetchTopicsUseCase
 import com.prostuti.student.domain.FetchWindowRankingUseCase
 import com.prostuti.student.domain.GenerateExamUseCase
 import com.prostuti.student.domain.GetAttemptQuestionsUseCase
+import com.prostuti.student.domain.ClearLocalAttemptElapsedUseCase
+import com.prostuti.student.domain.GetAttemptResponsesUseCase
+import com.prostuti.student.domain.GetLocalAttemptElapsedUseCase
+import com.prostuti.student.domain.SaveLocalAttemptElapsedUseCase
+import com.prostuti.student.domain.GetResumablePracticeAttemptUseCase
 import com.prostuti.student.domain.GetAttemptReviewUseCase
 import com.prostuti.student.domain.GetBooleanFromDataStoreUseCase
 import com.prostuti.student.domain.GetExamAttemptUseCase
@@ -96,11 +113,14 @@ import com.prostuti.student.ui.screen.auth.AuthSignupViewModel
 import com.prostuti.student.ui.screen.auth.AuthStartViewModel
 import com.prostuti.student.ui.screen.auth.AuthVerifyOtpViewModel
 import com.prostuti.student.ui.screen.home.HomeViewModel
+import com.prostuti.student.ui.screen.profile.ProfileViewModel
 import com.prostuti.student.ui.screen.intro.OnboardingViewModel
 import com.prostuti.student.ui.screen.examengine.ExamAnswerSheetViewModel
 import com.prostuti.student.ui.screen.examengine.ExamAttemptViewModel
 import com.prostuti.student.ui.screen.examengine.ExamLeaderboardViewModel
 import com.prostuti.student.ui.screen.examengine.ExamResultViewModel
+import com.prostuti.student.ui.screen.examengine.calculator.CalculatorViewModel
+import com.prostuti.student.ui.screen.examengine.scratchpad.ScratchpadViewModel
 import com.prostuti.student.ui.screen.practice.PracticeChapterSelectViewModel
 import com.prostuti.student.ui.screen.practice.PracticeExamPropertiesViewModel
 import com.prostuti.student.ui.screen.practice.PracticeSubjectChapterViewModel
@@ -130,10 +150,16 @@ import io.ktor.http.takeFrom
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import timber.log.Timber
+
+/** Koin name of the dispatcher the graph builder plots on. */
+const val GRAPH_COMPUTE_DISPATCHER = "graphCompute"
 
 val appModule = module {
     includes(databaseModule)
@@ -247,6 +273,7 @@ val appModule = module {
 
     single { MCQExamApiService(get()) }
     single<MCQExamRepository> { MCQExamRepositoryImpl(get()) }
+    single<AttemptProgressRepository> { AttemptProgressRepositoryImpl(get(), get()) }
 
     // Group/live exam — fake, Room-backed where the real backend doesn't exist yet. Swapping in
     // the real API later is a single-line change here, nothing above or below it.
@@ -264,6 +291,10 @@ val appModule = module {
     factory { VerifyResetOtpUseCase(get()) }
     factory { ResetPasswordUseCase(get()) }
 
+    single<UserRepository> { UserRepositoryImpl(get(), get()) }
+    factory { GetMeUseCase(get()) }
+    factory { ClearCachedMeUseCase(get()) }
+
     factory { GetStringFromDataStoreUseCase(get()) }
     factory { GetBooleanFromDataStoreUseCase(get()) }
     factory { SaveBooleanToDataStoreUseCase(get()) }
@@ -273,10 +304,15 @@ val appModule = module {
     factory { FetchChaptersUseCase(get()) }
     factory { FetchTopicsUseCase(get()) }
     factory { FetchMCQExamsUseCase(get()) }
-    factory { AttemptMCQExamUseCase(get()) }
+    factory { StartOrResumeExamAttemptUseCase(get()) }
     factory { FetchPassageUseCase(get()) }
     factory { GenerateExamUseCase(get()) }
     factory { GetAttemptQuestionsUseCase(get()) }
+    factory { GetAttemptResponsesUseCase(get()) }
+    factory { GetLocalAttemptElapsedUseCase(get()) }
+    factory { SaveLocalAttemptElapsedUseCase(get()) }
+    factory { ClearLocalAttemptElapsedUseCase(get()) }
+    factory { GetResumablePracticeAttemptUseCase(get(), get()) }
     factory { SubmitExamResponsesUseCase(get()) }
     factory { SubmitExamAttemptUseCase(get()) }
     factory { GetExamAttemptUseCase(get()) }
@@ -315,15 +351,29 @@ val appModule = module {
     viewModel { params -> AuthVerifyOtpViewModel(get(), get(), get(), params.get()) }
     viewModel { params -> AuthResetRequestViewModel(get(), get(), params.get()) }
     viewModel { params -> AuthResetNewPasswordViewModel(get(), params.get()) }
-    viewModel { HomeViewModel() }
-    viewModel { SettingsViewModel(get()) }
+    viewModel { HomeViewModel(get(), get()) }
+    viewModel { SettingsViewModel(get(), get()) }
+    viewModel { ProfileViewModel(get()) }
 
     viewModel { SubjectListViewModel(get()) }
     viewModel { params -> MCQExamListViewModel(params.get(), get(), get()) }
-    viewModel { params -> ExamAttemptViewModel(params.get(), get(), get(), get(), get(), get()) }
+    viewModel { params -> ExamAttemptViewModel(params.get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { params -> ExamResultViewModel(params.get(), get()) }
     viewModel { params -> ExamAnswerSheetViewModel(params.get(), get()) }
     viewModel { params -> ExamLeaderboardViewModel(params.get(), get()) }
+
+    // ── Exam tools: calculator + scratch canvas (own ViewModels, independent of the exam VM) ──
+    factory { ExpressionEvaluator() }
+    factory { EquationSolver() }
+    factory { StrokeEraser() }
+    viewModel { CalculatorViewModel(get(), get()) }
+
+    // ── Playground · graph builder ── plotting runs on its own CPU dispatcher (replaceable in tests).
+    single<CoroutineDispatcher>(named(GRAPH_COMPUTE_DISPATCHER)) { Dispatchers.Default }
+    factory { GraphCompiler() }
+    factory { GraphPlotter() }
+    viewModel { GraphBuilderViewModel(get(), get(), get(named(GRAPH_COMPUTE_DISPATCHER)), get()) }
+    viewModel { ScratchpadViewModel(get()) }
     viewModel { PracticeSubjectSelectViewModel(get()) }
     viewModel { PracticeSubjectChapterViewModel(get(), get(), get()) }
     viewModel { params -> PracticeChapterSelectViewModel(params.get(), get(), get(), get()) }

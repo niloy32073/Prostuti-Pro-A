@@ -7,7 +7,7 @@ import com.prostuti.student.data.model.response.ExamAttemptData
 import com.prostuti.student.data.model.response.MCQExam
 import com.prostuti.student.data.model.response.MetaData
 import com.prostuti.student.data.repository.fake.FakeQbMcqExamRepository
-import com.prostuti.student.domain.AttemptMCQExamUseCase
+import com.prostuti.student.domain.StartOrResumeExamAttemptUseCase
 import com.prostuti.student.domain.FetchMCQExamsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,7 +50,7 @@ class MCQExamListViewModelTest {
     )
 
     private fun viewModel(repo: FakeQbMcqExamRepository, subjectId: String = "phy") =
-        MCQExamListViewModel(subjectId, FetchMCQExamsUseCase(repo), AttemptMCQExamUseCase(repo))
+        MCQExamListViewModel(subjectId, FetchMCQExamsUseCase(repo), StartOrResumeExamAttemptUseCase(repo))
 
     @Test
     fun `init loads both board and college exams`() = runTest {

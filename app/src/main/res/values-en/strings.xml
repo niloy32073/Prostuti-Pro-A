@@ -104,11 +104,10 @@
     <string name="nav_settings">Settings</string>
 
     <!-- Generic -->
+    <string name="error_dismiss">Dismiss error</string>
     <string name="feature_coming_soon">This feature is coming soon</string>
 
     <!-- Home -->
-    <string name="home_greeting_demo">Hello, Nifa 👋</string>
-    <string name="home_batch_stream_demo">HSC 2027 · Science</string>
     <string name="notifications">Notifications</string>
     <string name="profile">Profile</string>
     <string name="home_live_exam_badge_demo">Live exam · Tomorrow 8:00 PM</string>
@@ -127,8 +126,6 @@
     <string name="home_rank1_initial_demo">S</string>
     <string name="home_rank3_name_demo">Emon</string>
     <string name="home_rank3_initial_demo">E</string>
-    <string name="home_my_rank_initial_demo">N</string>
-    <string name="home_my_rank_label_demo">You · Nifa</string>
     <string name="home_my_rating_demo">Rating 1482</string>
     <string name="home_my_rank_number_demo">#18</string>
     <string name="home_quick_menu_title">Quick menu</string>
@@ -145,8 +142,14 @@
     <string name="qm_magazine">Magazine</string>
     <string name="qm_ebook">Ebook</string>
     <string name="home_magazine_ebook_note">Magazine and Ebook are coming soon</string>
-    <string name="home_continue_title_demo">Continue</string>
-    <string name="home_continue_subtitle_demo">Chemistry Paper 2 — 13/25 questions left</string>
+    <string name="exam_attempt_no_questions">No questions were found for this exam. Go back and try again.</string>
+    <string name="home_continue_title">Continue</string>
+    <string name="home_continue_exam_fallback">Your ongoing exam</string>
+    <string name="home_continue_minutes_left">%1$d min left</string>
+    <string name="home_continue_time_over">Time\'s up</string>
+    <string name="home_continue_mode_live">Live</string>
+    <string name="home_continue_mode_practice">Practice</string>
+    <string name="home_continue_more">%1$d more unfinished</string>
     <string name="ai_chat_coming_soon">AI chat — coming soon</string>
 
     <!-- Settings -->
@@ -158,4 +161,186 @@
 
     <!-- Generic tab placeholder -->
     <string name="tab_coming_soon_body">This section is coming soon.</string>
+
+    <!-- Profile (GET auth/me) -->
+    <string name="home_greeting">Hello, %1$s 👋</string>
+    <string name="home_greeting_no_name">Hello 👋</string>
+    <string name="home_my_rank_label">You · %1$s</string>
+    <string name="home_my_rank_label_no_name">You</string>
+    <string name="profile_open">Open profile</string>
+    <string name="profile_avatar">Profile photo</string>
+    <string name="profile_section_contact">Contact</string>
+    <string name="profile_section_account">Account</string>
+    <string name="profile_email">Email</string>
+    <string name="profile_phone">Phone</string>
+    <string name="profile_role">Role</string>
+    <string name="profile_provider">Signed in with</string>
+    <string name="profile_created_at">Account created</string>
+    <string name="profile_last_login">Last login</string>
+    <string name="profile_verified">Verified</string>
+    <string name="profile_not_verified">Not verified</string>
+    <string name="profile_not_set">Not set</string>
+    <string name="profile_load_failed">Couldn\'t load your profile</string>
+    <string name="profile_retry">Try again</string>
+    <string name="role_student">Student</string>
+    <string name="role_teacher">Teacher</string>
+    <string name="role_admin">Admin</string>
+    <string name="role_moderator">Moderator</string>
+    <string name="role_reviewer">Reviewer</string>
+    <string name="role_dataop">Data operator</string>
+    <string name="provider_email">Email and password</string>
+    <string name="provider_phone">Phone and password</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_facebook">Facebook</string>
+    <string name="provider_magic_otp">One-time code</string>
+    <string name="exam_tool_calculator">Calculator</string>
+    <string name="exam_tool_canvas">Canvas</string>
+    <string name="scratch_pen">Pen</string>
+    <string name="scratch_eraser">Eraser</string>
+    <string name="scratch_eraser_partial">Erase part</string>
+    <string name="scratch_eraser_stroke">Erase whole line</string>
+    <string name="scratch_undo">Undo</string>
+    <string name="scratch_redo">Redo</string>
+    <string name="scratch_clear">Clear all</string>
+
+    <!-- Playground · Graph Builder -->
+    <string name="playground_title">Playground</string>
+    <string name="playground_subtitle">Hands-on learning tools</string>
+    <string name="playground_graph_builder">Graph Builder</string>
+    <string name="playground_graph_builder_desc">Type an equation and see its graph instantly — lines, curves, inequalities, integral areas</string>
+    <string name="playground_more_soon">More tools coming soon</string>
+    <string name="graph_title">Graph Builder</string>
+    <string name="graph_add_expression">New expression</string>
+    <string name="graph_expression_hint">Type an equation, e.g. y = x²</string>
+    <string name="graph_examples">Examples</string>
+    <string name="graph_examples_title">Add an example</string>
+    <string name="graph_settings">Graph settings</string>
+    <string name="graph_reset_view">Default view</string>
+    <string name="graph_zoom_in">Zoom in</string>
+    <string name="graph_zoom_out">Zoom out</string>
+    <string name="graph_show_line">Show graph</string>
+    <string name="graph_hide_line">Hide graph</string>
+    <string name="graph_line_options">Options</string>
+    <string name="graph_delete_line">Delete</string>
+    <string name="graph_move_up">Move up</string>
+    <string name="graph_move_down">Move down</string>
+    <string name="graph_color">Colour</string>
+    <string name="graph_show_derivative">Show derivative f′(x)</string>
+    <string name="graph_show_tangent">Show tangent</string>
+    <string name="graph_tangent_at">at x = %1$s</string>
+    <string name="graph_tangent_slope">Tangent slope m = %1$s</string>
+    <string name="graph_tangent_here">Tangent here</string>
+    <string name="graph_riemann">Riemann sum</string>
+    <string name="graph_riemann_off">Off</string>
+    <string name="graph_riemann_left">Left</string>
+    <string name="graph_riemann_right">Right</string>
+    <string name="graph_riemann_mid">Mid</string>
+    <string name="graph_riemann_trap">Trapezoid</string>
+    <string name="graph_riemann_count">Rectangles n = %1$d</string>
+    <string name="graph_riemann_value">Riemann sum (n = %1$d) ≈ %2$s</string>
+    <string name="graph_animate">Play</string>
+    <string name="graph_pause">Pause</string>
+    <string name="graph_range">Range</string>
+    <string name="graph_range_min">From</string>
+    <string name="graph_range_max">To</string>
+    <string name="graph_slider_min">Min</string>
+    <string name="graph_slider_max">Max</string>
+    <string name="graph_slider_step">Step</string>
+    <string name="graph_add_slider">Add slider: %1$s</string>
+    <string name="graph_area_note">Area below the x-axis counts as negative</string>
+    <string name="graph_between_note">Area between the two curves</string>
+    <string name="graph_value_undefined">undefined</string>
+    <string name="graph_not_converged">Value uncertain — the integral may diverge</string>
+    <string name="graph_angle_unit">Angle unit</string>
+    <string name="graph_radian">Radians</string>
+    <string name="graph_degree">Degrees</string>
+    <string name="graph_show_grid">Grid</string>
+    <string name="graph_show_axes">Axes</string>
+    <string name="graph_show_numbers">Axis numbers</string>
+    <string name="graph_pi_axis">x-axis in multiples of π</string>
+    <string name="graph_x_range">x range</string>
+    <string name="graph_y_range">y range</string>
+    <string name="graph_apply">Apply</string>
+    <string name="graph_square_axes">Equal scale</string>
+    <string name="graph_point_root">Root</string>
+    <string name="graph_point_min">Minimum</string>
+    <string name="graph_point_max">Maximum</string>
+    <string name="graph_point_y_intercept">y-intercept</string>
+    <string name="graph_point_intersection">Intersection</string>
+    <string name="graph_trace_slope">slope %1$s</string>
+    <string name="graph_keyboard_system">Phone keyboard</string>
+    <string name="graph_keyboard_math">Math keyboard</string>
+    <string name="graph_keyboard_hide">Hide keyboard</string>
+    <string name="graph_key_backspace">Backspace</string>
+    <string name="graph_key_left">Cursor left</string>
+    <string name="graph_key_right">Cursor right</string>
+    <string name="graph_key_enter">New line</string>
+    <string name="graph_key_page_main">Numbers and symbols</string>
+    <string name="graph_key_page_functions">Functions</string>
+    <string name="graph_key_page_calculus">Calculus</string>
+    <string name="graph_key_page_letters">Letters</string>
+    <string name="graph_empty_graph">Type an equation below, or pick an example</string>
+    <string name="graph_three_d_soon">The 3D view arrives in the next update</string>
+    <string name="graph_error_syntax">Can\'t read this — check the symbols</string>
+    <string name="graph_error_brackets">Brackets don\'t match</string>
+    <string name="graph_error_character">Unknown symbol “%1$s”</string>
+    <string name="graph_error_empty_argument">Something is missing inside the brackets</string>
+    <string name="graph_error_argument_count">Wrong number of inputs for this function</string>
+    <string name="graph_error_differential">End the integral with dx</string>
+    <string name="graph_error_tuple">Write a point (a, b) on its own line</string>
+    <string name="graph_error_undefined">%1$s is not defined</string>
+    <string name="graph_error_duplicate">%1$s is defined more than once</string>
+    <string name="graph_error_circular">%1$s depends on itself</string>
+    <string name="graph_error_broken">The line defining %1$s has an error</string>
+    <string name="graph_error_invalid_definition">A parameter can\'t depend on x or y</string>
+    <string name="graph_error_reserved">%1$s is a constant and can\'t be assigned</string>
+    <string name="graph_error_unsupported">This kind of equation can\'t be drawn</string>
+    <string name="graph_error_3d">This is a 3D graph — the 3D view arrives in the next update</string>
+    <string name="graph_error_complex">The expression is too complex</string>
+    <string name="graph_ex_cat_basic">Basic functions</string>
+    <string name="graph_ex_cat_conics">Conics</string>
+    <string name="graph_ex_cat_trig">Trigonometry</string>
+    <string name="graph_ex_cat_polar">Polar and parametric</string>
+    <string name="graph_ex_cat_inequality">Inequalities</string>
+    <string name="graph_ex_cat_calculus">Calculus</string>
+    <string name="graph_ex_cat_sliders">Play with sliders</string>
+    <string name="graph_ex_line">Straight line</string>
+    <string name="graph_ex_quadratic">Quadratic</string>
+    <string name="graph_ex_cubic">Cubic</string>
+    <string name="graph_ex_abs">Absolute value</string>
+    <string name="graph_ex_exponential">Exponential</string>
+    <string name="graph_ex_log">Logarithm</string>
+    <string name="graph_ex_rational">Rational function</string>
+    <string name="graph_ex_piecewise">Piecewise function</string>
+    <string name="graph_ex_floor">Floor ⌊x⌋</string>
+    <string name="graph_ex_circle">Circle</string>
+    <string name="graph_ex_circle_shifted">Circle centred at (2, −1)</string>
+    <string name="graph_ex_ellipse">Ellipse</string>
+    <string name="graph_ex_parabola">Parabola</string>
+    <string name="graph_ex_hyperbola">Hyperbola</string>
+    <string name="graph_ex_sine">Sine wave</string>
+    <string name="graph_ex_amplitude">Amplitude and period</string>
+    <string name="graph_ex_tan">Tangent</string>
+    <string name="graph_ex_inverse_trig">Inverse trig</string>
+    <string name="graph_ex_sum_trig">sin x + cos x</string>
+    <string name="graph_ex_rose">Rose curve</string>
+    <string name="graph_ex_cardioid">Cardioid</string>
+    <string name="graph_ex_spiral">Spiral</string>
+    <string name="graph_ex_lemniscate">Lemniscate</string>
+    <string name="graph_ex_param_circle">Parametric circle</string>
+    <string name="graph_ex_lissajous">Lissajous figure</string>
+    <string name="graph_ex_cycloid">Cycloid</string>
+    <string name="graph_ex_ineq_above">Above a curve</string>
+    <string name="graph_ex_ineq_disc">Inside a circle</string>
+    <string name="graph_ex_ineq_band">Between two lines</string>
+    <string name="graph_ex_integral">Area of a definite integral</string>
+    <string name="graph_ex_signed_area">Signed area</string>
+    <string name="graph_ex_between">Area between curves</string>
+    <string name="graph_ex_improper">Improper integral</string>
+    <string name="graph_ex_antiderivative">Antiderivative</string>
+    <string name="graph_ex_derivative">A function and its derivative</string>
+    <string name="graph_ex_series">Sum of a series</string>
+    <string name="graph_ex_slider_wave">Wave a sin(bx)</string>
+    <string name="graph_ex_slider_quadratic">Family ax² + bx + c</string>
+    <string name="graph_ex_slider_line">y = mx + c</string>
 </resources>

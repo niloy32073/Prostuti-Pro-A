@@ -127,7 +127,33 @@ internal object LatexNormalizer {
         return pieces
     }
 
-    fun normalize(formula: String): String {
+    /**
+     * Name operators the renderer files under "big operators" next to ∑ and ∫. It draws them
+     * like ∑: 1.3–1.5× the font size, in a lighter weight, with limits stacked underneath even
+     * in inline math. TeX draws them as plain upright text at normal size, limits beside them
+     * inline and underneath only in display math, so [process] rebuilds them that way.
+     */
+    private val namedOperators = setOf(
+        "lim", "max", "min", "sup", "inf", "limsup", "liminf",
+        "det", "gcd", "deg", "dim", "ker", "arg", "hom"
+    )
+
+    /** Commands after a name operator that get no thin space (relations, delimiters, spaces). */
+    private val noSpaceAfterOperator = setOf(
+        "left", "right", "big", "Big", "bigg", "Bigg", "bigl", "Bigl", "biggl", "Biggl",
+        "to", "rightarrow", "leftarrow", "Rightarrow", "Leftarrow", "leftrightarrow", "Leftrightarrow",
+        "leq", "geq", "le", "ge", "ne", "neq", "approx", "equiv", "sim", "simeq", "in", "notin",
+        "subset", "supset", "subseteq", "supseteq", "cdot", "times", "pm", "mp", "div",
+        "lbrace", "rbrace", "langle", "rangle", "lfloor", "rfloor", "lceil", "rceil",
+        "quad", "qquad", ",", ";", ":", "!", "{", "}", "|"
+    )
+
+    /**
+     * @param display true for a `$$…$$` block: name-operator limits go underneath (TeX's
+     * display style). Inline formulas put them beside the operator. `\displaystyle`
+     * inside the formula counts as display too.
+     */
+    fun normalize(formula: String, display: Boolean = false): String {
         var src = formula
         for ((pattern, replacement) in unsupportedCommands) {
             if (pattern.containsMatchIn(src)) {
@@ -142,11 +168,11 @@ internal object LatexNormalizer {
             return src
         }
         val out = StringBuilder(src.length + 16)
-        process(src, out)
+        process(src, out, display || src.contains("\\displaystyle"))
         return out.toString()
     }
 
-    private fun process(src: String, out: StringBuilder) {
+    private fun process(src: String, out: StringBuilder, display: Boolean = false) {
         var i = 0
         while (i < src.length) {
             val c = src[i]
@@ -159,6 +185,11 @@ internal object LatexNormalizer {
                         out.append("\\;")
                     } else {
                         out.append(src, i, end)
+                    }
+                    if (name in namedOperators) {
+                        out.setLength(out.length - (end - i)) // undo the raw `\name` appended above
+                        i = namedOperator(src, end, name, out, display)
+                        continue
                     }
                     i = end
                     when {
@@ -182,6 +213,101 @@ internal object LatexNormalizer {
                     i++
                 }
             }
+        }
+    }
+
+    /**
+     * Writes name operator [name] (its `\\name` ends at [start]) with any `\\limits` /
+     * `\\nolimits` and `_`/`^` scripts, and returns the index after them.
+     *
+     *   inline   \lim_{x\to a} f   → \mathrm{lim}_{x\to a}\,f
+     *   display  \lim_{x\to a} f   → \underset{x\to a}{\mathrm{lim}}\,f
+     *   no limit \max f            → \operatorname{max}f   (renderer spaces it as an operator)
+     */
+    private fun namedOperator(src: String, start: Int, name: String, out: StringBuilder, display: Boolean): Int {
+        var i = start
+        var below = display
+        var sub: String? = null
+        var sup: String? = null
+        while (true) {
+            var j = i
+            while (j < src.length && src[j].isWhitespace()) j++
+            if (j >= src.length) break
+            val c = src[j]
+            if (c == '\\') {
+                val end = controlSequenceEnd(src, j)
+                when (src.substring(j + 1, end)) {
+                    "limits" -> { below = true; i = end; continue }
+                    "nolimits" -> { below = false; i = end; continue }
+                }
+                break
+            }
+            if ((c == '_' && sub == null) || (c == '^' && sup == null)) {
+                val script = StringBuilder()
+                i = argument(src, j + 1, script)
+                if (c == '_') sub = script.toString() else sup = script.toString()
+                continue
+            }
+            break
+        }
+
+        if (sub == null && sup == null) {
+            // Unlike \mathrm, \operatorname gets the renderer's operator spacing on both sides.
+            when (name) {
+                "limsup" -> out.append("\\operatorname{lim}\\operatorname{sup}")
+                "liminf" -> out.append("\\operatorname{lim}\\operatorname{inf}")
+                else -> out.append("\\operatorname{").append(name).append('}')
+            }
+            return i
+        }
+
+        // A scripted operator is an ordinary atom to the renderer, so add TeX's thin spaces.
+        if (endsWithOrdinary(out)) out.append("\\,")
+
+        val body = when (name) {
+            "limsup" -> "\\mathrm{lim}\\,\\mathrm{sup}"
+            "liminf" -> "\\mathrm{lim}\\,\\mathrm{inf}"
+            else -> "\\mathrm{$name}"
+        }
+        if (below) {
+            var stacked = body
+            if (sub != null) stacked = "\\underset$sub{$stacked}"
+            if (sup != null) stacked = "\\overset$sup{$stacked}"
+            out.append(stacked)
+        } else {
+            out.append(body)
+            sub?.let { out.append('_').append(it) }
+            sup?.let { out.append('^').append(it) }
+        }
+        if (needsSpaceAfterOperator(src, i)) out.append("\\,")
+        return i
+    }
+
+    /** True when [out] ends in a letter, digit or closing bracket that isn't part of a
+     *  command such as `\\displaystyle`, so an operator after it needs a thin space. */
+    private fun endsWithOrdinary(out: StringBuilder): Boolean {
+        var k = out.length - 1
+        while (k >= 0 && out[k].isWhitespace()) k--
+        if (k < 0) return false
+        val c = out[k]
+        if (c == ')' || c == ']' || c == '}') return true
+        if (c.isDigit()) return true
+        if (!c.isLetter()) return false
+        while (k >= 0 && out[k].isLetter()) k--
+        return k < 0 || out[k] != '\\'
+    }
+
+    /** TeX puts a thin space between an operator and a following ordinary atom, none before
+     *  an opening bracket, relation, binary operator, punctuation or the end. */
+    private fun needsSpaceAfterOperator(src: String, start: Int): Boolean {
+        var j = start
+        while (j < src.length && src[j].isWhitespace()) j++
+        if (j >= src.length) return false
+        val c = src[j]
+        return when {
+            c.isLetterOrDigit() || c == '{' -> true
+            c == '\\' -> src.substring(j + 1, controlSequenceEnd(src, j)) !in noSpaceAfterOperator
+            else -> false
         }
     }
 

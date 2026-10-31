@@ -12,5 +12,7 @@ enum class ExamTypes {
     CUSTOM,
     LIVE,
     PRACTICE,
-    EXTRA_LIVE
+    EXTRA_LIVE,
+    /** A practice exam the student built with POST /exams/generate. */
+    GENERATED
 }

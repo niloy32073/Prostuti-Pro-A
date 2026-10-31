@@ -53,4 +53,37 @@ class OnboardingScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.onboarding_skip)).performClick()
         composeTestRule.waitUntil(timeoutMillis = 5_000) { finished }
     }
+
+    @Test
+    fun carousel_showsLastCardBeforeFirst_andNextCardAfter() {
+        composeTestRule.setContent {
+            ProstutiTheme {
+                OnboardingContent(cards = carouselCards, onFinish = {}, visibleCount = 3)
+            }
+        }
+
+        // The ring wraps: the first card sits in the middle, the last card on its left, the second on its right.
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_card1_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_card3_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_card2_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun carousel_nextFromSecondToLast_showsStartButton() {
+        composeTestRule.setContent {
+            ProstutiTheme {
+                OnboardingContent(cards = carouselCards, onFinish = {}, visibleCount = 3)
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_next)).performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_next)).performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.onboarding_start)).assertIsDisplayed()
+    }
+
+    private val carouselCards = listOf(
+        OnboardingCard(R.string.onboarding_card1_title, R.string.onboarding_card1_desc, ContainerRole.PRIMARY),
+        OnboardingCard(R.string.onboarding_card2_title, R.string.onboarding_card2_desc, ContainerRole.SECONDARY),
+        OnboardingCard(R.string.onboarding_card3_title, R.string.onboarding_card3_desc, ContainerRole.TERTIARY)
+    )
 }

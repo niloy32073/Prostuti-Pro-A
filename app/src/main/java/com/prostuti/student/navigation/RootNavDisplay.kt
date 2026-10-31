@@ -56,6 +56,9 @@ import com.prostuti.student.ui.screen.practice.PracticeChapterSelectScreen
 import com.prostuti.student.ui.screen.practice.PracticeExamPropertiesScreen
 import com.prostuti.student.ui.screen.practice.PracticeSubjectChapterScreen
 import com.prostuti.student.ui.screen.practice.PracticeSubjectSelectScreen
+import com.prostuti.student.ui.screen.playground.PlaygroundHubScreen
+import com.prostuti.student.ui.screen.playground.graph.GraphBuilderScreen
+import com.prostuti.student.ui.screen.profile.ProfileScreen
 import com.prostuti.student.ui.screen.timedexam.LockedResultScreen
 import com.prostuti.student.ui.screen.timedexam.TimedAnswerSheetScreen
 import com.prostuti.student.ui.screen.timedexam.TimedExamAttemptScreen
@@ -171,8 +174,24 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     onNavigateToPractice = { backStack.add(PracticeSubjectSelect) },
                     onNavigateToGroupList = { backStack.add(GroupList) },
                     onNavigateToLiveExamList = { backStack.add(LiveExamList) },
-                    onNavigateToGroupDetail = { groupId -> backStack.add(GroupDetail(groupId)) }
+                    onNavigateToGroupDetail = { groupId -> backStack.add(GroupDetail(groupId)) },
+                    onNavigateToProfile = { backStack.add(Profile) },
+                    onNavigateToPlayground = { backStack.add(PlaygroundHub) }
                 )
+            }
+            entry<PlaygroundHub> {
+                PlaygroundHubScreen(
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenGraphBuilder = { backStack.add(GraphBuilder) }
+                )
+            }
+            entry<GraphBuilder> {
+                GraphBuilderScreen(onBack = { backStack.removeLastOrNull() })
+            }
+
+            // ── Profile (GET auth/me) — lays itself out per window size class ──
+            entry<Profile> {
+                ProfileScreen(onBack = { backStack.removeLastOrNull() })
             }
 
             // ── Exam Engine (practice/live/group attempt + result/answer-sheet/leaderboard) ──

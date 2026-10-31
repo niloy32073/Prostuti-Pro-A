@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,12 +39,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import com.prostuti.student.R
+import com.prostuti.student.ui.component.UserAvatar
 import com.prostuti.student.ui.screen.home.component.AdmissionReminderCard
-import com.prostuti.student.ui.screen.home.component.ContinueProgressCard
+import com.prostuti.student.data.model.response.UnfinishedAttemptSummary
+import com.prostuti.student.ui.screen.home.component.ContinueAttemptCard
 import com.prostuti.student.ui.screen.home.component.ExamPreviewCardView
 import com.prostuti.student.ui.screen.home.component.LeaderboardSection
 import com.prostuti.student.ui.screen.home.component.QuickMenuItem
@@ -60,9 +69,22 @@ fun HomeScreen(
     onNavigateToGroupList: () -> Unit = {},
     onNavigateToLiveExamList: () -> Unit = {},
     onNavigateToGroupDetail: (groupId: String) -> Unit = {},
+    onContinueAttempt: (attemptId: String, titleBn: String) -> Unit = { _, _ -> },
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToPlayground: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Re-fetch on every return to Home so a just-finished or just-started exam shows up at once.
+    LifecycleResumeEffect(Unit) {
+        viewModel.refreshContinueAttempt()
+        onPauseOrDispose { }
+    }
+    val continueFallbackTitle = stringResource(R.string.home_continue_exam_fallback)
+    fun onContinueClick(attempt: UnfinishedAttemptSummary) {
+        onContinueAttempt(attempt.attemptId, attempt.titleBn ?: continueFallbackTitle)
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val comingSoon = stringResource(R.string.feature_coming_soon)
@@ -72,11 +94,13 @@ fun HomeScreen(
     val qbLabelRes = R.string.qm_question_bank
     val practiceLabelRes = R.string.qm_practice
     val groupLabelRes = R.string.qm_group
+    val playgroundLabelRes = R.string.qm_playground
     fun onQuickMenuClick(item: QuickMenuItem) {
         when (item.labelRes) {
             qbLabelRes -> onNavigateToQB()
             practiceLabelRes -> onNavigateToPractice()
             groupLabelRes -> onNavigateToGroupList()
+            playgroundLabelRes -> onNavigateToPlayground()
             else -> showComingSoon()
         }
     }
@@ -108,7 +132,11 @@ fun HomeScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            HomeHeaderRow(state = state, onAction = ::showComingSoon)
+            HomeHeaderRow(
+                state = state,
+                onNotificationsClick = ::showComingSoon,
+                onProfileClick = dropUnlessResumed { onNavigateToProfile() }
+            )
 
             if (useTwoPane) {
                 Row(modifier = Modifier.fillMaxSize().padding(top = 20.dp)) {
@@ -138,7 +166,12 @@ fun HomeScreen(
                             .padding(start = 20.dp),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        LiveAndUpcomingContent(state = state, onAction = ::showComingSoon, onCardClick = ::onUpcomingCardClick)
+                        LiveAndUpcomingContent(
+                            state = state,
+                            onAction = ::showComingSoon,
+                            onCardClick = ::onUpcomingCardClick,
+                            onContinueClick = ::onContinueClick
+                        )
                         Spacer(modifier = Modifier.padding(bottom = 12.dp))
                     }
                 }
@@ -149,7 +182,12 @@ fun HomeScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    LiveAndUpcomingContent(state = state, onAction = ::showComingSoon, onCardClick = ::onUpcomingCardClick)
+                    LiveAndUpcomingContent(
+                            state = state,
+                            onAction = ::showComingSoon,
+                            onCardClick = ::onUpcomingCardClick,
+                            onContinueClick = ::onContinueClick
+                        )
                     QuickMenuSection(onItemClick = ::onQuickMenuClick)
                     LeaderboardSection(state, onClick = ::showComingSoon)
                     Spacer(modifier = Modifier.padding(bottom = 12.dp))
@@ -161,7 +199,12 @@ fun HomeScreen(
 
 /** The running/upcoming-exam row plus the admission reminder and continue-progress cards. */
 @Composable
-private fun LiveAndUpcomingContent(state: HomeUiState, onAction: () -> Unit, onCardClick: (ExamPreviewCard) -> Unit) {
+private fun LiveAndUpcomingContent(
+    state: HomeUiState,
+    onAction: () -> Unit,
+    onCardClick: (ExamPreviewCard) -> Unit,
+    onContinueClick: (UnfinishedAttemptSummary) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -181,37 +224,53 @@ private fun LiveAndUpcomingContent(state: HomeUiState, onAction: () -> Unit, onC
         )
     }
 
-    if (state.hasContinueProgress) {
-        ContinueProgressCard(
-            subtitleRes = state.continueSubtitleRes,
-            percent = state.continuePercent,
-            onClick = onAction,
+    state.continueAttempt?.let { attempt ->
+        ContinueAttemptCard(
+            attempt = attempt,
+            remainingSeconds = state.continueRemainingSeconds,
+            onClick = { onContinueClick(attempt) },
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
         )
     }
 }
 
+/** Tags for the header's real-profile pieces — used by HomeScreenTest. */
+const val HOME_GREETING_TAG = "home_greeting"
+const val HOME_USERNAME_TAG = "home_username"
+const val HOME_PROFILE_BUTTON_TAG = "home_profile_button"
+
 @Composable
-private fun HomeHeaderRow(state: HomeUiState, onAction: () -> Unit) {
+private fun HomeHeaderRow(state: HomeUiState, onNotificationsClick: () -> Unit, onProfileClick: () -> Unit) {
+    val profile = state.profile
+    val fullName = profile?.fullName?.takeIf { it.isNotBlank() }
+    val openProfile = stringResource(R.string.profile_open)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 22.dp, start = 16.dp, end = 16.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(state.greetingRes),
+                text = if (fullName != null) stringResource(R.string.home_greeting, fullName)
+                else stringResource(R.string.home_greeting_no_name),
                 style = ProstutiTypography.bnTitleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag(HOME_GREETING_TAG)
             )
-            Text(
-                text = stringResource(state.batchStreamRes),
-                style = ProstutiTypography.enBodyMedium.copy(fontFamily = MonoFontFamily),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+            profile?.username?.takeIf { it.isNotBlank() }?.let { username ->
+                Text(
+                    text = stringResource(R.string.username_handle, username),
+                    style = ProstutiTypography.enBodyMedium.copy(fontFamily = MonoFontFamily),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp).testTag(HOME_USERNAME_TAG)
+                )
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
@@ -219,7 +278,7 @@ private fun HomeHeaderRow(state: HomeUiState, onAction: () -> Unit) {
                     .size(44.dp)
                     .background(MaterialTheme.colorScheme.surfaceContainerLow, CircleShape)
             ) {
-                IconButton(onClick = onAction) {
+                IconButton(onClick = onNotificationsClick) {
                     Icon(
                         Icons.Filled.NotificationsNone,
                         contentDescription = stringResource(R.string.notifications),
@@ -227,19 +286,17 @@ private fun HomeHeaderRow(state: HomeUiState, onAction: () -> Unit) {
                     )
                 }
             }
-            Box(
+            UserAvatar(
+                imageUrl = profile?.profileImage,
+                name = profile?.firstName,
+                contentDescription = null,
+                size = 44.dp,
                 modifier = Modifier
-                    .size(44.dp)
-                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                    .clickable(onClick = onAction),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Filled.Person,
-                    contentDescription = stringResource(R.string.profile),
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
+                    .testTag(HOME_PROFILE_BUTTON_TAG)
+                    .clip(CircleShape)
+                    .clickable(onClickLabel = openProfile, role = Role.Button, onClick = onProfileClick)
+                    .semantics { contentDescription = openProfile }
+            )
         }
     }
 }

@@ -21,13 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +33,7 @@ import com.prostuti.student.data.model.enums.TimedExamKind
 import com.prostuti.student.data.model.response.RankRow
 import com.prostuti.student.data.model.response.WindowRanking
 import com.prostuti.student.ui.component.BackButton
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.util.toBengaliDigits
 import org.koin.compose.viewmodel.koinViewModel
@@ -51,44 +48,48 @@ fun WindowRankingScreen(
     viewModel: WindowRankingViewModel = koinViewModel(parameters = { parametersOf(examId, kind) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    ObserveErrors(errors = state.errors, snackbarHostState = snackbarHostState, onConsumed = viewModel::clearError)
-
-    Scaffold(containerColor = MaterialTheme.colorScheme.background, snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
+        ) {
+            if (state.isLoading) {
+                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+                return@PullToRefreshErrorOverlayWrapper
             }
-            return@Scaffold
-        }
-        val ranking = state.ranking ?: return@Scaffold
-        val kindLabel = if (kind == TimedExamKind.LIVE) "লাইভ এক্সাম · সম্পূর্ণ স্ট্রিম · উইন্ডো শেষ" else "গ্রুপ এক্সাম · উইন্ডো শেষ"
+            val ranking = state.ranking ?: return@PullToRefreshErrorOverlayWrapper
+            val kindLabel = if (kind == TimedExamKind.LIVE) "লাইভ এক্সাম · সম্পূর্ণ স্ট্রিম · উইন্ডো শেষ" else "গ্রুপ এক্সাম · উইন্ডো শেষ"
 
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp)) {
-                BackButton(onClick = onBack)
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(text = "র‍্যাংকিং", style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onBackground)
-                    Text(text = kindLabel, style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp)) {
+                    BackButton(onClick = onBack)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(text = "র‍্যাংকিং", style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onBackground)
+                        Text(text = kindLabel, style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    item { StatsRow(ranking) }
+                    item { Histogram(ranking) }
+                    item {
+                        Text(
+                            text = "সবার র‍্যাংক", style = ProstutiTypography.bnBodyLarge, color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
+                        )
+                    }
+                    items(ranking.rows, key = { it.rank }) { row -> RankRowItem(row = row, onClick = if (row.isMe) onNavigateToMyAnswerSheet else null) }
                 }
             }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                item { StatsRow(ranking) }
-                item { Histogram(ranking) }
-                item {
-                    Text(
-                        text = "সবার র‍্যাংক", style = ProstutiTypography.bnBodyLarge, color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
-                    )
-                }
-                items(ranking.rows, key = { it.rank }) { row -> RankRowItem(row = row, onClick = if (row.isMe) onNavigateToMyAnswerSheet else null) }
-            }
+    
         }
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.R
+import com.prostuti.student.ui.component.UserAvatar
 import com.prostuti.student.ui.screen.home.HomeUiState
 import com.prostuti.student.ui.screen.home.LeaderboardDemoEntry
 import com.prostuti.student.ui.theme.ProstutiTypography
@@ -73,21 +74,19 @@ fun LeaderboardSection(state: HomeUiState, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.home_my_rank_initial_demo),
-                        style = ProstutiTypography.bnLabelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
+                UserAvatar(
+                    imageUrl = state.profile?.profileImage,
+                    name = state.profile?.firstName,
+                    contentDescription = null,
+                    size = 36.dp,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.home_my_rank_label_demo),
+                        text = state.profile?.firstName?.takeIf { it.isNotBlank() }
+                            ?.let { stringResource(R.string.home_my_rank_label, it) }
+                            ?: stringResource(R.string.home_my_rank_label_no_name),
                         style = ProstutiTypography.bnBodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )

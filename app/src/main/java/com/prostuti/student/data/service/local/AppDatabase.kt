@@ -2,6 +2,7 @@ package com.prostuti.student.data.service.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.prostuti.student.data.model.response.Chapter
 import com.prostuti.student.data.model.response.Subject
 import com.prostuti.student.data.model.response.Topic
@@ -10,12 +11,16 @@ import com.prostuti.student.data.model.response.Topic
     entities = [
         Subject::class, Chapter::class, Topic::class,
         GroupRoutineEntity::class, TimedExamAttemptEntity::class,
-        DemoExamWindowEntity::class, CreatedGroupEntity::class
+        DemoExamWindowEntity::class, CreatedGroupEntity::class,
+        AttemptProgressEntity::class,
+        CurrentUserEntity::class
     ],
     version = 1,
     exportSchema = true
 )
+@TypeConverters(StringListConverter::class)
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun attemptProgressDao(): AttemptProgressDao
     abstract fun subjectDao(): SubjectDao
     abstract fun chapterDao(): ChapterDao
     abstract fun topicDao(): TopicDao
@@ -23,4 +28,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun timedExamAttemptDao(): TimedExamAttemptDao
     abstract fun demoExamWindowDao(): DemoExamWindowDao
     abstract fun createdGroupDao(): CreatedGroupDao
+    abstract fun currentUserDao(): CurrentUserDao
 }

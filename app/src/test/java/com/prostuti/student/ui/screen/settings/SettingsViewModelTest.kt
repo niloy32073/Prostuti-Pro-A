@@ -2,6 +2,8 @@ package com.prostuti.student.ui.screen.settings
 
 import app.cash.turbine.test
 import com.prostuti.student.data.repository.fake.FakeDataStoreStorageRepository
+import com.prostuti.student.data.repository.fake.FakeUserRepository
+import com.prostuti.student.domain.ClearCachedMeUseCase
 import com.prostuti.student.domain.ClearDataStoreUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +23,7 @@ class SettingsViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var fakeStorage: FakeDataStoreStorageRepository
+    private val fakeUserRepo = FakeUserRepository()
 
     @Before
     fun setup() {
@@ -33,7 +36,7 @@ class SettingsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = SettingsViewModel(ClearDataStoreUseCase(fakeStorage))
+    private fun viewModel() = SettingsViewModel(ClearDataStoreUseCase(fakeStorage), ClearCachedMeUseCase(fakeUserRepo))
 
     @Test fun initialStateIsNotLoggedOut() {
         assertFalse(viewModel().state.value.isLoggedOut)
@@ -49,5 +52,6 @@ class SettingsViewModelTest {
         }
 
         assertEquals(1, fakeStorage.clearAllCallCount)
+        assertEquals(1, fakeUserRepo.clearCount) // cached profile is dropped too
     }
 }

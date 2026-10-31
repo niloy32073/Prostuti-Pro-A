@@ -22,4 +22,6 @@ val databaseModule = module {
     single { get<AppDatabase>().timedExamAttemptDao() }
     single { get<AppDatabase>().demoExamWindowDao() }
     single { get<AppDatabase>().createdGroupDao() }
+    single { get<AppDatabase>().attemptProgressDao() }
+    single { get<AppDatabase>().currentUserDao() }
 }

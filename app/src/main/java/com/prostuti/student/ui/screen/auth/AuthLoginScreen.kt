@@ -10,14 +10,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -26,7 +23,7 @@ import com.prostuti.student.R
 import com.prostuti.student.ui.component.AuthHeader
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.LockedIdentifierField
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.PasswordField
 import com.prostuti.student.ui.component.PrimaryButton
 import com.prostuti.student.ui.theme.ProstutiTypography
@@ -43,69 +40,72 @@ fun AuthLoginScreen(
     viewModel: AuthLoginViewModel = koinViewModel { parametersOf(identifier, firstName) }
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    ObserveErrors(state.errors, snackbarHostState, viewModel::clearError)
 
     LaunchedEffect(state.isSignedIn) {
         if (state.isSignedIn) onSignedIn()
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Column(modifier = Modifier.padding(top = 20.dp, start = 16.dp, end = 16.dp)) {
-                BackButton(onClick = onBack)
-            }
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Column(modifier = Modifier.padding(top = 20.dp, start = 16.dp, end = 16.dp)) {
+                    BackButton(onClick = onBack)
+                }
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(26.dp)
-            ) {
-                AuthHeader(
-                    title = if (firstName != null) {
-                        stringResource(R.string.auth_login_welcome_named, firstName)
-                    } else {
-                        stringResource(R.string.auth_login_welcome)
-                    },
-                    subtitle = stringResource(R.string.auth_login_subtitle)
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(26.dp)
+                ) {
+                    AuthHeader(
+                        title = if (firstName != null) {
+                            stringResource(R.string.auth_login_welcome_named, firstName)
+                        } else {
+                            stringResource(R.string.auth_login_welcome)
+                        },
+                        subtitle = stringResource(R.string.auth_login_subtitle)
+                    )
 
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LockedIdentifierField(
-                        label = stringResource(R.string.email_or_phone_label),
-                        value = identifier,
-                        onChangeClick = onBack
-                    )
-                    PasswordField(
-                        value = state.password,
-                        onValueChange = viewModel::updatePassword,
-                        label = stringResource(R.string.password_label),
-                        placeholder = stringResource(R.string.password_placeholder),
-                        isError = state.passwordError != null,
-                        errorText = state.passwordError?.let { stringResource(it) }
-                    )
-                    Text(
-                        text = stringResource(R.string.auth_forgot_password),
-                        style = ProstutiTypography.bnLabelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onForgotPassword(identifier) },
-                        textAlign = TextAlign.End
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        LockedIdentifierField(
+                            label = stringResource(R.string.email_or_phone_label),
+                            value = identifier,
+                            onChangeClick = onBack
+                        )
+                        PasswordField(
+                            value = state.password,
+                            onValueChange = viewModel::updatePassword,
+                            label = stringResource(R.string.password_label),
+                            placeholder = stringResource(R.string.password_placeholder),
+                            isError = state.passwordError != null,
+                            errorText = state.passwordError?.let { stringResource(it) }
+                        )
+                        Text(
+                            text = stringResource(R.string.auth_forgot_password),
+                            style = ProstutiTypography.bnLabelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onForgotPassword(identifier) },
+                            textAlign = TextAlign.End
+                        )
+                    }
+                }
+
+                Column(modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 28.dp, top = 12.dp)) {
+                    PrimaryButton(text = stringResource(R.string.continue_action), onClick = viewModel::signIn, loading = state.isLoading)
                 }
             }
-
-            Column(modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 28.dp, top = 12.dp)) {
-                PrimaryButton(text = stringResource(R.string.continue_action), onClick = viewModel::signIn, loading = state.isLoading)
-            }
+    
         }
     }
 }

@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,9 @@ import com.prostuti.student.ui.component.McqReportDialog
 import com.prostuti.student.ui.theme.ProstutiTypography
 
 private val mcqOptionLabels = listOf("ক", "খ", "গ", "ঘ")
+
+/** Options the student can no longer pick are faded. */
+internal const val DISABLED_OPTION_ALPHA = 0.45f
 
 /**
  * A single selectable MCQ, used while attempting an exam.
@@ -112,6 +116,8 @@ fun McqCard(
                     label = mcqOptionLabels.getOrElse(optIndex) { (optIndex + 1).toString() },
                     option = option,
                     isSelected = option.id == selectedOptionId,
+                    // One pick per question: once answered, every option is locked.
+                    enabled = selectedOptionId == null,
                     onClick = { onOptionSelected(option.id) }
                 )
             }
@@ -140,6 +146,7 @@ private fun McqOptionItem(
     label: String,
     option: Option,
     isSelected: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit
 ) {
     val bgColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
@@ -154,10 +161,11 @@ private fun McqOptionItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (enabled || isSelected) 1f else DISABLED_OPTION_ALPHA)
             .clip(RoundedCornerShape(10.dp))
             .background(bgColor)
             .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

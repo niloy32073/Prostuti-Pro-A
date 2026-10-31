@@ -47,7 +47,7 @@ class ExamLeaderboardScreenTest {
     }
 
     @Test
-    fun a404IsShownAsNotReadyYetMessage_notAsAnErrorSnackbar() {
+    fun a404IsShownAsNotReadyYetMessage_notAsAnErrorCard() {
         overrideRepository(
             FakeExamAttemptRepositoryForEngineTest(
                 getExamLeaderboardResult = ApiResponse.Failure(message = "Not found", errorCode = "404")

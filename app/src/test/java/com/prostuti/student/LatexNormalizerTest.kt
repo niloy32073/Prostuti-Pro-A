@@ -76,4 +76,48 @@ class LatexNormalizerTest {
         // Escaped braces aren't groups.
         assertEquals(listOf("\\{5", "\\}"), s("\\{5\\%\\}"))
     }
+
+    // ── Name operators (\lim, \max, …) ──────────────────────────────────────────────────
+    // The renderer draws these like ∑ (bigger, lighter, limits underneath even inline),
+    // so they are rebuilt the way TeX draws them.
+
+    private fun d(s: String) = LatexNormalizer.normalize(s, display = true)
+
+    @Test fun inlineLimitGoesBesideTheOperator() {
+        assertEquals("\\mathrm{lim}_{x\\to a}\\, f(x) = l", n("\\lim_{x\\to a} f(x) = l"))
+        // The screenshot's question: no thin space before an opening bracket.
+        assertEquals("\\mathrm{lim}_{x\\to a}[f(x)-g(x)]", n("\\lim_{x\\to a}[f(x)-g(x)]"))
+        assertEquals("\\mathrm{lim}_{x\\to a}\\,\\frac{g(x)}{f(x)}", n("\\lim_{x\\to a}\\frac{g(x)}{f(x)}"))
+    }
+
+    @Test fun displayLimitGoesUnderneath() {
+        assertEquals("\\underset{x\\to a}{\\mathrm{lim}}\\, f(x)", d("\\lim_{x\\to a} f(x)"))
+        assertEquals("\\displaystyle\\underset{n}{\\mathrm{max}}\\, a_{n}", n("\\displaystyle\\max_n a_n"))
+    }
+
+    @Test fun limitsAndNolimitsOverrideTheStyle() {
+        assertEquals("\\underset{x\\to 0}{\\mathrm{lim}}", n("\\lim\\limits_{x\\to 0}"))
+        assertEquals("\\mathrm{lim}_{x\\to 0}", d("\\lim\\nolimits_{x\\to 0}"))
+    }
+
+    @Test fun bothScriptsAndBraceLessScript() {
+        assertEquals("\\mathrm{sup}_{n}^{k}", n("\\sup_n^k"))
+        assertEquals("\\overset{k}{\\underset{n}{\\mathrm{sup}}}", d("\\sup_n^k"))
+    }
+
+    @Test fun operatorWithoutLimitsUsesOperatorname() {
+        assertEquals("\\operatorname{max}(a,b)", n("\\max(a,b)"))
+        assertEquals("\\operatorname{det} A", n("\\det A"))
+        assertEquals("\\operatorname{lim}\\operatorname{sup} x_{n}", n("\\limsup x_n"))
+    }
+
+    @Test fun thinSpaceBeforeAScriptedOperatorAfterAnOrdinary() {
+        assertEquals("2\\,\\mathrm{lim}_{x}\\, f", n("2\\lim_x f"))
+        assertEquals("a=\\mathrm{lim}_{x}\\, f", n("a=\\lim_x f"))
+    }
+
+    @Test fun otherCommandsStartingWithLimAreUntouched() {
+        assertEquals("\\limits", n("\\limits"))
+        assertEquals("\\mathrm{lim}_{n}\\,\\mathrm{min}_{k}\\, x", n("\\lim_n\\min_k x"))
+    }
 }

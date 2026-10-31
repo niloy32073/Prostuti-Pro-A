@@ -28,21 +28,18 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.data.model.response.Subject
 import com.prostuti.student.ui.component.BackButton
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -56,121 +53,119 @@ fun PracticeSubjectChapterScreen(
     viewModel: PracticeSubjectChapterViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    ObserveErrors(
-        errors = state.errors,
-        snackbarHostState = snackbarHostState,
-        onConsumed = viewModel::clearError
-    )
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BackButton(onClick = onBack)
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "সাবজেক্ট ও চ্যাপ্টার-টপিক বাছাই করো",
-                        style = ProstutiTypography.bnTitleMedium,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "প্র্যাকটিস এক্সাম",
-                        style = ProstutiTypography.enLabelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-            }
-
-            if (state.isLoadingSubjects) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else {
-                Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    LazyColumn(
-                        modifier = Modifier.width(280.dp).fillMaxHeight(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        item {
-                            Text(
-                                text = "বিষয় (একাধিক নির্বাচনযোগ্য)",
-                                style = ProstutiTypography.bnLabelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
-                        }
-                        items(state.subjects, key = { it.id }) { subject ->
-                            SubjectFocusRow(
-                                subject = subject,
-                                checked = subject.id in state.selectedSubjectIds,
-                                focused = subject.id == state.focusedSubjectId,
-                                onToggle = { viewModel.toggleSubject(subject.id) },
-                                onFocus = { viewModel.focusSubject(subject.id) }
-                            )
-                        }
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BackButton(onClick = onBack)
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "সাবজেক্ট ও চ্যাপ্টার-টপিক বাছাই করো",
+                            style = ProstutiTypography.bnTitleMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "প্র্যাকটিস এক্সাম",
+                            style = ProstutiTypography.enLabelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
                     }
+                }
 
-                    VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        val focusedId = state.focusedSubjectId
-                        when {
-                            focusedId == null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (state.isLoadingSubjects) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else {
+                    Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        LazyColumn(
+                            modifier = Modifier.width(280.dp).fillMaxHeight(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            item {
                                 Text(
-                                    text = "বাম পাশ থেকে একটা সাবজেক্ট বেছে নাও",
-                                    style = ProstutiTypography.bnBodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = "বিষয় (একাধিক নির্বাচনযোগ্য)",
+                                    style = ProstutiTypography.bnLabelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 6.dp)
                                 )
                             }
-
-                            focusedId in state.loadingSubjectIds -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            items(state.subjects, key = { it.id }) { subject ->
+                                SubjectFocusRow(
+                                    subject = subject,
+                                    checked = subject.id in state.selectedSubjectIds,
+                                    focused = subject.id == state.focusedSubjectId,
+                                    onToggle = { viewModel.toggleSubject(subject.id) },
+                                    onFocus = { viewModel.focusSubject(subject.id) }
+                                )
                             }
+                        }
 
-                            else -> {
-                                val group = state.focusedGroup
-                                if (group == null) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = "এই সাবজেক্ট এখনো নির্বাচিত নয়",
-                                            style = ProstutiTypography.bnBodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                } else {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentPadding = PaddingValues(20.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        item {
-                                            SubjectSelectHeader(
-                                                title = "${group.subjectNameBn} — চ্যাপ্টার ও টপিক",
-                                                group = group,
-                                                selectedTopicIds = state.selectedTopicIds,
-                                                onToggle = { viewModel.toggleSubjectAll(focusedId) }
+                        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                            val focusedId = state.focusedSubjectId
+                            when {
+                                focusedId == null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "বাম পাশ থেকে একটা সাবজেক্ট বেছে নাও",
+                                        style = ProstutiTypography.bnBodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                focusedId in state.loadingSubjectIds -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                }
+
+                                else -> {
+                                    val group = state.focusedGroup
+                                    if (group == null) {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = "এই সাবজেক্ট এখনো নির্বাচিত নয়",
+                                                style = ProstutiTypography.bnBodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                        items(group.chapters, key = { it.chapter.id }) { chapterGroup ->
-                                            ChapterCard(
-                                                chapterGroup = chapterGroup,
-                                                selectedTopicIds = state.selectedTopicIds,
-                                                onToggleOpen = { viewModel.toggleChapterOpen(focusedId, chapterGroup.chapter.id) },
-                                                onToggleAll = { viewModel.toggleChapterAll(focusedId, chapterGroup.chapter.id) },
-                                                onToggleTopic = viewModel::toggleTopic
-                                            )
+                                    } else {
+                                        LazyColumn(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentPadding = PaddingValues(20.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            item {
+                                                SubjectSelectHeader(
+                                                    title = "${group.subjectNameBn} — চ্যাপ্টার ও টপিক",
+                                                    group = group,
+                                                    selectedTopicIds = state.selectedTopicIds,
+                                                    onToggle = { viewModel.toggleSubjectAll(focusedId) }
+                                                )
+                                            }
+                                            items(group.chapters, key = { it.chapter.id }) { chapterGroup ->
+                                                ChapterCard(
+                                                    chapterGroup = chapterGroup,
+                                                    selectedTopicIds = state.selectedTopicIds,
+                                                    onToggleOpen = { viewModel.toggleChapterOpen(focusedId, chapterGroup.chapter.id) },
+                                                    onToggleAll = { viewModel.toggleChapterAll(focusedId, chapterGroup.chapter.id) },
+                                                    onToggleTopic = viewModel::toggleTopic
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -178,35 +173,36 @@ fun PracticeSubjectChapterScreen(
                         }
                     }
                 }
-            }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${state.selectedSubjectIds.size}টি বিষয়, ${state.selectedTopicIds.size}টি টপিক নির্বাচিত",
-                    style = ProstutiTypography.bnLabelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-                Button(
-                    onClick = {
-                        onNext(
-                            state.selectedSubjectIds.toList(),
-                            state.selectedChapterIds.toList(),
-                            state.selectedTopicIds.toList()
-                        )
-                    },
-                    enabled = state.canProceed,
-                    shape = RoundedCornerShape(50.dp),
-                    modifier = Modifier.height(48.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "পরবর্তী ধাপ", style = ProstutiTypography.bnBodyLarge)
+                    Text(
+                        text = "${state.selectedSubjectIds.size}টি বিষয়, ${state.selectedTopicIds.size}টি টপিক নির্বাচিত",
+                        style = ProstutiTypography.bnLabelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = {
+                            onNext(
+                                state.selectedSubjectIds.toList(),
+                                state.selectedChapterIds.toList(),
+                                state.selectedTopicIds.toList()
+                            )
+                        },
+                        enabled = state.canProceed,
+                        shape = RoundedCornerShape(50.dp),
+                        modifier = Modifier.height(48.dp)
+                    ) {
+                        Text(text = "পরবর্তী ধাপ", style = ProstutiTypography.bnBodyLarge)
+                    }
                 }
             }
+    
         }
     }
 }

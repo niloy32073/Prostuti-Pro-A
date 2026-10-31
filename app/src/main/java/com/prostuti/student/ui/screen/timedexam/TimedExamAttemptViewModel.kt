@@ -84,9 +84,14 @@ class TimedExamAttemptViewModel(
         }
     }
 
+    /** The first pick is final: once a question has an answer, later picks are ignored. */
     fun selectAnswer(mcqId: String, optionId: String) {
-        if (_state.value.isSubmitted) return
-        _state.update { it.copy(answers = it.answers + (mcqId to optionId)) }
+        var accepted = false
+        _state.update {
+            accepted = mcqId !in it.answers && !it.isSubmitted
+            if (accepted) it.copy(answers = it.answers + (mcqId to optionId)) else it
+        }
+        if (!accepted) return
         viewModelScope.launch { saveTimedExamAnswerUseCase(examId, kind, mcqId, optionId) }
     }
 

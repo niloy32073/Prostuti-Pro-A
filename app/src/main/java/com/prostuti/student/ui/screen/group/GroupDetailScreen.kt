@@ -22,15 +22,12 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,7 +40,7 @@ import com.prostuti.student.data.model.response.GroupDetail
 import com.prostuti.student.data.model.response.GroupMember
 import com.prostuti.student.data.model.response.GroupPastExam
 import com.prostuti.student.ui.component.BackButton
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.PrimaryButton
 import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.util.formatRemainingBn
@@ -66,86 +63,92 @@ fun GroupDetailScreen(
     viewModel: GroupDetailViewModel = koinViewModel(parameters = { parametersOf(groupId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    ObserveErrors(errors = state.errors, snackbarHostState = snackbarHostState, onConsumed = viewModel::clearError)
-
     // The ViewModel is retained across a pop-back-to (e.g. after creating a routine, or
     // submitting the exam, three/one screens down) — recomposing this entry doesn't re-run its
     // init{}, so without this the screen would keep showing whatever it loaded on first entry.
     LaunchedEffect(Unit) { viewModel.refresh() }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        if (state.isLoading && state.detail == null) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
-            return@Scaffold
-        }
-        val detail = state.detail ?: return@Scaffold
-
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 18.dp, start = 16.dp, end = 16.dp, bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BackButton(onClick = onBack)
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(text = detail.group.nameBn, style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface)
-                    Text(
-                        text = "${detail.group.memberCount.toBengaliDigits()} সদস্য",
-                        style = ProstutiTypography.enBodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding,
+            pullToRefreshEnabled = true,
+            isRefreshing = state.isLoading && state.detail != null,
+            onRefresh = viewModel::refresh
+        ) {
+            if (state.isLoading && state.detail == null) {
+                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
+                return@PullToRefreshErrorOverlayWrapper
             }
+            val detail = state.detail ?: return@PullToRefreshErrorOverlayWrapper
 
-            Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                        .clickable(onClick = onNavigateToCalendar)
-                        .padding(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 18.dp, start = 16.dp, end = 16.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
+                    BackButton(onClick = onBack)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(text = detail.group.nameBn, style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            text = "${detail.group.memberCount.toBengaliDigits()} সদস্য",
+                            style = ProstutiTypography.enBodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
                     }
-                    Text(
-                        text = "গ্রুপ রুটিন ক্যালেন্ডার দেখো", style = ProstutiTypography.bnBodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f).padding(start = 10.dp)
-                    )
                 }
 
-                ExamStatusSection(
-                    detail = detail,
-                    examState = state.examState,
-                    now = state.now,
-                    isDemoAdvancing = state.isDemoAdvancing,
-                    onDemoAdvance = viewModel::advanceDemoState,
-                    onNavigateToRoutineCreate = onNavigateToRoutineCreate,
-                    onNavigateToAttempt = onNavigateToAttempt,
-                    onNavigateToLockedResult = onNavigateToLockedResult,
-                    onNavigateToRanking = onNavigateToRanking
-                )
+                Column(
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                            .clickable(onClick = onNavigateToCalendar)
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
+                        }
+                        Text(
+                            text = "গ্রুপ রুটিন ক্যালেন্ডার দেখো", style = ProstutiTypography.bnBodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f).padding(start = 10.dp)
+                        )
+                    }
 
-                PastExamsSection(pastExams = detail.recentPastExams, onSeeAll = onNavigateToPastExams, onOpen = onNavigateToPastExam)
+                    ExamStatusSection(
+                        detail = detail,
+                        examState = state.examState,
+                        now = state.now,
+                        isDemoAdvancing = state.isDemoAdvancing,
+                        onDemoAdvance = viewModel::advanceDemoState,
+                        onNavigateToRoutineCreate = onNavigateToRoutineCreate,
+                        onNavigateToAttempt = onNavigateToAttempt,
+                        onNavigateToLockedResult = onNavigateToLockedResult,
+                        onNavigateToRanking = onNavigateToRanking
+                    )
 
-                MembersSection(members = detail.memberPreview, totalCount = detail.group.memberCount, onSeeAll = onNavigateToMembers)
+                    PastExamsSection(pastExams = detail.recentPastExams, onSeeAll = onNavigateToPastExams, onOpen = onNavigateToPastExam)
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    MembersSection(members = detail.memberPreview, totalCount = detail.group.memberCount, onSeeAll = onNavigateToMembers)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
+    
         }
     }
 }

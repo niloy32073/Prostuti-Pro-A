@@ -5,27 +5,19 @@ import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.utils.EmptyContent
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.content.TextContent
-import timber.log.Timber
 
 /**
- * Logs every outgoing request (method, full URL, body) in the same
- * "API ... | URL: ..." style as the response logs in [safeApiCall].
- * Install it only in debug builds. Headers are never logged, and
- * password/token fields in JSON bodies are masked.
+ * Logs every outgoing request (method, full URL, serialized body) through [ApiLog], next to the
+ * response and decoded-object logs that [safeApiCall] writes. Install it only in debug builds.
+ * Headers are never logged, and password/token fields in JSON bodies are masked.
  */
 val RequestLogging = createClientPlugin("RequestLogging") {
     on(SendingRequest) { request, content ->
-        val url = request.url.buildString()
-        Timber.d("API Request | ${request.method.value} | URL: $url | Body: ${describeBody(content)}")
+        ApiLog.request(request.method.value, request.url.buildString(), describeBody(content))
     }
 }
 
-private val SECRET_FIELDS = Regex(
-    """"(password|new_password|token|reset_token|refresh_token|access_token)"\s*:\s*"(?:[^"\\]|\\.)*""""
-)
-
-private fun maskSecrets(body: String): String =
-    SECRET_FIELDS.replace(body) { "\"${it.groupValues[1]}\":\"***\"" }
+private fun maskSecrets(body: String): String = ApiLog.maskSecrets(body)
 
 private fun describeBody(content: OutgoingContent): String = when (content) {
     is EmptyContent, is OutgoingContent.NoContent -> "<empty>"

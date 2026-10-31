@@ -12,6 +12,7 @@ import com.prostuti.student.data.model.response.ExamAttemptResultResponse
 import com.prostuti.student.data.model.response.ExamAttemptReviewData
 import com.prostuti.student.data.model.response.ExamLeaderboardData
 import com.prostuti.student.data.model.response.ExamResponseAckResponse
+import com.prostuti.student.data.model.response.ExamSummary
 import com.prostuti.student.data.model.response.FetchPassageData
 import com.prostuti.student.data.model.response.IntegrityEventResponse
 import com.prostuti.student.data.model.response.MCQExam
@@ -58,7 +59,13 @@ class FakeQbMcqExamRepository(
     override suspend fun getAttempt(attemptId: String): ApiResponse<ExamAttemptResultResponse> =
         error("not used by MCQExamListScreen tests")
 
-    override suspend fun listMyAttempts(examId: String?, page: Int, limit: Int): ApiResponse<List<ExamAttemptResultResponse>> =
+    override suspend fun listMyAttempts(examId: String?, unfinished: Boolean, page: Int, limit: Int): ApiResponse<List<ExamAttemptResultResponse>> =
+        error("not used by MCQExamListScreen tests")
+
+    override suspend fun getAttemptResponses(attemptId: String): ApiResponse<List<ExamResponseAckResponse>> =
+        error("not used by MCQExamListScreen tests")
+
+    override suspend fun getExam(examId: String): ApiResponse<ExamSummary> =
         error("not used by MCQExamListScreen tests")
 
     override suspend fun submitIntegrityEvents(attemptId: String, request: IntegrityEventSubmitRequest): ApiResponse<List<IntegrityEventResponse>> =

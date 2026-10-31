@@ -18,8 +18,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,12 +31,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.data.model.enums.AttemptMode
 import com.prostuti.student.data.model.response.ExamAttemptResultResponse
-import com.prostuti.student.ui.component.ObserveErrors
+import com.prostuti.student.domain.parseServerTimeMillis
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
-import java.time.Duration
-import java.time.Instant
 
 @Composable
 fun ExamResultScreen(
@@ -50,36 +47,35 @@ fun ExamResultScreen(
     viewModel: ExamResultViewModel = koinViewModel(parameters = { parametersOf(attemptId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    ObserveErrors(
-        errors = state.errors,
-        snackbarHostState = snackbarHostState,
-        onConsumed = viewModel::clearError
-    )
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        if (state.isLoading && state.result == null) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        PullToRefreshErrorOverlayWrapper(
+            errors = state.errors,
+            errorCleaner = viewModel::clearError,
+            overlayPadding = padding
+        ) {
+            if (state.isLoading && state.result == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else {
+                state.result?.let { result ->
+                    ResultContent(
+                        titleBn = titleBn,
+                        result = result,
+                        onViewAnswerSheet = onViewAnswerSheet,
+                        onViewLeaderboard = { onViewLeaderboard(result.examId) },
+                        onFinish = onFinish,
+                        modifier = Modifier.fillMaxSize().padding(padding)
+                    )
+                }
             }
-        } else {
-            state.result?.let { result ->
-                ResultContent(
-                    titleBn = titleBn,
-                    result = result,
-                    onViewAnswerSheet = onViewAnswerSheet,
-                    onViewLeaderboard = { onViewLeaderboard(result.examId) },
-                    onFinish = onFinish,
-                    modifier = Modifier.fillMaxSize().padding(padding)
-                )
-            }
+    
         }
     }
 }
@@ -304,12 +300,8 @@ private fun ResultSummaryRow(
 
 private fun formatTimeTaken(startAt: String, endAt: String?): String {
     if (endAt == null) return "—"
-    return try {
-        val duration = Duration.between(Instant.parse(startAt), Instant.parse(endAt))
-        val minutes = duration.toMinutes()
-        val seconds = duration.seconds % 60
-        "%02d:%02d".format(minutes, seconds)
-    } catch (e: Exception) {
-        "—"
-    }
+    val start = parseServerTimeMillis(startAt) ?: return "—"
+    val end = parseServerTimeMillis(endAt) ?: return "—"
+    val totalSeconds = ((end - start) / 1000).coerceAtLeast(0)
+    return "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }

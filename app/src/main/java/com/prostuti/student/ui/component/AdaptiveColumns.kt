@@ -14,3 +14,18 @@ fun adaptiveColumnCount(): Int {
         else -> 1
     }
 }
+
+/**
+ * How many cards a looping carousel shows side by side: compact 1 (plain pager),
+ * medium/expanded 3 (previous · current · next), large and up 5. Always odd so the
+ * current card sits in the middle.
+ */
+@Composable
+fun carouselVisibleCount(): Int {
+    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+    return when {
+        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND) -> 5
+        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> 3
+        else -> 1
+    }
+}

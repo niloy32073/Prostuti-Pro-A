@@ -214,14 +214,14 @@ private fun buildBlocks(
 
     // A literal `%` can't live inside a formula (see LatexNormalizer.splitOnPercent),
     // so render the pieces as separate formulas with a plain "%" between them.
-    fun appendPieces(target: ParagraphBuilder, pieces: List<String>, wrap: (String) -> String) {
+    fun appendPieces(target: ParagraphBuilder, pieces: List<String>, display: Boolean, wrap: (String) -> String) {
         for ((index, rawPiece) in pieces.withIndex()) {
             if (index > 0) target.appendText("%")
             val piece = rawPiece.trim()
             if (piece.isEmpty()) continue
             if (rawPiece.first().isWhitespace()) target.appendText(" ")
 
-            val formula = LatexNormalizer.normalize(piece)
+            val formula = LatexNormalizer.normalize(piece, display)
             if (formula.isNotEmpty()) {
                 val wrapped = wrap(formula)
                 val dims = measureCached(measurer, wrapped, config, fontPx, contentMaxWidth)
@@ -240,7 +240,7 @@ private fun buildBlocks(
         val pieces = LatexNormalizer.splitOnPercent(match.groupValues[2].trim())
 
         if (!isDisplay) {
-            appendPieces(paragraph, pieces) { it }
+            appendPieces(paragraph, pieces, display = false) { it }
             continue
         }
 
@@ -249,13 +249,13 @@ private fun buildBlocks(
             // the pieces out as their own centred line, still at display size.
             paragraph.build()?.let(blocks::add)
             val line = ParagraphBuilder(density, fontPx, config, centered = true)
-            appendPieces(line, pieces) { "\\displaystyle{$it}" }
+            appendPieces(line, pieces, display = true) { "\\displaystyle{$it}" }
             line.build()?.let(blocks::add)
             paragraph = ParagraphBuilder(density, fontPx, config)
             continue
         }
 
-        val formula = LatexNormalizer.normalize(pieces[0])
+        val formula = LatexNormalizer.normalize(pieces[0], display = true)
         if (formula.isEmpty()) continue
         val dims = measureCached(measurer, formula, config, fontPx, contentMaxWidth)
         if (dims == null) {
