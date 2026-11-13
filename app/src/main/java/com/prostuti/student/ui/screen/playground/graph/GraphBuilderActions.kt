@@ -1,6 +1,9 @@
 package com.prostuti.student.ui.screen.playground.graph
 
+import com.prostuti.student.domain.graph.Axis3
+import com.prostuti.student.domain.graph.GraphSpace
 import com.prostuti.student.domain.graph.plot.LineOptions
+import com.prostuti.student.ui.screen.playground.graph.space.SpaceSettings
 
 /** Every user action of the graph builder, so [GraphBuilderContent] stays stateless and testable. */
 class GraphBuilderActions(
@@ -9,6 +12,7 @@ class GraphBuilderActions(
     val onTextChange: (Long, String, Int, Int) -> Unit = { _, _, _, _ -> },
     val onKey: (MathKeyAction) -> Unit = {},
     val onAddLine: () -> Unit = {},
+    val onPanelCollapsed: (Boolean) -> Unit = {},
     val onDeleteLine: (Long) -> Unit = {},
     val onMoveLine: (Long, Int) -> Unit = { _, _ -> },
     val onToggleVisible: (Long) -> Unit = {},
@@ -19,7 +23,9 @@ class GraphBuilderActions(
     val onSliderChange: (Long, Double) -> Unit = { _, _ -> },
     val onTogglePlay: (Long) -> Unit = {},
     val onAddSlider: (String, Long) -> Unit = { _, _ -> },
-    val onAddExample: (GraphExample) -> Unit = {},
+    val onAddExample: (example: GraphExample, note: String?, replace: Boolean) -> Unit = { _, _, _ -> },
+    val onAddTable: () -> Unit = {},
+    val onTableChange: (Long, TableState) -> Unit = { _, _ -> },
     val onCanvasSize: (Int, Int) -> Unit = { _, _ -> },
     val onTransform: (Float, Float, Float, Float, Float) -> Unit = { _, _, _, _, _ -> },
     val onTap: (Float, Float, Float) -> Unit = { _, _, _ -> },
@@ -33,4 +39,18 @@ class GraphBuilderActions(
     val onApplyRanges: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     val onOpenSheet: (GraphSheet) -> Unit = {},
     val onCloseSheet: () -> Unit = {},
+    val onSpace: (GraphSpace) -> Unit = {},
+    val onRotateCamera: (Float, Float) -> Unit = { _, _ -> },
+    val onZoomSpace: (Float) -> Unit = {},
+    val onResetCamera: () -> Unit = {},
+    val onSpaceSettings: (SpaceSettings) -> Unit = {},
+    val onSpaceRangeText: (String) -> Unit = {},
+    val onRevolve: (Long, Axis3) -> Unit = { _, _ -> },
+    val onVRangeTexts: (Long, String, String) -> Unit = { _, _, _ -> },
+    val onSave: () -> Unit = {},
+    val onSaveAndExit: () -> Unit = {},
+    val onSaveAs: (name: String, exitAfter: Boolean) -> Unit = { _, _ -> },
+    val onShare: () -> Unit = {},
+    val onDiscardAndExit: () -> Unit = {},
+    val onDismissDialog: () -> Unit = {},
 )

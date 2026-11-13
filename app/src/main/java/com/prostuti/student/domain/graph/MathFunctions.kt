@@ -10,6 +10,8 @@ internal data class BuiltinFunction(
     val angle: AngleRole = AngleRole.NONE,
     /** Name of the inverse for the `sin^-1` / `sin⁻¹` spelling. */
     val inverse: String? = null,
+    /** Describes a whole line (an arrow, a solid) rather than a number; invalid inside expressions. */
+    val structural: Boolean = false,
 )
 
 /** The built-in functions, their spellings, and the multi-letter words the tokenizer knows. */
@@ -58,6 +60,11 @@ internal object MathFunctions {
         BuiltinFunction("nPr", 2),
         BuiltinFunction("factorial", 1),
         BuiltinFunction("gamma", 1),
+        // Whole-line forms, not values: vector((0,0,0), (1,2,3)), revolvex(f, a, b), revolvey(f, g, a, b).
+        BuiltinFunction("vector", 1, 2, structural = true),
+        BuiltinFunction("field", 2, 2, structural = true),
+        BuiltinFunction("revolvex", 3, 4, structural = true),
+        BuiltinFunction("revolvey", 3, 4, structural = true),
     )
 
     private val byName: Map<String, BuiltinFunction> = list.associateBy { it.name }

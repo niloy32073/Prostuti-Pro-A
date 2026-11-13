@@ -2,4 +2,21 @@
 <resources>
 
     <style name="Theme.Prostuti" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Launch theme. Below API 31 the splash shows the static launcher mark; API 31+ plays
+         the animated mark (values-v31). Swapped for Theme.Prostuti by installSplashScreen(). -->
+    <style name="Theme.Prostuti.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Prostuti</item>
+    </style>
+
+    <!-- Used by ProstutiSpinner to colour the spinner's road for the current app theme. -->
+    <style name="ThemeOverlay.Prostuti.Mark.Light" parent="">
+        <item name="prostutiMarkInk">@color/black</item>
+    </style>
+
+    <style name="ThemeOverlay.Prostuti.Mark.Dark" parent="">
+        <item name="prostutiMarkInk">@color/white</item>
+    </style>
 </resources>

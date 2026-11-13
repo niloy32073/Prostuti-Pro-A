@@ -37,7 +37,7 @@ private val DarkExtendedColors = ExtendedColors(
 
 val LocalExtendedColors = staticCompositionLocalOf { LightExtendedColors }
 
-private val LightColorScheme = lightColorScheme(
+internal val LightColorScheme = lightColorScheme(
     primary = PrimaryLight,
     onPrimary = OnPrimaryLight,
     primaryContainer = PrimaryContainerLight,
@@ -76,7 +76,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceTint = SurfaceTintLight
 )
 
-private val DarkColorScheme = darkColorScheme(
+internal val DarkColorScheme = darkColorScheme(
     primary = PrimaryDark,
     onPrimary = OnPrimaryDark,
     primaryContainer = PrimaryContainerDark,

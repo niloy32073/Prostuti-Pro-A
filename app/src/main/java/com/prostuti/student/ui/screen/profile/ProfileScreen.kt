@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -120,7 +120,7 @@ fun ProfileContent(
                 when {
                     profile != null -> ProfileBody(profile)
                     state.isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        ProstutiSpinner()
                     }
                     else -> ProfileLoadFailed(onRetry = onRefresh)
                 }
@@ -164,7 +164,7 @@ private fun ProfileBody(profile: MeData) {
 }
 
 @Composable
-private fun IdentityCard(profile: MeData, modifier: Modifier = Modifier) {
+internal fun IdentityCard(profile: MeData, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(16.dp))
@@ -205,7 +205,7 @@ private fun IdentityCard(profile: MeData, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ContactSection(profile: MeData) {
+internal fun ContactSection(profile: MeData) {
     val notSet = stringResource(R.string.profile_not_set)
     DetailSection(title = stringResource(R.string.profile_section_contact)) {
         DetailRow(
@@ -229,7 +229,7 @@ private fun ContactSection(profile: MeData) {
 }
 
 @Composable
-private fun AccountSection(profile: MeData) {
+internal fun AccountSection(profile: MeData) {
     val locale = LocalConfiguration.current.locales[0]
     DetailSection(title = stringResource(R.string.profile_section_account)) {
         DetailRow(
@@ -339,7 +339,7 @@ private fun VerifiedBadge(verified: Boolean, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ProfileLoadFailed(onRetry: () -> Unit) {
+internal fun ProfileLoadFailed(onRetry: () -> Unit) {
     // Scrollable so pull-to-refresh works here too.
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),

@@ -5,39 +5,46 @@ import com.prostuti.student.data.model.enums.Level
 import com.prostuti.student.data.model.request.ExamGenerateRequest
 import com.prostuti.student.data.model.request.ExamResponseSubmitRequest
 import com.prostuti.student.data.model.request.IntegrityEventSubmitRequest
-import com.prostuti.student.data.model.request.McqReportRequest
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.ExamAttemptData
 import com.prostuti.student.data.model.response.ExamAttemptResultResponse
-import com.prostuti.student.data.model.response.ExamAttemptReviewData
+import com.prostuti.student.data.model.response.ExamQuestionWithOptions
+import com.prostuti.student.data.model.request.ExamHistoryFilter
+import com.prostuti.student.data.model.response.AnswerSheetData
+import com.prostuti.student.data.model.response.AnswerSheetQuestion
+import com.prostuti.student.data.model.response.AttemptAnalysisData
+import com.prostuti.student.data.model.response.ExamHistoryItem
 import com.prostuti.student.data.model.response.ExamLeaderboardData
 import com.prostuti.student.data.model.response.ExamResponseAckResponse
 import com.prostuti.student.data.model.response.ExamSummary
 import com.prostuti.student.data.model.response.FetchPassageData
 import com.prostuti.student.data.model.response.IntegrityEventResponse
 import com.prostuti.student.data.model.response.MCQExam
-import com.prostuti.student.data.model.response.McqReportResponse
-import com.prostuti.student.data.repository.MCQExamRepository
+import com.prostuti.student.data.model.response.McqDetail
+import com.prostuti.student.data.repository.ExamRepository
+import com.prostuti.student.data.repository.MCQRepository
 
 /**
  * Mirror of the `test/` source set's fake of the same name — Android's `test` and `androidTest`
  * source sets do not share a classpath, so the Compose UI tests here (which run on-device) need
- * their own copy. Keep both in sync if MCQExamRepository's interface changes.
+ * their own copy. Keep both in sync if ExamRepository's or MCQRepository's interface changes.
  */
 class FakeExamAttemptRepositoryForEngineTest(
     var attemptQuestionsResult: ApiResponse<ExamAttemptData> = ApiResponse.Success(defaultAttemptData()),
     var submitResponsesResult: ApiResponse<List<ExamResponseAckResponse>> = ApiResponse.Success(emptyList()),
     var submitAttemptResult: ApiResponse<ExamAttemptResultResponse> = ApiResponse.Success(defaultResult()),
     var getAttemptResult: ApiResponse<ExamAttemptResultResponse> = ApiResponse.Success(defaultResult()),
-    var getAttemptReviewResult: ApiResponse<ExamAttemptReviewData> = ApiResponse.Success(defaultReview()),
+    var answerSheetResult: ApiResponse<AnswerSheetData> = ApiResponse.Success(defaultAnswerSheet()),
+    var questionsWithOptionsResult: ApiResponse<List<ExamQuestionWithOptions>> = ApiResponse.Success(defaultQuestionsWithOptions()),
+    var historyResult: ApiResponse<List<ExamHistoryItem>> = ApiResponse.Success(emptyList()),
+    var analysisResult: ApiResponse<AttemptAnalysisData> = ApiResponse.Success(AttemptAnalysisData(attemptId = "attempt1", examId = "exam1")),
     var getExamLeaderboardResult: ApiResponse<ExamLeaderboardData> = ApiResponse.Success(defaultLeaderboard()),
     var fetchPassageResult: ApiResponse<FetchPassageData> = ApiResponse.Success(FetchPassageData(id = "p1")),
-    var reportMcqResult: ApiResponse<McqReportResponse> = ApiResponse.Success(McqReportResponse(id = "rep1", mcqId = "m1", reportedBy = "u1")),
     var startAttemptResult: ApiResponse<ExamAttemptData>? = null,
     var listMyAttemptsResult: ApiResponse<List<ExamAttemptResultResponse>> = ApiResponse.Success(emptyList()),
     var attemptResponsesResult: ApiResponse<List<ExamResponseAckResponse>> = ApiResponse.Success(emptyList()),
     var getExamResult: ApiResponse<ExamSummary> = ApiResponse.Failure(message = "not configured", errorCode = "NOT_FOUND")
-) : MCQExamRepository {
+) : ExamRepository, MCQRepository {
 
     var lastSubmittedResponses: ExamResponseSubmitRequest? = null
     val allSubmittedResponses = mutableListOf<ExamResponseSubmitRequest>()
@@ -90,16 +97,30 @@ class FakeExamAttemptRepositoryForEngineTest(
     override suspend fun submitIntegrityEvents(attemptId: String, request: IntegrityEventSubmitRequest): ApiResponse<List<IntegrityEventResponse>> =
         ApiResponse.Success(emptyList())
 
-    override suspend fun getAttemptReview(attemptId: String): ApiResponse<ExamAttemptReviewData> = getAttemptReviewResult
+    val historyCalls = mutableListOf<Pair<ExamHistoryFilter, Int>>()
+
+    override suspend fun getExamHistory(filter: ExamHistoryFilter, page: Int, limit: Int): ApiResponse<List<ExamHistoryItem>> {
+        historyCalls += filter to page
+        return historyResult
+    }
+
+    override suspend fun getAnswerSheet(attemptId: String): ApiResponse<AnswerSheetData> = answerSheetResult
+
+    override suspend fun getAttemptAnalysis(attemptId: String): ApiResponse<AttemptAnalysisData> = analysisResult
 
     override suspend fun getExamLeaderboard(examId: String, page: Int): ApiResponse<ExamLeaderboardData> {
         getExamLeaderboardLastPage = page
         return getExamLeaderboardResult
     }
 
+    override suspend fun getExamQuestionsWithOptions(examId: String): ApiResponse<List<ExamQuestionWithOptions>> =
+        questionsWithOptionsResult
+
     override suspend fun fetchPassage(passageId: String): ApiResponse<FetchPassageData> = fetchPassageResult
 
-    override suspend fun reportMcq(mcqId: String, request: McqReportRequest): ApiResponse<McqReportResponse> = reportMcqResult
+    override suspend fun fetchMcq(mcqId: String): ApiResponse<McqDetail> =
+        ApiResponse.Failure(message = "not configured", errorCode = "NOT_FOUND")
+
 
     companion object {
         const val DEFAULT_START_AT = "2026-01-01T00:00:00Z"
@@ -133,34 +154,29 @@ class FakeExamAttemptRepositoryForEngineTest(
             rightAnswerCount = 3, wrongAnswerCount = 1, skipCount = 1, totalScore = 3.0, rank = 2
         )
 
-        fun defaultReview() = ExamAttemptReviewData(
-            attemptId = "attempt1", examId = "exam1",
+        fun defaultAnswerSheet() = AnswerSheetData(
+            attemptId = "attempt1", examId = "exam1", source = "SNAPSHOT",
             questions = listOf(
-                com.prostuti.student.data.model.response.MCQReviewQuestionResponse(
-                    mcqId = "mcq1", order = 1, questionText = "Q1?",
-                    options = listOf(
-                        com.prostuti.student.data.model.response.MCQReviewOptionResponse(id = "o1", optionText = "A", order = 1, isCorrect = true),
-                        com.prostuti.student.data.model.response.MCQReviewOptionResponse(id = "o2", optionText = "B", order = 2, isCorrect = false)
-                    ),
-                    selectedOptionId = "o1", isCorrect = true
-                ),
-                com.prostuti.student.data.model.response.MCQReviewQuestionResponse(
-                    mcqId = "mcq2", order = 2, questionText = "Q2?",
-                    options = listOf(
-                        com.prostuti.student.data.model.response.MCQReviewOptionResponse(id = "o3", optionText = "C", order = 1, isCorrect = true),
-                        com.prostuti.student.data.model.response.MCQReviewOptionResponse(id = "o4", optionText = "D", order = 2, isCorrect = false)
-                    ),
-                    selectedOptionId = "o4", isCorrect = false
-                ),
-                com.prostuti.student.data.model.response.MCQReviewQuestionResponse(
-                    mcqId = "mcq3", order = 3, questionText = "Q3?",
-                    options = listOf(
-                        com.prostuti.student.data.model.response.MCQReviewOptionResponse(id = "o5", optionText = "E", order = 1, isCorrect = true),
-                        com.prostuti.student.data.model.response.MCQReviewOptionResponse(id = "o6", optionText = "F", order = 2, isCorrect = false)
-                    ),
-                    selectedOptionId = null, isCorrect = null
-                )
+                AnswerSheetQuestion(mcqId = "mcq3", order = 3, subjectId = "s1", chapterId = "c1", topicId = null,
+                    selectedOptionId = null, correctOptionId = "o5", result = "SKIPPED", isCorrect = false),
+                AnswerSheetQuestion(mcqId = "mcq1", order = 1, subjectId = "s1", chapterId = "c1", topicId = "t1",
+                    selectedOptionId = "o1", correctOptionId = "o1", result = "CORRECT", isCorrect = true,
+                    explanationText = "Because A."),
+                AnswerSheetQuestion(mcqId = "mcq2", order = 2, subjectId = "s1", chapterId = "c1", topicId = "t2",
+                    selectedOptionId = "o4", correctOptionId = "o3", result = "WRONG", isCorrect = false)
             )
+        )
+
+        fun defaultQuestionsWithOptions() = listOf(
+            ExamQuestionWithOptions(mcqId = "mcq1", order = 1, questionText = "Q1?", options = listOf(
+                com.prostuti.student.data.model.response.Option(id = "o1", optionText = "A", order = 1),
+                com.prostuti.student.data.model.response.Option(id = "o2", optionText = "B", order = 2))),
+            ExamQuestionWithOptions(mcqId = "mcq2", order = 2, questionText = "Q2?", options = listOf(
+                com.prostuti.student.data.model.response.Option(id = "o3", optionText = "C", order = 1),
+                com.prostuti.student.data.model.response.Option(id = "o4", optionText = "D", order = 2))),
+            ExamQuestionWithOptions(mcqId = "mcq3", order = 3, questionText = "Q3?", options = listOf(
+                com.prostuti.student.data.model.response.Option(id = "o5", optionText = "E", order = 1),
+                com.prostuti.student.data.model.response.Option(id = "o6", optionText = "F", order = 2)))
         )
 
         fun defaultLeaderboard() = ExamLeaderboardData(

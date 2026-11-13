@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,6 +37,7 @@ import com.prostuti.student.util.formatAbsoluteDateTimeBn
 import com.prostuti.student.util.toBengaliDigits
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun LiveExamDetailScreen(
@@ -61,7 +62,7 @@ fun LiveExamDetailScreen(
         ) {
             if (state.isLoading && state.exam == null) {
                 Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    ProstutiSpinner()
                 }
                 return@PullToRefreshErrorOverlayWrapper
             }
@@ -72,8 +73,8 @@ fun LiveExamDetailScreen(
                     BackButton(onClick = onBack)
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(text = exam.titleBn, style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onBackground)
-                        Text(text = exam.subtitleBn, style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                        Text(text = localized(exam.titleBn, exam.titleEn), style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onBackground)
+                        Text(text = localized(exam.subtitleBn, exam.subtitleEn), style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
                     }
                 }
 

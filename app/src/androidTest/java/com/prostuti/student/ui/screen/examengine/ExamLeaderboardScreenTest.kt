@@ -6,7 +6,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.prostuti.student.data.model.response.ApiResponse
-import com.prostuti.student.data.repository.MCQExamRepository
+import com.prostuti.student.data.repository.ExamRepository
 import com.prostuti.student.data.repository.fake.FakeExamAttemptRepositoryForEngineTest
 import com.prostuti.student.ui.theme.ProstutiTheme
 import org.junit.Rule
@@ -21,7 +21,7 @@ class ExamLeaderboardScreenTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private fun overrideRepository(fakeRepo: FakeExamAttemptRepositoryForEngineTest) {
-        GlobalContext.get().loadModules(listOf(module { single<MCQExamRepository> { fakeRepo } }), allowOverride = true)
+        GlobalContext.get().loadModules(listOf(module { single<ExamRepository> { fakeRepo } }), allowOverride = true)
     }
 
     private fun waitForText(text: String) {

@@ -37,7 +37,10 @@ data class Question(
     @SerialName("question_text")
     val questionText: String? = null,
     @SerialName("question_image_link")
-    val questionImageLink: String? = null
+    val questionImageLink: String? = null,
+    // Position inside its passage group; null when the API doesn't send it.
+    @SerialName("passage_order")
+    val passageOrder: Int? = null
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -52,5 +55,8 @@ data class Option(
     @JsonNames("option_image_link")
     val optionImageLink: String? = null,
     @SerialName("order")
-    val order: Int
+    val order: Int,
+    // Only sent by the questions-with-options API; null when the answer isn't shared.
+    @SerialName("is_correct")
+    val isCorrect: Boolean? = null
 )

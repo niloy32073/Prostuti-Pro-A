@@ -54,7 +54,7 @@ class HomeViewModelTest {
 
     @Test fun initialStateHasTwoUpcomingExamCardsWithOnePrimary() {
         val state = buildViewModel().state.value
-        assertEquals(2, state.upcomingExams.size)
+        assertEquals(1, state.upcomingExams.size)
         assertTrue(state.upcomingExams.count { it.isPrimary } == 1)
     }
 
@@ -67,12 +67,12 @@ class HomeViewModelTest {
 
     // ── Profile (real data, GET auth/me) ───────────────────────────────────────────────────
 
-    @Test fun profileIsFetchedFreshOnOpenAndShown() {
+    @Test fun profileIsReadCacheFirstOnOpenAndShown() {
         userRepo.results = listOf(ApiResponse.Success(FakeUserRepository.me()))
 
         val state = buildViewModel().state.value
 
-        assertEquals(listOf(true), userRepo.refreshArgs)
+        assertEquals(listOf(false), userRepo.refreshArgs)
         assertEquals("Muwaz Ahmed", state.profile?.fullName)
         assertEquals("muwy", state.profile?.username)
     }
@@ -110,6 +110,7 @@ class HomeViewModelTest {
         val state = viewModel.state.value
         assertEquals("attempt1", state.continueAttempt?.attemptId)
         assertEquals("রসায়ন মডেল টেস্ট", state.continueAttempt?.titleBn)
+        assertEquals("the English title comes along for English mode", "Chemistry model test", state.continueAttempt?.titleEn)
         assertEquals(2, state.continueAttempt?.otherUnfinishedCount)
         assertEquals(45 * 60, state.continueRemainingSeconds) // 60 min − 15 min used
         assertEquals(null to true, repo.lastListArgs) // all exams, unfinished only
@@ -167,6 +168,7 @@ class HomeViewModelTest {
         val state = viewModel.state.value
         assertEquals("attempt1", state.continueAttempt?.attemptId)
         assertNull(state.continueAttempt?.titleBn)
+        assertNull(state.continueAttempt?.titleEn)
         assertNull(state.continueRemainingSeconds)
     }
 

@@ -3,19 +3,20 @@ package com.prostuti.student.data.model.response
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Non-paged endpoints (e.g. exams/{id}/questions/with-options) send these as null.
 @Serializable
 data class MetaData(
     @SerialName("current_page")
-    val currentPage: Int,
+    val currentPage: Int? = null,
 
     @SerialName("page_limit")
-    val pageLimit: Int,
+    val pageLimit: Int? = null,
 
     @SerialName("total_items")
-    val totalItems: Int,
+    val totalItems: Int? = null,
 
     @SerialName("total_pages")
-    val totalPages: Int
+    val totalPages: Int? = null
 )
 
 @Serializable

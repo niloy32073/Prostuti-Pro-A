@@ -14,4 +14,6 @@ data class GraphLineState(
     val visible: Boolean = true,
     val options: LineOptions = LineOptions(),
     val slider: SliderRange = SliderRange(),
+    /** Set for a data table line (then [text] is unused). */
+    val table: TableState? = null,
 )

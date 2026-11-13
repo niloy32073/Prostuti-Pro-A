@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -20,6 +20,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.prostuti.student.R
 import com.prostuti.student.data.model.response.MCQExam
 import com.prostuti.student.ui.theme.ProstutiTypography
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun ExamDetailDialog(
@@ -32,7 +33,7 @@ fun ExamDetailDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = exam.titleBn, style = ProstutiTypography.bnTitleMedium)
+            Text(text = localized(exam.titleBn, exam.titleEn), style = ProstutiTypography.bnTitleMedium)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -68,9 +69,8 @@ fun ExamDetailDialog(
                     shape = RoundedCornerShape(50.dp)
                 ) {
                     if (isAttempting) {
-                        CircularProgressIndicator(
+                        ProstutiSpinner(
                             modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {

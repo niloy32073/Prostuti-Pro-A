@@ -32,6 +32,7 @@ import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.screen.qb.component.SubjectTypeCard
 import com.prostuti.student.ui.theme.ProstutiTypography
 import kotlinx.coroutines.launch
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun SubjectTypeScreen(
@@ -67,7 +68,7 @@ fun SubjectTypeScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = nameBn,
+                        text = localized(nameBn, nameEn),
                         style = ProstutiTypography.bnTitleMedium,
                         color = MaterialTheme.colorScheme.onBackground
                     )

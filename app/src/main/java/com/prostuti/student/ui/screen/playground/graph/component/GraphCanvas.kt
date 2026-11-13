@@ -220,14 +220,14 @@ private fun DrawScope.drawGeometry(
     val tx = ((gv.xMin - vp.xMin) / vp.unitsPerPxX).toFloat()
     val ty = ((vp.yMax - gv.yMax) / vp.unitsPerPxY).toFloat()
     val k = 2f / (sx + sy) // keeps stroke widths constant under the transform
-    val width = (if (selected) 3.4.dp.toPx() else 2.6.dp.toPx()) * k
+    val width = (if (g.thinCurves) 1.6.dp.toPx() else if (selected) 3.4.dp.toPx() else 2.6.dp.toPx()) * k
     val dash = PathEffect.dashPathEffect(floatArrayOf(9.dp.toPx() * k, 6.dp.toPx() * k))
     val stroke = Stroke(width, cap = StrokeCap.Round, join = StrokeJoin.Round, pathEffect = if (g.dashed) dash else null)
     withTransform({
         translate(tx, ty)
         scale(sx, sy, pivot = Offset.Zero)
     }) {
-        if (p.hasFill) drawPath(p.fills, color.copy(alpha = if (p.hasRiemann) 0.10f else 0.22f))
+        if (p.hasFill) drawPath(p.fills, if (g.solidFills) color else color.copy(alpha = if (p.hasRiemann) 0.10f else 0.22f))
         if (p.hasNegative) drawPath(p.negativeFills, negativeColor.copy(alpha = if (p.hasRiemann) 0.10f else 0.22f))
         if (p.hasRiemann) {
             drawPath(p.riemann, color.copy(alpha = 0.22f))
@@ -254,7 +254,8 @@ private fun DrawScope.drawMarkers(
 ) {
     for ((x, y) in g.points) {
         val c = Offset(vp.px(x), vp.py(y))
-        drawCircle(color, 5.5.dp.toPx(), c)
+        drawCircle(color, if (g.pointLabels) 5.5.dp.toPx() else 4.5.dp.toPx(), c)
+        if (!g.pointLabels) continue
         val layout = measurer.measure(coordinate(x, y), TextStyle(fontSize = 11.sp, color = ink))
         drawText(layout, topLeft = Offset(c.x + 8.dp.toPx(), c.y - layout.size.height - 2.dp.toPx()))
     }

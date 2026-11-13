@@ -4,12 +4,27 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prostuti.student.domain.calculator.AngleUnit
+import com.prostuti.student.domain.GetSavedGraphUseCase
+import com.prostuti.student.domain.SaveGraphUseCase
 import com.prostuti.student.domain.graph.CompiledGraph
 import com.prostuti.student.domain.graph.GraphCompiler
 import com.prostuti.student.domain.graph.GraphLineInput
 import com.prostuti.student.domain.graph.GraphLineKind
 import com.prostuti.student.domain.graph.GraphNumberFormat
 import com.prostuti.student.domain.graph.GraphPlot
+import com.prostuti.student.domain.graph.GraphSpace
+import com.prostuti.student.domain.graph.MathNode
+import com.prostuti.student.domain.graph.MathParser
+import com.prostuti.student.domain.graph.MathPrinter
+import com.prostuti.student.domain.graph.MathTree
+import com.prostuti.student.domain.graph.ParseResult
+import com.prostuti.student.domain.graph.TableInput
+import com.prostuti.student.domain.graph.BinOp
+import com.prostuti.student.domain.graph.Axis3
+import com.prostuti.student.domain.graph.space.SpaceGeometry
+import com.prostuti.student.domain.graph.space.SpacePlotter
+import com.prostuti.student.ui.screen.playground.graph.space.SpaceCamera
+import com.prostuti.student.ui.screen.playground.graph.space.SpaceSettings
 import com.prostuti.student.domain.graph.plot.GraphPlotter
 import com.prostuti.student.domain.graph.plot.LineGeometry
 import com.prostuti.student.domain.graph.plot.LineOptions
@@ -53,10 +68,18 @@ class GraphBuilderViewModel(
     private val plotter: GraphPlotter,
     private val computeDispatcher: CoroutineDispatcher,
     private val savedStateHandle: SavedStateHandle,
+    private val spacePlotter: SpacePlotter,
+    private val getSavedGraph: GetSavedGraphUseCase,
+    private val saveGraph: SaveGraphUseCase,
+    /** Open this "My graphs" entry (null = a new graph). */
+    private val savedGraphId: Long? = null,
 ) : ViewModel() {
 
     private val json = Json { ignoreUnknownKeys = true }
     private var nextId: Long = 1
+
+    /** What the content looked like when last saved/opened: differs → unsaved changes. */
+    private var cleanSignature: String = ""
 
     private val _state = MutableStateFlow(restore())
     val state: StateFlow<GraphBuilderUiState> = _state.asStateFlow()
@@ -68,21 +91,28 @@ class GraphBuilderViewModel(
         val visible: Set<Long>,
         val viewport: PlotViewport?,
         val selectedId: Long?,
+        val space: GraphSpace,
+        /** 3D: half-size of the box to mesh for. */
+        val range: Double,
     )
 
     private val renderRequests = MutableStateFlow<RenderRequest?>(null)
-    private var lastCompileKey: Pair<List<GraphLineInput>, AngleUnit>? = null
+    private var lastCompileKey: Triple<List<GraphLineInput>, AngleUnit, GraphSpace>? = null
     private var lastGraph: CompiledGraph = CompiledGraph.EMPTY
 
     /** Latest graph, for tracing on the main thread. */
     @Volatile private var graph: CompiledGraph = CompiledGraph.EMPTY
     private var computedViewport: PlotViewport? = null
+    private var meshRange: Double = 0.0
     private var playJob: Job? = null
 
     init {
         viewModelScope.launch {
             renderRequests.filterNotNull().conflate().collect { render(it) }
         }
+        cleanSignature = savedStateHandle.get<String>(KEY_CLEAN) ?: signature(_state.value)
+        val fresh = savedStateHandle.get<String>(KEY_GRAPH) == null
+        if (fresh && savedGraphId != null) open(savedGraphId)
         requestRender()
     }
 
@@ -92,17 +122,111 @@ class GraphBuilderViewModel(
         val saved = savedStateHandle.get<String>(KEY_GRAPH)?.let {
             runCatching { json.decodeFromString(SavedGraph.serializer(), it) }.getOrNull()
         }
-        if (saved != null && saved.lines.isNotEmpty()) {
-            nextId = saved.nextId
-            return GraphBuilderUiState(lines = saved.lines, settings = saved.settings, viewport = saved.viewport)
-        }
-        return GraphBuilderUiState(lines = listOf(GraphLineState(id = nextId++, colorIndex = 0)))
+        if (saved != null && saved.lines.isNotEmpty()) return stateFrom(saved, GraphBuilderUiState())
+        return GraphBuilderUiState(
+            planeLines = listOf(GraphLineState(id = nextId++, colorIndex = 0)),
+            spaceLines = listOf(GraphLineState(id = nextId++, colorIndex = 0)),
+        )
     }
 
+    private fun stateFrom(saved: SavedGraph, base: GraphBuilderUiState): GraphBuilderUiState {
+        nextId = maxOf(nextId, saved.nextId)
+        return base.copy(
+            planeLines = saved.lines,
+            spaceLines = saved.spaceLines.ifEmpty { listOf(GraphLineState(id = nextId++, colorIndex = 0)) },
+            space = saved.space,
+            settings = saved.settings,
+            viewport = saved.viewport,
+            camera = saved.camera,
+            spaceSettings = saved.spaceSettings,
+            savedGraphId = saved.savedId,
+            savedName = saved.savedName,
+        )
+    }
+
+    private fun snapshot(s: GraphBuilderUiState) =
+        SavedGraph(s.planeLines, s.settings, s.viewport, nextId, s.spaceLines, s.space, s.camera, s.spaceSettings, s.savedGraphId, s.savedName)
+
+    /** Keeps the graph in SavedStateHandle (process death) and refreshes the unsaved-changes flag. */
     private fun save() {
         val s = _state.value
-        savedStateHandle[KEY_GRAPH] = json.encodeToString(SavedGraph.serializer(), SavedGraph(s.lines, s.settings, s.viewport, nextId))
+        savedStateHandle[KEY_GRAPH] = json.encodeToString(SavedGraph.serializer(), snapshot(s))
+        savedStateHandle[KEY_CLEAN] = cleanSignature
+        val dirty = signature(s) != cleanSignature
+        if (dirty != s.isDirty) _state.update { it.copy(isDirty = dirty) }
     }
+
+    /** Only what the student made counts as a change — panning or turning the view does not. */
+    private fun signature(s: GraphBuilderUiState): String =
+        (s.planeLines + s.spaceLines).joinToString("\u0001") { l ->
+            "${l.text}|${l.table}|${l.options}|${l.slider}|${l.colorIndex}|${l.visible}"
+        } + "|" + s.settings.angleUnit
+
+    // ── My graphs ───────────────────────────────────────────────────────────────────────────
+
+    private fun open(id: Long) {
+        viewModelScope.launch {
+            val entity = getSavedGraph(id)
+            val saved = entity?.let { runCatching { json.decodeFromString(SavedGraph.serializer(), it.content) }.getOrNull() }
+            if (saved == null) {
+                _state.update { it.copy(message = GraphMessage.OPEN_FAILED) }
+                return@launch
+            }
+            _state.update { stateFrom(saved.copy(savedId = id, savedName = entity.name), it) }
+            cleanSignature = signature(_state.value)
+            computedViewport = null
+            save()
+            requestRender()
+        }
+    }
+
+    /** Toolbar "save": overwrite the existing entry, or ask for a name the first time. */
+    fun requestSave(exitAfter: Boolean = false) {
+        val name = _state.value.savedName
+        if (name == null) {
+            _state.update { it.copy(dialog = GraphDialog.SaveName(exitAfter)) }
+        } else {
+            saveAs(name, exitAfter)
+        }
+    }
+
+    fun saveAs(name: String, exitAfter: Boolean = false) {
+        if (name.isBlank()) return
+        val s = _state.value
+        val preview = (s.planeLines + s.spaceLines)
+            .mapNotNull { l -> l.table?.let { "table" } ?: l.text.takeIf { it.isNotBlank() && !it.trimStart().startsWith("#") } }
+            .take(PREVIEW_LINES)
+            .joinToString("   ")
+        val content = json.encodeToString(SavedGraph.serializer(), snapshot(s.copy(savedName = name.trim())))
+        viewModelScope.launch {
+            val id = runCatching { saveGraph(s.savedGraphId, name, content, preview, s.isSpace) }.getOrNull()
+            if (id == null) {
+                _state.update { it.copy(message = GraphMessage.SAVE_FAILED) }
+                return@launch
+            }
+            _state.update {
+                it.copy(
+                    savedGraphId = id, savedName = name.trim(), dialog = null, message = GraphMessage.SAVED,
+                    exitRequested = exitAfter,
+                )
+            }
+            cleanSignature = signature(_state.value)
+            save()
+        }
+    }
+
+    /** Back pressed: leave at once, or ask first when there are unsaved changes. */
+    fun requestExit() {
+        val s = _state.value
+        val empty = (s.planeLines + s.spaceLines).all { it.text.isBlank() && it.table == null }
+        if (s.isDirty && !empty) _state.update { it.copy(dialog = GraphDialog.UnsavedChanges) }
+        else _state.update { it.copy(exitRequested = true) }
+    }
+
+    fun discardAndExit() = _state.update { it.copy(dialog = null, exitRequested = true) }
+    fun dismissDialog() = _state.update { it.copy(dialog = null) }
+    fun onMessageShown() = _state.update { it.copy(message = null) }
+    fun onExitHandled() = _state.update { it.copy(exitRequested = false) }
 
     // ── Rendering ───────────────────────────────────────────────────────────────────────────
 
@@ -114,18 +238,29 @@ class GraphBuilderViewModel(
             computedViewport?.covers(live) == true -> computedViewport
             else -> live.expanded(PLOT_MARGIN)
         }
+        // 3D meshes are reused while the zoom stays within ~15% of the range they were made for.
+        val range = s.spaceSettings.range
+        if (meshRange <= 0 || abs(kotlin.math.ln(range / meshRange)) > MESH_RANGE_TOLERANCE) meshRange = range
         renderRequests.value = RenderRequest(
-            inputs = s.lines.map { GraphLineInput(it.id, it.text) },
+            inputs = s.lines.map { line ->
+                GraphLineInput(line.id, line.text, line.table?.let { TableInput(it.xs, it.ys, it.model) })
+            },
             angle = s.settings.angleUnit,
             options = s.lines.associate { it.id to it.options },
             visible = s.lines.filter { it.visible }.mapTo(HashSet()) { it.id },
-            viewport = target,
+            viewport = if (s.isSpace) null else target,
             selectedId = s.selectedId ?: s.focusedId,
+            space = s.space,
+            range = if (s.isSpace) meshRange else 0.0,
         )
     }
 
     private suspend fun render(request: RenderRequest) {
-        val compileKey = request.inputs to request.angle
+        if (request.space == GraphSpace.SPACE) {
+            renderSpace(request)
+            return
+        }
+        val compileKey = Triple(request.inputs, request.angle, request.space)
         val (compiled, geometries) = withContext(computeDispatcher) {
             val compiled = if (compileKey == lastCompileKey) lastGraph else compiler.compile(request.inputs, request.angle)
             lastCompileKey = compileKey
@@ -152,13 +287,39 @@ class GraphBuilderViewModel(
         graph = compiled
         computedViewport = request.viewport
         _state.update { s ->
-            s.copy(statuses = statusesFor(compiled, geometries), geometries = geometries)
+            s.copy(statuses = mergeStatuses(s, statusesFor(compiled, geometries)), geometries = geometries)
         }
+    }
+
+    private suspend fun renderSpace(request: RenderRequest) {
+        val compileKey = Triple(request.inputs, request.angle, request.space)
+        val (compiled, meshes) = withContext(computeDispatcher) {
+            val compiled = if (compileKey == lastCompileKey) lastGraph else compiler.compile(request.inputs, request.angle, GraphSpace.SPACE)
+            lastCompileKey = compileKey
+            lastGraph = compiled
+            val drawn = compiled.lines.filter { it.id in request.visible && it.plot != null }
+            val meshes = coroutineScope {
+                drawn.map { line ->
+                    async { spacePlotter.plot(line, request.options[line.id] ?: LineOptions(), request.range) }
+                }.awaitAll().filterNotNull()
+            }
+            compiled to meshes
+        }
+        _state.update { s ->
+            s.copy(statuses = mergeStatuses(s, statusesFor(compiled, emptyList())), spaceGeometries = meshes)
+        }
+    }
+
+    /** Keeps the other view's statuses (ids are unique across both lists) and drops deleted lines. */
+    private fun mergeStatuses(s: GraphBuilderUiState, fresh: Map<Long, LineStatus>): Map<Long, LineStatus> {
+        val alive = (s.planeLines + s.spaceLines).mapTo(HashSet()) { it.id }
+        return (s.statuses + fresh).filterKeys { it in alive }
     }
 
     private fun statusesFor(compiled: CompiledGraph, geometries: List<LineGeometry>): Map<Long, LineStatus> =
         compiled.lines.associate { line ->
             val integral = line.plot as? GraphPlot.IntegralArea
+            val table = line.plot as? GraphPlot.Table
             val value = line.value
             line.id to LineStatus(
                 kind = line.kind,
@@ -172,6 +333,10 @@ class GraphBuilderViewModel(
                 integralBetweenCurves = integral?.bottom != null,
                 riemannSum = geometries.firstOrNull { it.lineId == line.id }?.riemannSum,
                 isExplicit = line.plot is GraphPlot.ExplicitY,
+                pointCount = table?.xs?.size ?: 0,
+                fitRSquared = table?.result?.rSquared,
+                fitR = table?.result?.r,
+                fitText = table?.result?.display,
                 drawsSomething = line.plot != null,
             )
         }
@@ -212,11 +377,13 @@ class GraphBuilderViewModel(
     }
 
     fun zoomBy(factor: Float) {
+        if (_state.value.isSpace) { zoomSpace(factor); return }
         val s = _state.value
         onTransform(0f, 0f, factor, s.canvasWidthPx / 2f, s.canvasHeightPx / 2f)
     }
 
     fun resetView() {
+        if (_state.value.isSpace) { resetCamera(); return }
         val s = _state.value
         if (s.canvasWidthPx > 0) setViewport(defaultViewport(s.canvasWidthPx, s.canvasHeightPx))
     }
@@ -258,6 +425,15 @@ class GraphBuilderViewModel(
         if (!(hi > lo)) return
         val line = _state.value.line(id) ?: return
         setOptions(id, line.options.copy(rangeMin = lo, rangeMax = hi))
+    }
+
+    /** Second (v) range of a parametric surface. */
+    fun setVRangeTexts(id: Long, min: String, max: String) {
+        val lo = evaluate(min) ?: return
+        val hi = evaluate(max) ?: return
+        if (!(hi > lo)) return
+        val line = _state.value.line(id) ?: return
+        setOptions(id, line.options.copy(vMin = lo, vMax = hi))
     }
 
     fun setSliderRangeTexts(id: Long, min: String, max: String, step: String) {
@@ -358,7 +534,7 @@ class GraphBuilderViewModel(
     // ── Lines ───────────────────────────────────────────────────────────────────────────────
 
     private fun updateLines(render: Boolean = true, transform: (List<GraphLineState>) -> List<GraphLineState>) {
-        _state.update { it.copy(lines = transform(it.lines)) }
+        _state.update { it.withLines(transform(it.lines)) }
         save()
         if (render) requestRender()
     }
@@ -375,9 +551,17 @@ class GraphBuilderViewModel(
 
     fun onFocus(id: Long) {
         _state.update {
-            it.copy(focusedId = id, selectedId = id, keyboardVisible = true, trace = null, selectedPoint = null)
+            it.copy(focusedId = id, selectedId = id, keyboardVisible = true, trace = null, selectedPoint = null, panelCollapsed = false)
         }
         requestRender()
+    }
+
+    /**
+     * Phone layout: slide the equation panel (list + keyboard) down to a thin bar so the graph gets
+     * the screen, or bring it back up. Collapsing ends editing, so the keyboard closes too.
+     */
+    fun setPanelCollapsed(collapsed: Boolean) = _state.update {
+        if (collapsed) it.copy(panelCollapsed = true, focusedId = null, keyboardVisible = false) else it.copy(panelCollapsed = false)
     }
 
     fun onTextChange(id: Long, text: String, selectionStart: Int, selectionEnd: Int) {
@@ -392,7 +576,7 @@ class GraphBuilderViewModel(
             val index = afterId?.let { id -> lines.indexOfFirst { it.id == id } }?.takeIf { it >= 0 }
             if (index == null) lines + line else lines.toMutableList().apply { add(index + 1, line) }
         }
-        _state.update { it.copy(focusedId = line.id, selectedId = line.id, keyboardVisible = true) }
+        _state.update { it.copy(focusedId = line.id, selectedId = line.id, keyboardVisible = true, panelCollapsed = false) }
     }
 
     fun deleteLine(id: Long) {
@@ -437,15 +621,49 @@ class GraphBuilderViewModel(
         }
     }
 
-    fun addExample(example: GraphExample) {
-        val s = _state.value
-        val keep = s.lines.filter { it.text.isNotBlank() }
+    /**
+     * Adds an example or template ([note] is its translated note). With [replace] the current list
+     * is cleared first — templates define their own sliders (g, v₀…), which would clash otherwise.
+     */
+    fun addExample(example: GraphExample, note: String? = null, replace: Boolean = false) {
+        if (example.space != _state.value.isSpace) setSpace(if (example.space) GraphSpace.SPACE else GraphSpace.PLANE)
+        stopPlaying()
+        val keep = if (replace) emptyList() else _state.value.lines.filter { it.text.isNotBlank() || it.table != null }
         val added = mutableListOf<GraphLineState>()
-        for (text in example.lines) added += newLine(text, keep + added)
+        note?.let { added += newLine("# $it", keep + added) }
+        for (text in example.lines) {
+            val name = PARAMETER_NAME.find(text)?.groupValues?.get(1)
+            val line = newLine(text, keep + added)
+            added += example.sliders[name]?.let { line.copy(slider = it) } ?: line
+        }
+        example.table?.let { added += newLine("", keep + added).copy(table = it) }
         updateLines { keep + added }
-        _state.update { it.copy(sheet = null, focusedId = null, keyboardVisible = false, selectedId = added.last().id) }
+        _state.update {
+            it.copy(sheet = null, focusedId = null, keyboardVisible = false, selectedId = added.lastOrNull { l -> !l.text.startsWith("#") }?.id)
+        }
+        example.window?.let { w ->
+            if (example.space) {
+                updateSpaceSettings(_state.value.spaceSettings.copy(range = w[0]))
+            } else if (w.size == 4) {
+                applyRanges(w[0], w[1], w[2], w[3])
+            }
+        }
         requestRender()
     }
+
+    /** A new data table line under the focused line (or at the end). */
+    fun addTable() {
+        val line = newLine().copy(table = TableState())
+        val after = _state.value.focusedId
+        updateLines { lines ->
+            val index = after?.let { id -> lines.indexOfFirst { it.id == id } }?.takeIf { it >= 0 }
+            val rest = lines.filterNot { it.text.isBlank() && it.table == null && it.id != after }
+            if (index == null) rest + line else rest.toMutableList().apply { add(minOf(index + 1, size), line) }
+        }
+        _state.update { it.copy(focusedId = null, keyboardVisible = false, selectedId = line.id) }
+    }
+
+    fun setTable(id: Long, table: TableState) = updateLine(id) { it.copy(table = table) }
 
     fun onSliderChange(id: Long, value: Double) {
         val name = _state.value.status(id).parameterName ?: return
@@ -561,14 +779,130 @@ class GraphBuilderViewModel(
         setOptions(line.id, line.options.copy(tangentAt = trace.x))
     }
 
+    // ── 3D ──────────────────────────────────────────────────────────────────────────────────
+
+    fun setSpace(space: GraphSpace) {
+        if (_state.value.space == space) return
+        stopPlaying()
+        _state.update {
+            it.copy(space = space, focusedId = null, selectedId = null, keyboardVisible = false, trace = null, selectedPoint = null, sheet = null)
+        }
+        save()
+        requestRender()
+    }
+
+    fun rotateCamera(dYaw: Float, dPitch: Float) {
+        _state.update { it.copy(camera = it.camera.rotated(dYaw, dPitch)) }
+    }
+
+    /** Pinch in 3D: a bigger factor shows a smaller box (zoom in). */
+    fun zoomSpace(factor: Float) {
+        if (!(factor > 0f) || !factor.isFinite()) return
+        _state.update {
+            val range = (it.spaceSettings.range / factor).coerceIn(MIN_SPACE_RANGE, MAX_SPACE_RANGE)
+            it.copy(spaceSettings = it.spaceSettings.copy(range = range))
+        }
+        save()
+        requestRender()
+    }
+
+    fun resetCamera() {
+        _state.update { it.copy(camera = SpaceCamera(), spaceSettings = it.spaceSettings.copy(range = SpaceSettings.DEFAULT_RANGE)) }
+        save()
+        requestRender()
+    }
+
+    fun updateSpaceSettings(settings: SpaceSettings) {
+        _state.update { it.copy(spaceSettings = settings.copy(range = settings.range.coerceIn(MIN_SPACE_RANGE, MAX_SPACE_RANGE))) }
+        save()
+        requestRender()
+    }
+
+    fun setSpaceRangeText(text: String) {
+        val r = evaluate(text) ?: return
+        if (r > 0) updateSpaceSettings(_state.value.spaceSettings.copy(range = r))
+    }
+
+    /**
+     * Turns a 2D integral line ∫_a^b f dx (or ∫(f − g)dx) into a 3D solid of revolution about [axis]:
+     * writes `revolvex(f, [g,] a, b)` in the 3D list, copies the definitions it uses, opens 3D.
+     */
+    fun revolve(lineId: Long, axis: Axis3) {
+        val s = _state.value
+        val source = s.planeLines.firstOrNull { it.id == lineId } ?: return
+        val functions = s.planeLines.mapNotNull { GraphCompiler.definedFunctionName(it.text) }.toSet()
+        val statement = (MathParser.parse(source.text, functions) as? ParseResult.Success)?.statement ?: return
+        val integral = statement.operands.singleOrNull() as? MathNode.Integral ?: return
+        val v = integral.variable
+        fun asX(n: MathNode) = if (v == "x") n else MathTree.renameFree(n, v, "x")
+        val body = integral.body
+        val between = body is MathNode.Bin && body.op == BinOp.SUB &&
+            MathTree.dependsOn(body.left, v) && MathTree.dependsOn(body.right, v)
+        val parts = if (between) listOf(asX((body as MathNode.Bin).left), asX(body.right)) else listOf(asX(body))
+        val args = parts + listOf(integral.lower, integral.upper)
+        val name = if (axis == Axis3.Y) "revolvey" else "revolvex"
+        val text = name + "(" + args.joinToString(", ") { MathPrinter.print(it) } + ")"
+
+        // Bring along the parameters and functions the integral uses.
+        val needed = args.flatMap { MathTree.freeSymbols(it) + MathTree.calledFunctions(it) }.toMutableSet()
+        val copied = ArrayList<String>()
+        var changed = true
+        while (changed) {
+            changed = false
+            for (line in s.planeLines) {
+                val defined = GraphCompiler.definedFunctionName(line.text) ?: ASSIGNMENT.find(line.text)?.groupValues?.get(1)
+                if (defined == null || defined in GraphCompiler.RESERVED_VARIABLES || defined !in needed || line.text in copied) continue
+                copied += line.text
+                val st = (MathParser.parse(line.text, functions) as? ParseResult.Success)?.statement ?: continue
+                st.operands.forEach { needed += MathTree.freeSymbols(it) + MathTree.calledFunctions(it) }
+                changed = true
+            }
+        }
+        val ordered = s.planeLines.map { it.text }.filter { it in copied && s.spaceLines.none { l -> l.text == it } }
+        val fit = fitRange(source.text, functions, s.planeLines)
+        _state.update {
+            it.copy(
+                space = GraphSpace.SPACE, sheet = null, focusedId = null, keyboardVisible = false,
+                camera = SpaceCamera(),
+                spaceSettings = if (fit != null) it.spaceSettings.copy(range = fit) else it.spaceSettings,
+            )
+        }
+        val existing = _state.value.spaceLines.filter { it.text.isNotBlank() }
+        val added = ArrayList<GraphLineState>()
+        for (t in ordered + text) added += newLine(t, existing + added)
+        updateLines { existing + added }
+        _state.update { it.copy(selectedId = added.last().id) }
+    }
+
+    /**
+     * A box that fits the solid made from the 2D integral line: the larger of its x-extent and the
+     * curve's height (the radius after turning), plus a margin.
+     */
+    private fun fitRange(text: String, functions: Set<String>, planeLines: List<GraphLineState>): Double? {
+        val graph = GraphCompiler().compile(planeLines.map { GraphLineInput(it.id, it.text) }, _state.value.settings.angleUnit)
+        val area = graph.lines.firstOrNull { line -> planeLines.firstOrNull { it.id == line.id }?.text == text }
+            ?.plot as? GraphPlot.IntegralArea ?: return null
+        if (!area.lower.isFinite() || !area.upper.isFinite()) return null
+        var extent = maxOf(abs(area.lower), abs(area.upper))
+        val top = area.top.asFunctionOf(0)
+        val bottom = area.bottom?.asFunctionOf(0)
+        for (i in 0..200) {
+            val x = area.lower + (area.upper - area.lower) * i / 200
+            top.value(x).takeIf { it.isFinite() }?.let { extent = maxOf(extent, abs(it)) }
+            bottom?.value(x)?.takeIf { it.isFinite() }?.let { extent = maxOf(extent, abs(it)) }
+        }
+        return (extent * 1.25).coerceIn(MIN_SPACE_RANGE, MAX_SPACE_RANGE).takeIf { extent > 0 }
+    }
+
     override fun onCleared() {
         playJob?.cancel()
         save()
-        super.onCleared()
     }
 
     companion object {
         private const val KEY_GRAPH = "graph_builder_state"
+        private const val KEY_CLEAN = "graph_builder_clean"
+        private const val PREVIEW_LINES = 3
         private const val PLOT_MARGIN = 0.25
         private const val DEFAULT_SPAN = 20.0
         private const val MIN_UNITS_PER_PX = 1e-9
@@ -577,5 +911,10 @@ class GraphBuilderViewModel(
         private const val SLIDER_SWEEP_FRAMES = 240.0
         private const val RIEMANN_FRAME_MS = 220L
         private const val RIEMANN_ANIMATION_MAX = 100
+        private const val MESH_RANGE_TOLERANCE = 0.15
+        private const val MIN_SPACE_RANGE = 0.05
+        private const val MAX_SPACE_RANGE = 1e5
+        private val PARAMETER_NAME = Regex("""^\s*([A-Za-zα-ωΑ-Ω](?:_[A-Za-z0-9]+)?)\s*=""")
+        private val ASSIGNMENT = Regex("""^\s*([A-Za-zα-ωΑ-Ω](?:_[A-Za-z0-9]+)?)\s*=""")
     }
 }

@@ -44,12 +44,6 @@ data class HomeUiState(
             titleRes = R.string.home_live_exam_title_demo,
             subtitleRes = R.string.home_live_exam_subtitle_demo,
             isPrimary = true
-        ),
-        ExamPreviewCard(
-            badgeRes = R.string.home_group_exam_badge_demo,
-            titleRes = R.string.home_group_exam_title_demo,
-            subtitleRes = R.string.home_group_exam_subtitle_demo,
-            isPrimary = false
         )
     ),
     val hasAdmissionReminder: Boolean = true,
@@ -79,13 +73,13 @@ class HomeViewModel(
 
     init { loadProfile() }
 
-    /** Fetches a fresh profile once per Home visit (so a newly signed-in user never sees the
-     *  previous one), then keeps following the Room cache — a refresh on the Profile screen
-     *  shows up here too. */
+    /** Cache-first: shows the Room copy of `auth/me` at once and only calls the API when nothing
+     *  is cached (first open after sign-in — sign-in and logout both clear the cache). Keeps
+     *  following the cache, so a refresh on the Profile screen shows up here too. */
     private fun loadProfile() {
         profileJob?.cancel()
         profileJob = viewModelScope.launch {
-            getMeUseCase(refresh = true).collect { r ->
+            getMeUseCase(refresh = false).collect { r ->
                 when (r) {
                     is ApiResponse.Success -> _state.update { it.copy(profile = r.data) }
                     // Dashboard: on failure keep the cached profile (if any) instead of an error.

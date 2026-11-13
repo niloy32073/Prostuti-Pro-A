@@ -27,6 +27,7 @@ import com.prostuti.student.R
 import com.prostuti.student.data.model.enums.AttemptMode
 import com.prostuti.student.data.model.response.UnfinishedAttemptSummary
 import com.prostuti.student.ui.theme.ProstutiTypography
+import com.prostuti.student.ui.component.localized
 
 const val CONTINUE_ATTEMPT_CARD_TAG = "home_continue_attempt_card"
 
@@ -71,7 +72,7 @@ fun ContinueAttemptCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = attempt.titleBn ?: stringResource(R.string.home_continue_exam_fallback),
+                text = attempt.titleBn?.let { localized(it, attempt.titleEn) } ?: stringResource(R.string.home_continue_exam_fallback),
                 style = ProstutiTypography.bnLabelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

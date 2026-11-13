@@ -3,7 +3,9 @@ package com.prostuti.student.ui.screen.examengine
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prostuti.student.data.model.enums.AttemptMode
+import com.prostuti.student.data.model.enums.BookmarkResourceType
 import com.prostuti.student.data.model.enums.ExamAttemptErrorCode
+import com.prostuti.student.data.model.enums.ReportResourceType
 import com.prostuti.student.data.model.request.ExamResponseItem
 import com.prostuti.student.data.model.request.ExamResponseSubmitRequest
 import com.prostuti.student.data.model.response.ApiResponse
@@ -11,17 +13,22 @@ import com.prostuti.student.data.model.response.ExamAttemptData
 import com.prostuti.student.data.model.response.ExamResponseAckResponse
 import com.prostuti.student.data.model.response.FetchPassageData
 import com.prostuti.student.data.model.response.Question
+import com.prostuti.student.domain.AddBookmarkUseCase
 import com.prostuti.student.domain.ClearLocalAttemptElapsedUseCase
 import com.prostuti.student.domain.FetchPassageUseCase
 import com.prostuti.student.domain.GetAttemptQuestionsUseCase
 import com.prostuti.student.domain.GetAttemptResponsesUseCase
 import com.prostuti.student.domain.GetLocalAttemptElapsedUseCase
+import com.prostuti.student.domain.ObserveReportedIdsUseCase
+import com.prostuti.student.domain.ObserveBookmarkedIdsUseCase
+import com.prostuti.student.domain.RemoveBookmarkUseCase
 import com.prostuti.student.domain.SaveLocalAttemptElapsedUseCase
 import com.prostuti.student.domain.SubmitExamAttemptUseCase
 import com.prostuti.student.domain.SubmitExamResponsesUseCase
 import com.prostuti.student.domain.SubmitMcqReportUseCase
-import com.prostuti.student.domain.examRemainingSeconds
+import com.prostuti.student.domain.liveRemainingSeconds
 import com.prostuti.student.domain.practiceElapsedMs
+import com.prostuti.student.ui.screen.bookmark.BookmarkToggler
 import com.prostuti.student.util.TimeProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +36,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val ERR_BOOKMARK = "BOOKMARK"
 private const val ERR_REPORT = "REPORT"
 private const val ERR_RESTORE = "RESTORE"
 private const val ERR_RESUME = "RESUME"
@@ -40,6 +48,8 @@ private const val SAVE_PROGRESS_EVERY_TICKS = 5
 data class ExamAttemptUiState(
     val attemptId: String = "",
     val startAt: String = "",
+    /** A group exam's window end: the LIVE timer stops there, and the screen shows it in a banner. */
+    val windowClosesAt: String? = null,
     /** LIVE: time runs from start_at and leaving the app submits. PRACTICE: time pauses while away. */
     val mode: AttemptMode = AttemptMode.PRACTICE,
     /** True until the questions and the saved progress have arrived (or loading failed). */
@@ -50,9 +60,14 @@ data class ExamAttemptUiState(
     val totalDurationSeconds: Int = 0,
     val timeRemainingSeconds: Int = 0,
     val showSubmitDialog: Boolean = false,
+    /** The exam time ran out: answering is locked, the attempt submits on its own and the
+     *  screen shows the "time is up" dialog instead of jumping straight to the result. */
+    val isTimeUp: Boolean = false,
     val isSubmitting: Boolean = false,
     val isSubmitted: Boolean = false,
     val favoriteMcqIds: Set<String> = emptySet(),
+    /** Reported MCQs: their flag shows red and can't be tapped again. */
+    val reportedMcqIds: Set<String> = emptySet(),
     val reportResultMessage: String? = null,
     val errors: Map<String, String> = emptyMap()
 )
@@ -66,6 +81,8 @@ data class ExamAttemptUiState(
  *    unfinished live attempt reopened later is submitted straight away.
  *  - PRACTICE: the clock only runs while the exam is on screen. Time used is restored on resume
  *    from the larger of the server's last `response_time` and the value saved on this device.
+ * In every mode, reaching zero (on screen, or already at zero when reopened) submits without
+ * asking and sets [ExamAttemptUiState.isTimeUp] so the screen shows the time-up dialog.
  */
 class ExamAttemptViewModel(
     private val attemptId: String,
@@ -78,11 +95,35 @@ class ExamAttemptViewModel(
     private val submitExamResponsesUseCase: SubmitExamResponsesUseCase,
     private val submitExamAttemptUseCase: SubmitExamAttemptUseCase,
     private val submitMcqReportUseCase: SubmitMcqReportUseCase,
-    private val timeProvider: TimeProvider
+    observeBookmarkedIdsUseCase: ObserveBookmarkedIdsUseCase,
+    addBookmarkUseCase: AddBookmarkUseCase,
+    removeBookmarkUseCase: RemoveBookmarkUseCase,
+    observeReportedIdsUseCase: ObserveReportedIdsUseCase,
+    private val timeProvider: TimeProvider,
+    /** A group exam's window end; the LIVE timer never runs past it. Null for every other exam. */
+    private val windowClosesAt: String? = null,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(ExamAttemptUiState(attemptId = attemptId))
+    private val _state = MutableStateFlow(ExamAttemptUiState(attemptId = attemptId, windowClosesAt = windowClosesAt))
     val state: StateFlow<ExamAttemptUiState> = _state.asStateFlow()
+
+    private val bookmarks = BookmarkToggler(
+        scope = viewModelScope,
+        type = BookmarkResourceType.MCQ,
+        observeBookmarkedIds = observeBookmarkedIdsUseCase,
+        addBookmark = addBookmarkUseCase,
+        removeBookmark = removeBookmarkUseCase,
+        onChange = { ids -> _state.update { it.copy(favoriteMcqIds = ids) } },
+        onError = { message -> _state.update { it.copy(errors = it.errors + (ERR_BOOKMARK to message)) } }
+    )
+
+    init {
+        viewModelScope.launch {
+            observeReportedIdsUseCase(ReportResourceType.MCQ).collect { ids ->
+                _state.update { it.copy(reportedMcqIds = ids) }
+            }
+        }
+    }
 
     /** mcqId -> response time (ms) of answers whose save call has not succeeded yet; flushed before submit. */
     private val unsyncedResponseTimes = mutableMapOf<String, Int>()
@@ -126,7 +167,7 @@ class ExamAttemptViewModel(
                 questions = data.questions,
                 totalDurationSeconds = totalSeconds,
                 timeRemainingSeconds = when (data.mode) {
-                    AttemptMode.LIVE -> examRemainingSeconds(data.startAt, data.duration, timeProvider.nowEpochMillis())
+                    AttemptMode.LIVE -> liveRemainingSeconds(data.startAt, data.duration, timeProvider.nowEpochMillis(), windowClosesAt)
                     AttemptMode.PRACTICE -> totalSeconds // corrected by restoreProgress()
                 }
             )
@@ -168,10 +209,10 @@ class ExamAttemptViewModel(
             }
             val s = _state.value
             when {
+                // The time ran out (live: while away; practice: used up earlier): submit what was saved.
+                s.timeRemainingSeconds == 0 && !s.isSubmitted -> onTimeUp()
                 // Live exams can't be rejoined: an unfinished one opened again is submitted as is.
                 isReopen && s.mode == AttemptMode.LIVE -> submitExam()
-                // The time ran out (live: while away; practice: used up earlier): submit what was saved.
-                s.timeRemainingSeconds == 0 && !s.isSubmitted -> submitExam()
             }
         }
     }
@@ -196,12 +237,10 @@ class ExamAttemptViewModel(
     fun resyncTimer() {
         _state.update { s ->
             if (s.mode != AttemptMode.LIVE || s.startAt.isEmpty() || s.isSubmitted) return@update s
-            val remaining = examRemainingSeconds(s.startAt, s.totalDurationSeconds / 60, timeProvider.nowEpochMillis())
-            s.copy(
-                timeRemainingSeconds = remaining,
-                showSubmitDialog = if (remaining == 0) true else s.showSubmitDialog
-            )
+            val remaining = liveRemainingSeconds(s.startAt, s.totalDurationSeconds / 60, timeProvider.nowEpochMillis(), windowClosesAt)
+            s.copy(timeRemainingSeconds = remaining)
         }
+        if (_state.value.timeRemainingSeconds == 0 && !_state.value.isLoading) onTimeUp()
     }
 
     /**
@@ -235,7 +274,7 @@ class ExamAttemptViewModel(
     fun selectAnswer(mcqId: String, optionId: String) {
         var accepted = false
         _state.update {
-            accepted = mcqId !in it.selectedAnswers && !it.isSubmitted
+            accepted = mcqId !in it.selectedAnswers && !it.isSubmitted && !it.isTimeUp
             if (accepted) it.copy(selectedAnswers = it.selectedAnswers + (mcqId to optionId)) else it
         }
         if (!accepted) return
@@ -256,12 +295,10 @@ class ExamAttemptViewModel(
     }
 
     fun tickTimer() {
-        _state.update { s ->
-            val next = (s.timeRemainingSeconds - 1).coerceAtLeast(0)
-            s.copy(
-                timeRemainingSeconds = next,
-                showSubmitDialog = if (next == 0 && !s.isSubmitted) true else s.showSubmitDialog
-            )
+        _state.update { s -> s.copy(timeRemainingSeconds = (s.timeRemainingSeconds - 1).coerceAtLeast(0)) }
+        if (_state.value.timeRemainingSeconds == 0) {
+            onTimeUp()
+            return
         }
         if (++ticksSinceSave >= SAVE_PROGRESS_EVERY_TICKS) {
             ticksSinceSave = 0
@@ -269,7 +306,16 @@ class ExamAttemptViewModel(
         }
     }
 
-    fun showSubmitDialog() { _state.update { it.copy(showSubmitDialog = true) } }
+    /** Time is over: lock answering and submit without asking. Once [ExamAttemptUiState.isTimeUp]
+     *  is set it stays set, so the screen keeps the time-up dialog until the student opens the result. */
+    private fun onTimeUp() {
+        if (_state.value.isSubmitted) return
+        _state.update { it.copy(isTimeUp = true, showSubmitDialog = false) }
+        saveLocalProgress() // practice: if the submit fails and the app closes, reopening still finds no time left
+        submitExam()
+    }
+
+    fun showSubmitDialog() { _state.update { if (it.isTimeUp) it else it.copy(showSubmitDialog = true) } }
     fun dismissSubmitDialog() { _state.update { it.copy(showSubmitDialog = false) } }
 
     fun submitExam() {
@@ -321,15 +367,10 @@ class ExamAttemptViewModel(
 
     fun clearError(tag: String) { _state.update { it.copy(errors = it.errors - tag) } }
 
-    fun toggleFavorite(mcqId: String) {
-        // TODO: persist with a ToggleFavoriteUseCase once a favorite-MCQ API endpoint exists.
-        _state.update { s ->
-            val updated = if (mcqId in s.favoriteMcqIds) s.favoriteMcqIds - mcqId else s.favoriteMcqIds + mcqId
-            s.copy(favoriteMcqIds = updated)
-        }
-    }
+    fun toggleFavorite(mcqId: String) = bookmarks.toggle(mcqId)
 
     fun submitReport(mcqId: String, reason: String, description: String) {
+        if (mcqId in _state.value.reportedMcqIds) return // reports are final
         viewModelScope.launch {
             when (val r = submitMcqReportUseCase(mcqId, reason, description.ifBlank { null })) {
                 is ApiResponse.Success -> _state.update {

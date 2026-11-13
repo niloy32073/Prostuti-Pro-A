@@ -20,7 +20,10 @@ data class TimedExam(
     val questionCount: Int,
     val markPerQuestion: Float,
     val negativeMark: Float,
-    val totalParticipants: Int
+    val totalParticipants: Int,
+    /** English title/subtitle; blank = show the Bangla one. */
+    val titleEn: String = "",
+    val subtitleEn: String = ""
 )
 
 /** Whatever's known about *my* attempt at a [TimedExam] right now — null fields mean "not

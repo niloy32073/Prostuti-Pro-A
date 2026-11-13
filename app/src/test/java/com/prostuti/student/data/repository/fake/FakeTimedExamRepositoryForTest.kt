@@ -21,12 +21,16 @@ class FakeTimedExamRepositoryForTest(
     var lastAdvanceDemoStateExamId: String? = null
     var lastMySubmissionExamId: String? = null
     val savedAnswers = mutableListOf<Pair<String, String>>()   // (mcqId, optionId)
+    /** Exam window (epoch millis); the default stays open for a day, so the 60-minute exam gets its full time. */
+    var window: Pair<Long, Long> = 0L to 86_400_000L
+    var submitResult: ApiResponse<MyTimedExamSubmission> = ApiResponse.Failure(message = "not stubbed", errorCode = "NOT_STUBBED")
+    var submitCallCount = 0
 
     override suspend fun questions(): List<Question> = emptyList()
 
     override suspend fun examDurationMinutes(examId: String): Int = 60
 
-    override suspend fun resolveWindow(examId: String): Pair<Long, Long> = 0L to 0L
+    override suspend fun resolveWindow(examId: String): Pair<Long, Long> = window
 
     override suspend fun registerWindow(examId: String, windowStartEpochMillis: Long, windowEndEpochMillis: Long) = Unit
 
@@ -41,8 +45,10 @@ class FakeTimedExamRepositoryForTest(
         savedAnswers += mcqId to optionId
     }
 
-    override suspend fun submit(examId: String, kind: TimedExamKind): ApiResponse<MyTimedExamSubmission> =
-        ApiResponse.Failure(message = "not stubbed", errorCode = "NOT_STUBBED")
+    override suspend fun submit(examId: String, kind: TimedExamKind): ApiResponse<MyTimedExamSubmission> {
+        submitCallCount++
+        return submitResult
+    }
 
     override suspend fun autoSubmitAbandonedAttempt(examId: String, kind: TimedExamKind): MyTimedExamSubmission? = null
 

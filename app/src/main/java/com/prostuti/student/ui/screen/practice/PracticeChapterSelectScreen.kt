@@ -21,7 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -40,6 +40,7 @@ import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun PracticeChapterSelectScreen(
@@ -84,7 +85,7 @@ fun PracticeChapterSelectScreen(
 
                 if (state.isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        ProstutiSpinner()
                     }
                 } else {
                     LazyColumn(
@@ -95,7 +96,7 @@ fun PracticeChapterSelectScreen(
                         items(state.groups, key = { it.subjectId }) { group ->
                             Column {
                                 SubjectSelectHeader(
-                                    title = group.subjectNameBn,
+                                    title = localized(group.subjectNameBn, group.subjectNameEn),
                                     group = group,
                                     selectedTopicIds = state.selectedTopicIds,
                                     onToggle = { viewModel.toggleSubjectAll(group.subjectId) },
@@ -170,7 +171,7 @@ internal fun ChapterCard(
         ) {
             TriStateCheckbox(state = toggleState, onClick = onToggleAll)
             Text(
-                text = chapterGroup.chapter.chapterNameBn,
+                text = localized(chapterGroup.chapter.chapterNameBn, chapterGroup.chapter.chapterNameEn),
                 style = ProstutiTypography.bnBodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
@@ -209,7 +210,7 @@ internal fun ChapterCard(
                             onCheckedChange = { onToggleTopic(topic.id) }
                         )
                         Text(
-                            text = topic.nameBn,
+                            text = localized(topic.nameBn, topic.nameEn),
                             style = ProstutiTypography.bnBodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

@@ -3,6 +3,7 @@ package com.prostuti.student.ui.screen.examengine
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.repository.fake.FakeExamAttemptRepositoryForEngineTest
 import com.prostuti.student.domain.GetExamAttemptUseCase
+import com.prostuti.student.domain.StartOrResumeExamAttemptUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -37,7 +38,11 @@ class ExamResultViewModelTest {
     }
 
     private fun buildViewModel(attemptId: String = "attempt1") =
-        ExamResultViewModel(attemptId = attemptId, getExamAttemptUseCase = GetExamAttemptUseCase(fakeRepo))
+        ExamResultViewModel(
+            attemptId = attemptId,
+            getExamAttemptUseCase = GetExamAttemptUseCase(fakeRepo),
+            startOrResumeExamAttemptUseCase = StartOrResumeExamAttemptUseCase(fakeRepo)
+        )
 
     @Test
     fun `load success exposes the score breakdown`() = runTest {
@@ -74,5 +79,29 @@ class ExamResultViewModelTest {
 
         viewModel.clearError("LOAD")
         assertTrue(viewModel.state.value.errors.isEmpty())
+    }
+
+    @Test
+    fun `retake starts a new attempt on the same exam and is consumed once`() = runTest {
+        val viewModel = buildViewModel()
+
+        viewModel.retake()
+
+        val started = viewModel.state.value.retakeAttempt
+        assertEquals("attempt1", started?.attemptId)
+        assertEquals(false, viewModel.state.value.isStartingRetake)
+        viewModel.onRetakeConsumed()
+        assertEquals(null, viewModel.state.value.retakeAttempt)
+    }
+
+    @Test
+    fun `retake failure shows RETAKE error`() = runTest {
+        fakeRepo.startAttemptResult = ApiResponse.Failure(message = "Exam expired", errorCode = "EXAM_EXPIRED")
+        val viewModel = buildViewModel()
+
+        viewModel.retake()
+
+        assertEquals("Exam expired", viewModel.state.value.errors["RETAKE"])
+        assertEquals(null, viewModel.state.value.retakeAttempt)
     }
 }

@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 room {
@@ -31,9 +33,12 @@ android {
     buildTypes {
         debug {
             buildConfigField("String", "BASE_URL", "\"https://testbe.prostuti.com.bd\"")
+            // Crashlytics off in debug: crashes and errors stay in Logcat only.
+            manifestPlaceholders["crashlyticsEnabled"] = false
         }
         release {
             buildConfigField("String", "BASE_URL", "\"https://testbe.prostuti.com.bd\"")
+            manifestPlaceholders["crashlyticsEnabled"] = true
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
@@ -66,6 +71,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.serialization.core)
@@ -99,10 +105,18 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
+    // Push notifications (FCM)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.kotlinx.coroutines.play.services)
     // LaTeX renderer
     implementation(libs.latex.base)
     implementation(libs.latex.parser)
     implementation(libs.latex.renderer)
+    // Home screen widget
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
 
     testImplementation(libs.junit)
     testImplementation(libs.androidx.room.testing)
@@ -111,6 +125,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(platform(libs.ktor.bom))
     testImplementation(libs.ktor.client.mock)
+    androidTestImplementation(libs.androidx.glance.appwidget.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -118,6 +133,8 @@ dependencies {
     androidTestImplementation(libs.koin.test)
     androidTestImplementation(libs.koin.test.junit4)
     androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(platform(libs.ktor.bom))
+    androidTestImplementation(libs.ktor.client.mock)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

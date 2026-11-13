@@ -11,4 +11,6 @@ class ExpressionListActions(
     val onTogglePlay: (Long) -> Unit,
     val onAddSlider: (name: String, afterId: Long) -> Unit,
     val onAddLine: () -> Unit,
+    val onAddTable: () -> Unit = {},
+    val onTableChange: (Long, com.prostuti.student.ui.screen.playground.graph.TableState) -> Unit = { _, _ -> },
 )

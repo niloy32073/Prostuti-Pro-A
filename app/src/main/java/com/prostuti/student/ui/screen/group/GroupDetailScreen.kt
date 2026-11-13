@@ -1,5 +1,13 @@
 package com.prostuti.student.ui.screen.group
 
+import com.prostuti.student.ui.component.paneIsMediumOrWider
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.ColumnScope
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,33 +26,56 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
+import com.prostuti.student.ui.component.ProstutiSpinner
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.prostuti.student.BuildConfig
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.dropUnlessResumed
+import com.prostuti.student.R
+import com.prostuti.student.data.model.enums.SlotKind
+import com.prostuti.student.ui.screen.routine.slot.RefreshAtWindowEdges
+import com.prostuti.student.ui.screen.routine.slot.HandleExamLaunch
+import com.prostuti.student.ui.screen.routine.slot.SlotAction
+import com.prostuti.student.ui.screen.routine.topicLabelText
+import com.prostuti.student.domain.routine.TopicLabel
+import com.prostuti.student.ui.screen.routine.slot.SlotDetailSheet
+import com.prostuti.student.ui.screen.routine.slot.rememberNow
+import java.time.Instant
+import java.time.LocalDate
 import com.prostuti.student.data.model.enums.GroupRole
-import com.prostuti.student.data.model.enums.TimedExamState
-import com.prostuti.student.data.model.response.GroupDetail
-import com.prostuti.student.data.model.response.GroupMember
-import com.prostuti.student.data.model.response.GroupPastExam
+import com.prostuti.student.data.model.response.StudyGroup
+import com.prostuti.student.data.model.response.StudyGroupMember
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
-import com.prostuti.student.ui.component.PrimaryButton
+import com.prostuti.student.ui.component.localizedNumber
+import com.prostuti.student.ui.screen.group.component.GroupConfirmDialog
 import com.prostuti.student.ui.theme.ProstutiTypography
-import com.prostuti.student.util.formatRemainingBn
-import com.prostuti.student.util.toBengaliDigits
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -52,40 +83,153 @@ import org.koin.core.parameter.parametersOf
 fun GroupDetailScreen(
     groupId: String,
     onBack: () -> Unit,
-    onNavigateToRoutineCreate: () -> Unit,
-    onNavigateToCalendar: () -> Unit,
-    onNavigateToPastExams: () -> Unit,
     onNavigateToMembers: () -> Unit,
-    onNavigateToPastExam: (examId: String) -> Unit,
-    onNavigateToAttempt: (examId: String) -> Unit,
-    onNavigateToLockedResult: (examId: String) -> Unit,
-    onNavigateToRanking: (examId: String) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToJoinRequests: () -> Unit,
+    onCreateRoutine: () -> Unit,
+    onScheduleAdhoc: () -> Unit,
+    onOpenCalendar: () -> Unit,
+    onOpenExamAttempt: (attemptId: String, title: String, lockResultUntil: String?) -> Unit,
+    onOpenExamResult: (attemptId: String, title: String, lockResultUntil: String?) -> Unit,
+    onOpenRanking: (examId: String, title: String, closesAt: String) -> Unit,
+    onSeeAllPastExams: () -> Unit,
+    /** The group is gone, or I just left it: close every screen of it. */
+    onGroupClosed: () -> Unit,
     viewModel: GroupDetailViewModel = koinViewModel(parameters = { parametersOf(groupId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    // The ViewModel is retained across a pop-back-to (e.g. after creating a routine, or
-    // submitting the exam, three/one screens down) — recomposing this entry doesn't re-run its
-    // init{}, so without this the screen would keep showing whatever it loaded on first entry.
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val copiedMessage = stringResource(R.string.group_code_copied)
+
+    // The ViewModel survives a pop back to this entry, so reload whenever the screen is shown again.
     LaunchedEffect(Unit) { viewModel.refresh() }
 
+    RefreshAtWindowEdges(slots = state.todaySlots, onRefresh = viewModel::refresh)
+    // Exam titles for the engine's screens: the slot's name, else its topics.
+    val titles = (state.todaySlots + state.pastSlots).associate { it.id to (it.title ?: topicLabelText(state.labels[it.id] ?: TopicLabel.Count(it.topicIds.size))) }
+    HandleExamLaunch(
+        launch = state.examLaunch, titleOf = { titles[it].orEmpty() }, onConsumed = viewModel::consumeExamLaunch,
+        onOpenAttempt = onOpenExamAttempt, onOpenResult = onOpenExamResult,
+    )
+
+
+    LaunchedEffect(state.notice) {
+        state.notice?.let {
+            viewModel.consumeNotice()
+            snackbarHostState.showSnackbar(context.getString(it.res, it.arg))
+        }
+    }
+
+    LaunchedEffect(state.isGone) {
+        if (state.isGone) {
+            viewModel.consumeGone()
+            onGroupClosed()
+        }
+    }
+
+    GroupDetailContent(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        onBack = onBack,
+        onSeeAllMembers = onNavigateToMembers,
+        onOpenSettings = onNavigateToSettings,
+        onOpenJoinRequests = onNavigateToJoinRequests,
+        onCreateRoutine = onCreateRoutine,
+        onScheduleAdhoc = onScheduleAdhoc,
+        onOpenCalendar = onOpenCalendar,
+        onOpenSlot = viewModel::openSlot,
+        onSlotAction = { slotId, action ->
+            val slot = (state.todaySlots + state.pastSlots).firstOrNull { it.id == slotId }
+            val examId = slot?.examId
+            if (action == SlotAction.RANKING) { if (examId != null) onOpenRanking(examId, titles[slotId].orEmpty(), slot.closesAt) }
+            else viewModel.openExam(slotId, action)
+        },
+        onSeeAllPastExams = onSeeAllPastExams,
+        onDismissSlot = viewModel::dismissSlot,
+        onRescheduleSlot = viewModel::reschedule,
+        onDeleteSlot = viewModel::deleteSlot,
+        onLeave = viewModel::leave,
+        onCopyCode = { code ->
+            context.copyToClipboard(code)
+            scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+        },
+        onShareCode = { group, code -> context.shareInviteCode(context.getString(R.string.group_share_text, group.name, code)) },
+        onRefresh = viewModel::refresh,
+        onClearError = viewModel::clearError,
+    )
+}
+
+@Composable
+fun GroupDetailContent(
+    state: GroupDetailUiState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onBack: () -> Unit,
+    onSeeAllMembers: () -> Unit,
+    onOpenSettings: () -> Unit = {},
+    onOpenJoinRequests: () -> Unit = {},
+    onCreateRoutine: () -> Unit = {},
+    onScheduleAdhoc: () -> Unit = {},
+    onOpenCalendar: () -> Unit = {},
+    onOpenSlot: (String) -> Unit = {},
+    onSlotAction: (String, SlotAction) -> Unit = { _, _ -> },
+    onSeeAllPastExams: () -> Unit = {},
+    onDismissSlot: () -> Unit = {},
+    onRescheduleSlot: (LocalDate) -> Unit = {},
+    onDeleteSlot: () -> Unit = {},
+    onLeave: () -> Unit = {},
+    onCopyCode: (String) -> Unit,
+    onShareCode: (StudyGroup, String) -> Unit,
+    onRefresh: () -> Unit,
+    onClearError: (String) -> Unit,
+    /** Fixed time for tests; null = the ticking clock. */
+    clock: Instant? = null,
+) {
+    val ticking by rememberNow()
+    val now = clock ?: ticking
+    val scope = rememberCoroutineScope()
+    val comingSoon = stringResource(R.string.feature_coming_soon)
+
+    state.openSlot?.let { slot ->
+        SlotDetailSheet(
+            slot = slot, label = state.labels[slot.id], now = now, canManage = state.isAdmin,
+            lastDate = if (slot.kind == SlotKind.ROUTINE) state.routineLastDate else null, isBusy = state.isSlotBusy,
+            onReschedule = onRescheduleSlot, onDelete = onDeleteSlot, onDismiss = onDismissSlot,
+        )
+    }
+
+    var confirmLeave by rememberSaveable { mutableStateOf(false) }
+    if (confirmLeave) {
+        GroupConfirmDialog(
+            title = stringResource(R.string.group_leave_title),
+            body = stringResource(R.string.group_leave_body),
+            confirmLabel = stringResource(R.string.group_leave),
+            destructive = true,
+            onConfirm = { confirmLeave = false; onLeave() },
+            onDismiss = { confirmLeave = false },
+        )
+    }
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         PullToRefreshErrorOverlayWrapper(
             errors = state.errors,
-            errorCleaner = viewModel::clearError,
+            errorCleaner = onClearError,
             overlayPadding = padding,
             pullToRefreshEnabled = true,
-            isRefreshing = state.isLoading && state.detail != null,
-            onRefresh = viewModel::refresh
+            isRefreshing = state.isLoading && state.group != null,
+            onRefresh = onRefresh
         ) {
-            if (state.isLoading && state.detail == null) {
+            val group = state.group
+            if (group == null) {
                 Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    if (state.isLoading) ProstutiSpinner()
                 }
                 return@PullToRefreshErrorOverlayWrapper
             }
-            val detail = state.detail ?: return@PullToRefreshErrorOverlayWrapper
 
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 Row(
@@ -94,235 +238,90 @@ fun GroupDetailScreen(
                 ) {
                     BackButton(onClick = onBack)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(text = detail.group.nameBn, style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "${detail.group.memberCount.toBengaliDigits()} সদস্য",
+                            text = group.name, style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = stringResource(R.string.group_member_count, localizedNumber(group.memberCount)),
                             style = ProstutiTypography.enBodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
                         )
                     }
+                    if (group.myRole == GroupRole.ADMIN) {
+                        IconButton(onClick = dropUnlessResumed { onOpenSettings() }, modifier = Modifier.testTag(TAG_SETTINGS)) {
+                            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.group_settings_title))
+                        }
+                    }
                 }
 
-                Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                            .clickable(onClick = onNavigateToCalendar)
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
-                        }
-                        Text(
-                            text = "গ্রুপ রুটিন ক্যালেন্ডার দেখো", style = ProstutiTypography.bnBodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f).padding(start = 10.dp)
-                        )
+                // What to do now (exams, prep) and the group around it (past exams, members).
+                val main: @Composable ColumnScope.() -> Unit = {
+                    group.description?.takeIf { it.isNotBlank() }?.let {
+                        Text(text = it, style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
-                    ExamStatusSection(
-                        detail = detail,
-                        examState = state.examState,
-                        now = state.now,
-                        isDemoAdvancing = state.isDemoAdvancing,
-                        onDemoAdvance = viewModel::advanceDemoState,
-                        onNavigateToRoutineCreate = onNavigateToRoutineCreate,
-                        onNavigateToAttempt = onNavigateToAttempt,
-                        onNavigateToLockedResult = onNavigateToLockedResult,
-                        onNavigateToRanking = onNavigateToRanking
-                    )
+                    if (group.myRole == GroupRole.ADMIN && state.pendingRequestCount > 0) {
+                        JoinRequestsBanner(count = state.pendingRequestCount, onClick = dropUnlessResumed { onOpenJoinRequests() })
+                    }
 
-                    PastExamsSection(pastExams = detail.recentPastExams, onSeeAll = onNavigateToPastExams, onOpen = onNavigateToPastExam)
+                    val code = group.inviteCode
+                    if (group.myRole == GroupRole.ADMIN && code != null) {
+                        InviteCodeCard(code = code, onCopy = { onCopyCode(code) }, onShare = { onShareCode(group, code) })
+                    }
 
-                    MembersSection(members = detail.memberPreview, totalCount = detail.group.memberCount, onSeeAll = onNavigateToMembers)
+                    // A non-member (e.g. opened from a notification later) has no exams to see.
+                    if (group.myRole != null) {
+                        GroupExamSection(
+                            state = state, now = now, onOpenSlot = onOpenSlot, onSlotAction = onSlotAction,
+                            onOpenCalendar = dropUnlessResumed { onOpenCalendar() },
+                            onCreateRoutine = dropUnlessResumed { onCreateRoutine() },
+                            onScheduleAdhoc = dropUnlessResumed { onScheduleAdhoc() },
+                            onConcepts = { scope.launch { snackbarHostState.showSnackbar(comingSoon) } },
+                        )
+                    }
+                }
+                val side: @Composable ColumnScope.() -> Unit = {
+                    if (group.myRole != null && state.pastSlots.isNotEmpty()) {
+                        PastExamsPreview(state, onOpen = { onSlotAction(it, SlotAction.RANKING) }, onSeeAll = dropUnlessResumed { onSeeAllPastExams() })
+                    }
 
+                    MembersSection(members = state.memberPreview, totalCount = group.memberCount, onSeeAll = dropUnlessResumed { onSeeAllMembers() })
+
+                    // An admin leaves from GroupSettings, where the last-admin rule is explained.
+                    if (group.myRole == GroupRole.MEMBER) {
+                        TextButton(
+                            onClick = { confirmLeave = true },
+                            enabled = !state.isLeaving,
+                            modifier = Modifier.fillMaxWidth().testTag(TAG_LEAVE)
+                        ) {
+                            Text(stringResource(R.string.group_leave), style = ProstutiTypography.bnLabelLarge, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-            }
-    
-        }
-    }
-}
 
-@Composable
-private fun ExamStatusSection(
-    detail: GroupDetail,
-    examState: TimedExamState?,
-    now: Long,
-    isDemoAdvancing: Boolean,
-    onDemoAdvance: () -> Unit,
-    onNavigateToRoutineCreate: () -> Unit,
-    onNavigateToAttempt: (String) -> Unit,
-    onNavigateToLockedResult: (String) -> Unit,
-    onNavigateToRanking: (String) -> Unit
-) {
-    Column {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "এক্সাম স্ট্যাটাস", style = ProstutiTypography.bnBodyLarge, color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-            if (BuildConfig.DEBUG && detail.currentExam != null) {
-                Text(
-                    text = if (isDemoAdvancing) "…" else "ডেমো: অবস্থা পাল্টাও",
-                    style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                        .clickable(enabled = !isDemoAdvancing, onClick = onDemoAdvance)
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-
-        val exam = detail.currentExam
-        when {
-            detail.routine == null && detail.group.myRole == GroupRole.ADMIN -> NoRoutineAdminCard(onCreate = onNavigateToRoutineCreate)
-            detail.routine == null -> NoRoutineMemberCard()
-            exam == null -> Text(
-                text = "আজ এই গ্রুপের কোনো এক্সাম-দিন নেই।", style = ProstutiTypography.bnBodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            examState == TimedExamState.CLOSED -> ClosedExamCard(
-                titleBn = exam.titleBn,
-                onViewRanking = { onNavigateToRanking(exam.examId) }
-            )
-            examState == TimedExamState.OPEN_SUBMITTED -> OpenExamCard(
-                remainingLabel = formatRemainingBn(exam.windowEndEpochMillis - now),
-                titleBn = exam.titleBn, subtitleBn = exam.subtitleBn,
-                ctaLabel = "তুমি সাবমিট করেছো — দেখো", onCta = { onNavigateToLockedResult(exam.examId) }
-            )
-            examState == TimedExamState.OPEN_NOT_SUBMITTED -> OpenExamCard(
-                remainingLabel = formatRemainingBn(exam.windowEndEpochMillis - now),
-                titleBn = exam.titleBn, subtitleBn = exam.subtitleBn,
-                ctaLabel = "এক্সামে অংশ নিন", onCta = { onNavigateToAttempt(exam.examId) }
-            )
-            else -> Text(
-                text = "উইন্ডো এখনও শুরু হয়নি।", style = ProstutiTypography.bnBodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun NoRoutineAdminCard(onCreate: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow).padding(18.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Text(
-            text = "এখনও কোনো গ্রুপ রুটিন তৈরি হয়নি — রুটিন সেট করলে এক্সাম-দিনগুলোতে এক্সাম অটো শুরু হবে",
-            style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-        PrimaryButton(text = "গ্রুপ রুটিন তৈরি করুন", onClick = onCreate, modifier = Modifier.fillMaxWidth(0.8f))
-    }
-}
-
-@Composable
-private fun NoRoutineMemberCard() {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerLow).padding(16.dp)) {
-        Text(
-            text = "এখনও অ্যাডমিন গ্রুপের রুটিন সেট করেনি — রুটিন সেট হলে নির্দিষ্ট দিনে এক্সাম এখানে অটো দেখাবে।",
-            style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun OpenExamCard(remainingLabel: String, titleBn: String, subtitleBn: String, ctaLabel: String, onCta: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primaryContainer).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-            Text(
-                text = "উইন্ডো খোলা আছে আরও $remainingLabel", style = ProstutiTypography.enLabelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(start = 8.dp)
-            )
-        }
-        Text(text = titleBn, style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-        Text(text = subtitleBn, style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-        PrimaryButton(text = ctaLabel, onClick = onCta)
-    }
-}
-
-@Composable
-private fun ClosedExamCard(titleBn: String, onViewRanking: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerLow).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Box(modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 8.dp, vertical = 3.dp)) {
-            Text(text = "উইন্ডো শেষ", style = ProstutiTypography.bnLabelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
-        }
-        Text(text = titleBn, style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onSurface)
-        PrimaryButton(text = "র‍্যাংকিং ও অ্যান্সার শিট দেখো", onClick = onViewRanking)
-    }
-}
-
-@Composable
-private fun PastExamsSection(pastExams: List<GroupPastExam>, onSeeAll: () -> Unit, onOpen: (String) -> Unit) {
-    if (pastExams.isEmpty()) return
-    Column {
-        SectionHeader(title = "আগের এক্সামগুলো", onSeeAll = onSeeAll)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            pastExams.forEach { exam ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                        .clickable { onOpen(exam.examId) }.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = exam.titleBn, style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            text = "${exam.dateLabelBn} · ${exam.submittedCount.toBengaliDigits()} জন সাবমিট · গড় ${exam.averagePercent.toBengaliDigits()}%",
-                            style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp)
+                if (paneIsMediumOrWider()) {
+                    // Medium and up: two columns, each scrolling on its own.
+                    Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Column(
+                            Modifier.weight(0.6f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(20.dp), content = main
+                        )
+                        VerticalDivider(Modifier.padding(vertical = 8.dp))
+                        Column(
+                            Modifier.weight(0.4f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(vertical = 6.dp).testTag(TAG_DETAIL_SIDE_PANE),
+                            verticalArrangement = Arrangement.spacedBy(20.dp), content = side
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MembersSection(members: List<GroupMember>, totalCount: Int, onSeeAll: () -> Unit) {
-    Column {
-        SectionHeader(title = "সদস্যরা (${totalCount.toBengaliDigits()})", onSeeAll = onSeeAll)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            members.forEach { member ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow).padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
-                        Text(text = member.initial, style = ProstutiTypography.bnLabelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                    }
-                    Text(
-                        text = member.name, style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f).padding(start = 10.dp), maxLines = 1, overflow = TextOverflow.Ellipsis
-                    )
-                    if (member.isAdmin) {
-                        Box(modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.tertiaryContainer).padding(horizontal = 8.dp, vertical = 2.dp)) {
-                            Text(text = "অ্যাডমিন", style = ProstutiTypography.bnLabelMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
-                        }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        main()
+                        side()
                     }
                 }
             }
@@ -330,13 +329,122 @@ private fun MembersSection(members: List<GroupMember>, totalCount: Int, onSeeAll
     }
 }
 
+/** The last three ended exams; a row opens its ranking. */
 @Composable
-private fun SectionHeader(title: String, onSeeAll: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text = title, style = ProstutiTypography.bnBodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+private fun PastExamsPreview(state: GroupDetailUiState, onOpen: (String) -> Unit, onSeeAll: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag(TAG_PAST_PREVIEW)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.past_title), style = ProstutiTypography.bnTitleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            TextButton(onClick = onSeeAll) { Text(stringResource(R.string.group_see_all), style = ProstutiTypography.bnLabelLarge) }
+        }
+        state.pastSlots.forEach { slot ->
+            val title = slot.title ?: topicLabelText(state.labels[slot.id] ?: TopicLabel.Count(slot.topicIds.size))
+            PastExamRow(slot, title, state.pastStats[slot.id], onClick = { onOpen(slot.id) })
+        }
+    }
+}
+
+@Composable
+private fun JoinRequestsBanner(count: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.tertiaryContainer).clickable(onClick = onClick).padding(14.dp)
+            .testTag(TAG_REQUESTS_BANNER),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
-            text = "সবাই দেখো", style = ProstutiTypography.bnLabelLarge, color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable(onClick = onSeeAll)
+            text = stringResource(R.string.group_pending_requests, localizedNumber(count)),
+            style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.weight(1f)
         )
+        Text(stringResource(R.string.group_see_all), style = ProstutiTypography.bnLabelLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
     }
 }
+
+@Composable
+private fun InviteCodeCard(code: String, onCopy: () -> Unit, onShare: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)
+            .testTag(TAG_INVITE_CODE),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.group_invite_code_title), style = ProstutiTypography.bnLabelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(code, style = ProstutiTypography.enTitleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(vertical = 2.dp))
+            Text(stringResource(R.string.group_invite_code_hint), style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        IconButton(onClick = onCopy) {
+            Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.group_copy_code_cd), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        IconButton(onClick = onShare) {
+            Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.group_share_code_cd), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+    }
+}
+
+@Composable
+private fun MembersSection(members: List<StudyGroupMember>, totalCount: Int, onSeeAll: () -> Unit) {
+    Column {
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.group_members_section, localizedNumber(totalCount)),
+                style = ProstutiTypography.bnBodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = stringResource(R.string.group_see_all), style = ProstutiTypography.bnLabelLarge, color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onSeeAll).padding(horizontal = 6.dp, vertical = 4.dp)
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            members.forEach { member -> MemberRow(member = member, isMe = false) }
+        }
+    }
+}
+
+/** One member row: initial, username (+ "তুমি"), admin badge, then [trailing] (the admin's menu). Shared with GroupMembersScreen. */
+@Composable
+internal fun MemberRow(member: StudyGroupMember, isMe: Boolean, trailing: @Composable () -> Unit = {}) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow).padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
+            Text(text = member.username.take(1).uppercase(), style = ProstutiTypography.bnLabelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        }
+        Text(
+            text = if (isMe) stringResource(R.string.group_member_you, member.username) else member.username,
+            style = ProstutiTypography.bnBodyMedium, color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f).padding(start = 10.dp), maxLines = 1, overflow = TextOverflow.Ellipsis
+        )
+        if (member.role == GroupRole.ADMIN) {
+            Box(modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.tertiaryContainer).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                Text(text = stringResource(R.string.group_admin_badge), style = ProstutiTypography.bnLabelMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
+            }
+        }
+        trailing()
+    }
+}
+
+private fun Context.copyToClipboard(text: String) {
+    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("group code", text))
+}
+
+private fun Context.shareInviteCode(message: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, message)
+    }
+    startActivity(Intent.createChooser(send, null))
+}
+
+const val TAG_DETAIL_SIDE_PANE = "group_detail_side_pane"
+const val TAG_INVITE_CODE = "group_invite_code"
+const val TAG_SETTINGS = "group_settings"
+const val TAG_REQUESTS_BANNER = "group_requests_banner"
+const val TAG_LEAVE = "group_leave"
+const val TAG_PAST_PREVIEW = "group_past_preview"
+const val TAG_ADMIN_SCHEDULE = "group_admin_schedule"
+const val TAG_CREATE_ROUTINE = "group_create_routine"
+const val TAG_SCHEDULE_ADHOC = "group_schedule_adhoc"

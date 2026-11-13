@@ -8,6 +8,11 @@ class LatexWriterTest {
     private fun latex(text: String, functions: Set<String> = emptySet()) =
         LatexWriter.write((MathParser.parse(text, functions) as ParseResult.Success).statement)
 
+    @Test fun vectorFieldIsNamedNotSpelledOut() {
+        assertEquals("\\vec{F}=(-y, x)", latex("field(-y, x)"))
+        assertEquals("\\vec{v}: (0, 0)\\rightarrow (3, 4)", latex("vector((0, 0), (3, 4))"))
+    }
+
     @Test fun typesetsCommonForms() {
         assertEquals("y = x^{2}", latex("y = x^2"))
         assertEquals("y = \\frac{1}{x}", latex("y = 1/x"))

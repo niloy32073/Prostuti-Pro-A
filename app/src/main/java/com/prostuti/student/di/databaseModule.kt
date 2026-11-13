@@ -18,10 +18,11 @@ val databaseModule = module {
     single { get<AppDatabase>().subjectDao() }
     single { get<AppDatabase>().chapterDao() }
     single { get<AppDatabase>().topicDao() }
-    single { get<AppDatabase>().groupRoutineDao() }
     single { get<AppDatabase>().timedExamAttemptDao() }
     single { get<AppDatabase>().demoExamWindowDao() }
-    single { get<AppDatabase>().createdGroupDao() }
     single { get<AppDatabase>().attemptProgressDao() }
     single { get<AppDatabase>().currentUserDao() }
+    single { get<AppDatabase>().savedGraphDao() }
+    single { get<AppDatabase>().bookmarkDao() }
+    single { get<AppDatabase>().reportedResourceDao() }
 }

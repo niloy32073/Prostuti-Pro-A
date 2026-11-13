@@ -73,7 +73,7 @@ class MCQExamListViewModel(
                         isLoading = false,
                         boardExams = if (page == 1) r.data else s.boardExams + r.data,
                         boardPage = page,
-                        boardHasMore = r.metaData?.let { page < it.totalPages } ?: false
+                        boardHasMore = r.metaData?.totalPages?.let { page < it } ?: false
                     )
                 }
                 is ApiResponse.Failure -> _state.update {
@@ -92,7 +92,7 @@ class MCQExamListViewModel(
                         isLoading = false,
                         collegeExams = if (page == 1) r.data else s.collegeExams + r.data,
                         collegePage = page,
-                        collegeHasMore = r.metaData?.let { page < it.totalPages } ?: false
+                        collegeHasMore = r.metaData?.totalPages?.let { page < it } ?: false
                     )
                 }
                 is ApiResponse.Failure -> _state.update {

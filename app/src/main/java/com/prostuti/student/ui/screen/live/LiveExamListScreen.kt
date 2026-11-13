@@ -17,7 +17,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,6 +38,7 @@ import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.util.toBengaliDigits
 import org.koin.compose.viewmodel.koinViewModel
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun LiveExamListScreen(
@@ -66,7 +67,7 @@ fun LiveExamListScreen(
 
                 when {
                     state.isLoading && state.rows.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        ProstutiSpinner()
                     }
                     state.rows.isEmpty() -> Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                         Text(
@@ -102,7 +103,7 @@ private fun LiveExamRowCard(row: LiveExamRow, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = row.exam.titleBn, style = ProstutiTypography.bnBodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text = localized(row.exam.titleBn, row.exam.titleEn), style = ProstutiTypography.bnBodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 text = "${row.exam.questionCount.toBengaliDigits()}টি প্রশ্ন · ${row.exam.totalParticipants.toBengaliDigits()} জন অংশগ্রহণকারী",
                 style = ProstutiTypography.enLabelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp)

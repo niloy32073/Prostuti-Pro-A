@@ -94,6 +94,10 @@ object LatexWriter {
             "factorial" -> latex(args[0], Prec.ATOM) + "!"
             "exp" -> "e^{$a}"
             "log" -> if (args.size == 2) "\\log_{${write(args[1])}}" + paren(a) else "\\log" + paren(a)
+            "revolvex", "revolvey" -> revolution(node)
+            // No "\\ " spacing commands: the renderer draws them as a red backslash.
+            "field" -> "\\vec{F}=" + paren(args.joinToString(", ") { write(it) })
+            "vector" -> "\\vec{v}: " + args.joinToString("\\rightarrow ") { latex(it, Prec.ATOM) }
             "nCr" -> "{}^{${write(args[0])}}C_{${write(args[1])}}"
             "nPr" -> "{}^{${write(args[0])}}P_{${write(args[1])}}"
             in TRIG_INVERSE -> "\\${TRIG_INVERSE.getValue(node.name)}^{-1}" + paren(a)
@@ -102,6 +106,23 @@ object LatexWriter {
                 val name = if (MathFunctions.isBuiltin(node.name)) "\\operatorname{${node.name}}" else symbol(node.name)
                 name + "'".repeat(node.primes) + paren(args.joinToString(", ") { write(it) })
             }
+        }
+    }
+
+    /** The volume formula itself: V = π∫(f² − g²)dx about x, V = 2π∫|x|(f − g)dx about y. */
+    private fun revolution(node: MathNode.Call): String {
+        val args = node.args
+        // Brackets only when needed: x² → x^{2}, (x²)² stays bracketed.
+        val f = latex(args[0], Prec.POSTFIX)
+        val g = if (args.size == 4) latex(args[1], Prec.POSTFIX) else null
+        val a = write(args[args.size - 2])
+        val b = write(args[args.size - 1])
+        return if (node.name == "revolvex") {
+            val body = if (g == null) "$f^{2}" else "\\left[$f^{2}-$g^{2}\\right]"
+            "V_{x}=\\pi\\int_{$a}^{$b}$body\\,dx"
+        } else {
+            val body = if (g == null) f else "\\left($f-$g\\right)"
+            "V_{y}=2\\pi\\int_{$a}^{$b}\\left|x\\right|$body\\,dx"
         }
     }
 

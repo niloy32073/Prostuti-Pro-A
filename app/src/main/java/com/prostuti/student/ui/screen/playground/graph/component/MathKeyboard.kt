@@ -45,6 +45,7 @@ fun MathKeyboard(
     page: KeyboardPage,
     onKey: (MathKeyAction) -> Unit,
     modifier: Modifier = Modifier,
+    space: Boolean = false,
 ) {
     val haptics = LocalHapticFeedback.current
     fun press(action: MathKeyAction) {
@@ -66,7 +67,7 @@ fun MathKeyboard(
                     Icon(Icons.Filled.KeyboardHide, contentDescription = stringResource(R.string.graph_keyboard_hide))
                 }
             }
-            for (row in MathKeyboardLayout.rows(page)) {
+            for (row in MathKeyboardLayout.rows(page, space)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
                     for (key in row) KeyButton(key) { press(key.action) }
                 }

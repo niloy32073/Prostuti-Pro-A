@@ -13,6 +13,8 @@ import com.prostuti.student.ui.screen.qb.MCQExamListScreen
 import com.prostuti.student.ui.screen.qb.QuestionReaderScreen
 import com.prostuti.student.ui.screen.qb.SubjectListScreen
 import com.prostuti.student.ui.screen.qb.SubjectTypeScreen
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun QBNavDisplay(
@@ -53,13 +55,15 @@ fun QBNavDisplay(
             entry<QuestionReader> { route ->
                 QuestionReaderScreen(
                     titleBn = route.titleBn,
-                    onBack = { backStack.removeLastOrNull() }
+                    onBack = { backStack.removeLastOrNull() },
+                    viewModel = koinViewModel { parametersOf(route.examId) }
                 )
             }
             entry<ChapterBrowse> { route ->
                 ChapterBrowseScreen(
                     subjectId = route.subjectId,
                     nameBn = route.nameBn,
+                    nameEn = route.nameEn,
                     onBack = { backStack.removeLastOrNull() }
                 )
             }

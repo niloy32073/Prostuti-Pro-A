@@ -24,7 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -42,6 +42,9 @@ import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
+import com.prostuti.student.R
+import androidx.compose.ui.res.stringResource
+import com.prostuti.student.ui.component.localized
 
 /** The Medium/Expanded combined step — subject list + the focused subject's chapter/topic tree
  *  side by side (SubjectChapterMedium/Expanded in the design), replacing the compact flow's two
@@ -88,7 +91,7 @@ fun PracticeSubjectChapterScreen(
 
                 if (state.isLoadingSubjects) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        ProstutiSpinner()
                     }
                 } else {
                     Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -130,7 +133,7 @@ fun PracticeSubjectChapterScreen(
                                 }
 
                                 focusedId in state.loadingSubjectIds -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                    ProstutiSpinner()
                                 }
 
                                 else -> {
@@ -151,7 +154,7 @@ fun PracticeSubjectChapterScreen(
                                         ) {
                                             item {
                                                 SubjectSelectHeader(
-                                                    title = "${group.subjectNameBn} — চ্যাপ্টার ও টপিক",
+                                                    title = stringResource(R.string.practice_subject_chapters_title, localized(group.subjectNameBn, group.subjectNameEn)),
                                                     group = group,
                                                     selectedTopicIds = state.selectedTopicIds,
                                                     onToggle = { viewModel.toggleSubjectAll(focusedId) }
@@ -226,7 +229,7 @@ private fun SubjectFocusRow(
     ) {
         Checkbox(checked = checked, onCheckedChange = { onToggle() })
         Text(
-            text = subject.nameBn,
+            text = localized(subject.nameBn, subject.nameEn),
             style = ProstutiTypography.bnBodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
@@ -242,7 +245,7 @@ private fun SubjectFocusRow(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "${subject.nameBn} এর চ্যাপ্টার দেখো",
+                    contentDescription = stringResource(R.string.practice_subject_open_chapters, localized(subject.nameBn, subject.nameEn)),
                     tint = if (focused) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(14.dp)
                 )

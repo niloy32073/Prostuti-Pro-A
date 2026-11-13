@@ -1,5 +1,8 @@
 package com.prostuti.student.ui.screen.examengine
 
+import com.prostuti.student.util.DhakaTime
+import com.prostuti.student.ui.screen.routine.minuteOfDayText
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,7 +30,7 @@ import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -69,6 +72,7 @@ import com.prostuti.student.ui.screen.examengine.calculator.CalculatorPanel
 import com.prostuti.student.ui.screen.examengine.component.McqCard
 import com.prostuti.student.ui.screen.examengine.component.McqGridItem
 import com.prostuti.student.ui.screen.examengine.component.PassageCard
+import com.prostuti.student.ui.screen.examengine.component.TimeUpDialog
 import com.prostuti.student.ui.screen.examengine.component.groupQuestionsByPassage
 import com.prostuti.student.ui.screen.examengine.scratchpad.ScratchpadPanel
 import com.prostuti.student.ui.theme.ProstutiTypography
@@ -87,7 +91,9 @@ fun ExamAttemptScreen(
     attemptId: String,
     onBack: () -> Unit,
     onSubmitted: () -> Unit,
-    viewModel: ExamAttemptViewModel = koinViewModel(parameters = { parametersOf(attemptId) })
+    /** A group exam's window end (its result stays locked until then); null for every other exam. */
+    lockResultUntil: String? = null,
+    viewModel: ExamAttemptViewModel = koinViewModel(parameters = { parametersOf(attemptId, lockResultUntil) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -123,11 +129,19 @@ fun ExamAttemptScreen(
         }
     }
 
-    LaunchedEffect(state.isSubmitted) {
-        if (state.isSubmitted) onSubmitted()
+    // A time-up submit waits on the dialog below, so the student sees why the exam ended.
+    LaunchedEffect(state.isSubmitted, state.isTimeUp) {
+        if (state.isSubmitted && !state.isTimeUp) onSubmitted()
     }
 
-    if (state.showSubmitDialog) {
+    if (state.isTimeUp) {
+        TimeUpDialog(
+            isSubmitting = state.isSubmitting,
+            isSubmitted = state.isSubmitted,
+            onViewResult = onSubmitted,
+            onRetry = viewModel::submitExam
+        )
+    } else if (state.showSubmitDialog) {
         SubmitConfirmDialog(
             isSubmitting = state.isSubmitting,
             onConfirm = viewModel::submitExam,
@@ -154,10 +168,11 @@ fun ExamAttemptScreen(
             overlayPadding = padding
         ) {
             val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            state.windowClosesAt?.let { GroupWindowBanner(it) }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
             ) {
                 when {
                     // Expanded: 2-column questions + right panel always visible
@@ -244,9 +259,24 @@ fun ExamAttemptScreen(
                     }
                 }
             }
+            }
     
         }
     }
+}
+
+const val TAG_GROUP_WINDOW_BANNER = "exam_group_window_banner"
+
+/** "গ্রুপ এক্সাম · উইন্ডো শেষ রাত ১১:০০" above a group exam. */
+@Composable
+private fun GroupWindowBanner(closesAt: String) {
+    val millis = DhakaTime.parseInstant(closesAt)?.toEpochMilli() ?: return
+    Text(
+        text = stringResource(R.string.exam_group_window_banner, minuteOfDayText(DhakaTime.minuteOfDayAt(millis).let { if (it == 0) DhakaTime.MINUTES_PER_DAY else it })),
+        style = ProstutiTypography.bnLabelLarge, color = MaterialTheme.colorScheme.onTertiaryContainer,
+        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.tertiaryContainer)
+            .padding(horizontal = 16.dp, vertical = 8.dp).testTag(TAG_GROUP_WINDOW_BANNER)
+    )
 }
 
 // ── Exam content column (questions + header + submit) ───────────────────────
@@ -339,7 +369,7 @@ private fun ExamContent(
                 contentAlignment = Alignment.Center
             ) {
                 if (state.isLoading) {
-                    CircularProgressIndicator()
+                    ProstutiSpinner()
                 } else {
                     Text(
                         text = stringResource(R.string.exam_attempt_no_questions),
@@ -367,7 +397,8 @@ private fun ExamContent(
                         onOptionSelected = { optionId -> viewModel.selectAnswer(item.question.mcqId, optionId) },
                         isFavorite = item.question.mcqId in state.favoriteMcqIds,
                         onToggleFavorite = { viewModel.toggleFavorite(item.question.mcqId) },
-                        onReport = { reason, description -> viewModel.submitReport(item.question.mcqId, reason, description) }
+                        onReport = { reason, description -> viewModel.submitReport(item.question.mcqId, reason, description) },
+                        isReported = item.question.mcqId in state.reportedMcqIds
                     )
 
                     is McqGridItem.PassageGroup -> PassageCard(passage = item.passage) {
@@ -383,7 +414,8 @@ private fun ExamContent(
                                 isFavorite = question.mcqId in state.favoriteMcqIds,
                                 onToggleFavorite = { viewModel.toggleFavorite(question.mcqId) },
                                 onReport = { reason, description -> viewModel.submitReport(question.mcqId, reason, description) },
-                                showContainer = false
+                                showContainer = false,
+                                isReported = question.mcqId in state.reportedMcqIds
                             )
                         }
                     }
@@ -504,9 +536,8 @@ private fun SubmitConfirmDialog(isSubmitting: Boolean, onConfirm: () -> Unit, on
         confirmButton = {
             Button(onClick = onConfirm, enabled = !isSubmitting, shape = RoundedCornerShape(50.dp)) {
                 if (isSubmitting) {
-                    CircularProgressIndicator(
+                    ProstutiSpinner(
                         modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {

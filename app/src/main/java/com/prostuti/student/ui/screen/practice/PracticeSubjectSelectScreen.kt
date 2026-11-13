@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,6 +37,7 @@ import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun PracticeSubjectSelectScreen(
@@ -87,7 +88,7 @@ fun PracticeSubjectSelectScreen(
 
                 if (state.isLoading && state.subjects.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        ProstutiSpinner()
                     }
                 } else {
                     val columns = adaptiveColumnCount()
@@ -154,7 +155,7 @@ private fun PracticeSubjectCheckRow(
     ) {
         Checkbox(checked = checked, onCheckedChange = { onToggle() })
         Text(
-            text = subject.nameBn,
+            text = localized(subject.nameBn, subject.nameEn),
             style = ProstutiTypography.bnBodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)

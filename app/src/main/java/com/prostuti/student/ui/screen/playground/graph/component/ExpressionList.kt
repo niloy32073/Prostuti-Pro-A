@@ -2,6 +2,7 @@ package com.prostuti.student.ui.screen.playground.graph.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -58,12 +60,21 @@ fun ExpressionList(state: GraphBuilderUiState, actions: ExpressionListActions, m
                 onSliderChange = { actions.onSliderChange(line.id, it) },
                 onTogglePlay = { actions.onTogglePlay(line.id) },
                 onAddSlider = { name -> actions.onAddSlider(name, line.id) },
+                onTableChange = { actions.onTableChange(line.id, it) },
             )
         }
         item(key = "add") {
-            OutlinedButton(onClick = actions.onAddLine, modifier = Modifier.fillMaxWidth().testTag("add_expression")) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Text(stringResource(R.string.graph_add_expression), modifier = Modifier.padding(start = 6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = actions.onAddLine, modifier = Modifier.weight(1f).testTag("add_expression")) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text(stringResource(R.string.graph_add_expression), modifier = Modifier.padding(start = 6.dp))
+                }
+                if (!state.isSpace) {
+                    OutlinedButton(onClick = actions.onAddTable, modifier = Modifier.weight(1f).testTag("add_table")) {
+                        Icon(Icons.Filled.TableChart, contentDescription = null)
+                        Text(stringResource(R.string.graph_add_table), modifier = Modifier.padding(start = 6.dp))
+                    }
+                }
             }
         }
     }

@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.data.model.response.Subject
 import com.prostuti.student.ui.theme.ProstutiTypography
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun SubjectListItem(subject: Subject, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -53,7 +54,7 @@ fun SubjectListItem(subject: Subject, onClick: () -> Unit, modifier: Modifier = 
         Spacer(modifier = Modifier.width(12.dp))
 
         Text(
-            text = subject.nameBn,
+            text = localized(subject.nameBn, subject.nameEn),
             style = ProstutiTypography.bnBodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)

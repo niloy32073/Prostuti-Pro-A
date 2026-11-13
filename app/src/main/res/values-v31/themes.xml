@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 31+: the system splash plays the 2200 ms animated mark. -->
+    <style name="Theme.Prostuti.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/avd_prostuti_splash</item>
+        <item name="windowSplashScreenAnimationDuration">2200</item>
+        <item name="postSplashScreenTheme">@style/Theme.Prostuti</item>
+    </style>
+</resources>

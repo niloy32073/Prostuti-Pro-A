@@ -2,7 +2,7 @@ package com.prostuti.student.ui.screen.examengine
 
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.repository.fake.FakeExamAttemptRepositoryForEngineTest
-import com.prostuti.student.domain.GetAttemptReviewUseCase
+import com.prostuti.student.domain.GetAttemptAnswerSheetUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -35,8 +35,12 @@ class ExamAnswerSheetViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun buildViewModel() =
-        ExamAnswerSheetViewModel(attemptId = "attempt1", getAttemptReviewUseCase = GetAttemptReviewUseCase(fakeRepo))
+    private fun buildViewModel(topicFilter: String? = null) =
+        ExamAnswerSheetViewModel(
+            attemptId = "attempt1",
+            topicFilter = topicFilter,
+            getAttemptAnswerSheetUseCase = GetAttemptAnswerSheetUseCase(fakeRepo, fakeRepo)
+        )
 
     @Test
     fun `load success sorts questions by order and exposes correct wrong skipped counts`() = runTest {
@@ -53,7 +57,7 @@ class ExamAnswerSheetViewModelTest {
 
     @Test
     fun `load failure populates LOAD error`() = runTest {
-        fakeRepo.getAttemptReviewResult = ApiResponse.Failure(message = "Review unavailable", errorCode = "403")
+        fakeRepo.answerSheetResult = ApiResponse.Failure(message = "Review unavailable", errorCode = "ATTEMPT_NOT_FINALIZED")
         val viewModel = buildViewModel()
         advanceUntilIdle()
 
@@ -105,8 +109,24 @@ class ExamAnswerSheetViewModelTest {
     }
 
     @Test
+    fun `questions-with-options failure is shown as LOAD error`() = runTest {
+        fakeRepo.questionsWithOptionsResult = ApiResponse.Failure(message = "Exam not found", errorCode = "NOT_FOUND")
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        assertEquals("Exam not found", viewModel.state.value.errors["LOAD"])
+        assertEquals(emptyList<String>(), viewModel.state.value.questions.map { it.mcqId })
+    }
+
+    @Test
+    fun `topic filter keeps only that topic, no-topic filter keeps untagged questions`() = runTest {
+        assertEquals(listOf("mcq2"), buildViewModel(topicFilter = "t2").state.value.questions.map { it.mcqId })
+        assertEquals(listOf("mcq3"), buildViewModel(topicFilter = ANSWER_SHEET_NO_TOPIC).state.value.questions.map { it.mcqId })
+    }
+
+    @Test
     fun `clearError removes only the targeted tag`() = runTest {
-        fakeRepo.getAttemptReviewResult = ApiResponse.Failure(message = "boom", errorCode = "500")
+        fakeRepo.answerSheetResult = ApiResponse.Failure(message = "boom", errorCode = "500")
         val viewModel = buildViewModel()
         advanceUntilIdle()
 

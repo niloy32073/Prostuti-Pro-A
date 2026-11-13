@@ -11,7 +11,6 @@ import io.ktor.http.isSuccess
 import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
-import timber.log.Timber
 import java.net.UnknownHostException
 
 suspend inline fun <reified T> safeApiCall(
@@ -48,12 +47,14 @@ suspend inline fun <reified T> safeApiCall(
             } catch (e: Exception) {
                 null
             }
+            val errorCode = errorBody?.error?.code ?: response.status.value.toString()
+            logServerError(response, errorCode)
 
             ApiResponse.Failure(
                 message = errorBody?.message
                     ?: errorBody?.error?.details
                     ?: "Unexpected server response (${response.status.value})",
-                errorCode = errorBody?.error?.code ?: response.status.value.toString(),
+                errorCode = errorCode,
                 details = errorBody?.error?.details
             )
         }
@@ -61,12 +62,12 @@ suspend inline fun <reified T> safeApiCall(
         throw e
     } catch (e: Exception) {
         val (errorMessage, errorCode) = when (e) {
-            is SocketTimeoutException, is HttpRequestTimeoutException -> "Timeout: Server is too slow" to "TIMEOUT_ERROR"
-            is UnknownHostException, is UnresolvedAddressException -> "No internet connection" to "NETWORK_ERROR"
+            is SocketTimeoutException, is HttpRequestTimeoutException -> "Timeout: Server is too slow" to TIMEOUT_ERROR
+            is UnknownHostException, is UnresolvedAddressException -> "No internet connection" to NETWORK_ERROR
             is SerializationException -> "Mapping Error: Check your data classes" to "SERIALIZATION_ERROR"
             else -> (e.message ?: "Unknown error") to "UNKNOWN_ERROR"
         }
-        Timber.tag(ApiLog.TAG).e(e, "safeApiCall failed: %s", errorCode)
+        logApiFailure("safeApiCall", errorCode, e)
 
         ApiResponse.Failure(
             message = errorMessage,

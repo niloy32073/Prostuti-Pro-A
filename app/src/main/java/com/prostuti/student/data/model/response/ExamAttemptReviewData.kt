@@ -3,16 +3,7 @@ package com.prostuti.student.data.model.response
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class ExamAttemptReviewData(
-    @SerialName("attempt_id")
-    val attemptId: String,
-    @SerialName("exam_id")
-    val examId: String,
-    @SerialName("questions")
-    val questions: List<MCQReviewQuestionResponse>
-)
-
+/** One answer-sheet question as the answer-sheet screen shows it (built by `mergeAnswerSheet`). */
 @Serializable
 data class MCQReviewQuestionResponse(
     @SerialName("mcq_id")
@@ -32,7 +23,10 @@ data class MCQReviewQuestionResponse(
     @SerialName("selected_option_id")
     val selectedOptionId: String? = null,
     @SerialName("is_correct")
-    val isCorrect: Boolean? = null
+    val isCorrect: Boolean? = null,
+    /** The shared passage (উদ্দীপক) this question belongs to, if any. */
+    @SerialName("passage")
+    val passage: FetchPassageData? = null
 )
 
 @Serializable

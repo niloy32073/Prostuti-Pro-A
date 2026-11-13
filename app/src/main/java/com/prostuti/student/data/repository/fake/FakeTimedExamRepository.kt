@@ -10,7 +10,6 @@ import com.prostuti.student.data.model.response.TimedExamAnswerSheet
 import com.prostuti.student.data.model.response.WindowRanking
 import com.prostuti.student.data.repository.TimedExamRepository
 import com.prostuti.student.data.service.local.DemoExamWindowDao
-import com.prostuti.student.data.service.local.GroupRoutineDao
 import com.prostuti.student.data.service.local.TimedExamAttemptDao
 import com.prostuti.student.data.service.local.TimedExamAttemptEntity
 import com.prostuti.student.domain.TimedExamStateDeriver
@@ -22,20 +21,13 @@ private data class ScoreResult(val correct: Int, val wrong: Int, val unanswered:
 class FakeTimedExamRepository(
     private val attemptDao: TimedExamAttemptDao,
     private val demoWindowDao: DemoExamWindowDao,
-    private val groupRoutineDao: GroupRoutineDao,
     private val time: TimeProvider
 ) : TimedExamRepository {
 
     override suspend fun questions(): List<Question> = ExamDummyData.questions
 
     override suspend fun examDurationMinutes(examId: String): Int {
-        if (examId.startsWith("grp_")) {
-            val groupId = examId.removePrefix("grp_")
-            ExamDummyData.staticRoutineByGroupId[groupId]?.let { return it.examDurationMinutes }
-            groupRoutineDao.getByGroupId(groupId)?.let { return it.examDurationMinutes }
-        } else {
-            ExamDummyData.liveExams.find { it.examId == examId }?.let { return it.examDurationMinutes }
-        }
+        ExamDummyData.liveExams.find { it.examId == examId }?.let { return it.examDurationMinutes }
         return 30
     }
 
@@ -188,18 +180,8 @@ class FakeTimedExamRepository(
     }
 
     private suspend fun resolveMarkingScheme(examId: String): Pair<Float, Float> {
-        if (examId.startsWith("grp_")) {
-            val groupId = examId.removePrefix("grp_")
-            ExamDummyData.staticRoutineByGroupId[groupId]?.let {
-                return it.markPerQuestion to (if (it.negativeMarkingEnabled) it.negativeMark else 0f)
-            }
-            groupRoutineDao.getByGroupId(groupId)?.let {
-                return it.markPerQuestion to (if (it.negativeMarkingEnabled) it.negativeMark else 0f)
-            }
-        } else {
-            ExamDummyData.liveExams.find { it.examId == examId }?.let {
-                return it.markPerQuestion to it.negativeMark
-            }
+        ExamDummyData.liveExams.find { it.examId == examId }?.let {
+            return it.markPerQuestion to it.negativeMark
         }
         return 1f to 0.25f
     }

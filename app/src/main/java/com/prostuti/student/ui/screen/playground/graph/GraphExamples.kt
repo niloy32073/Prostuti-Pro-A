@@ -80,4 +80,48 @@ object GraphExamples {
             ),
         ),
     )
+
+    /** 3D examples: surfaces, solids, curves, vectors and volumes. */
+    val spaceCategories: List<GraphExampleCategory> = spaceExamples().map { c -> c.copy(examples = c.examples.map { it.copy(space = true) }) }
+
+    private fun spaceExamples(): List<GraphExampleCategory> = listOf(
+        GraphExampleCategory(
+            R.string.graph_ex_cat_surfaces,
+            listOf(
+                GraphExample(R.string.graph_ex_paraboloid, listOf("z = (x^2 + y^2)/4")),
+                GraphExample(R.string.graph_ex_saddle, listOf("z = (x^2 - y^2)/4")),
+                GraphExample(R.string.graph_ex_ripple, listOf("z = 2sin(sqrt(x^2 + y^2))")),
+                GraphExample(R.string.graph_ex_gaussian, listOf("z = 4e^(-(x^2 + y^2)/4)")),
+                GraphExample(R.string.graph_ex_plane, listOf("2x + 3y + 2z = 6")),
+            ),
+        ),
+        GraphExampleCategory(
+            R.string.graph_ex_cat_solids,
+            listOf(
+                GraphExample(R.string.graph_ex_sphere, listOf("x^2 + y^2 + z^2 = 9")),
+                GraphExample(R.string.graph_ex_ellipsoid, listOf("x^2/16 + y^2/9 + z^2/4 = 1")),
+                GraphExample(R.string.graph_ex_cone, listOf("x^2 + y^2 = z^2")),
+                GraphExample(R.string.graph_ex_cylinder, listOf("x^2 + y^2 = 4")),
+                GraphExample(R.string.graph_ex_hyperboloid, listOf("x^2 + y^2 - z^2 = 1")),
+                GraphExample(R.string.graph_ex_torus, listOf("((3 + cos(v))cos(u), (3 + cos(v))sin(u), sin(v))")),
+            ),
+        ),
+        GraphExampleCategory(
+            R.string.graph_ex_cat_space_curves,
+            listOf(
+                GraphExample(R.string.graph_ex_helix, listOf("(2cos(4t), 2sin(4t), t/2)")),
+                GraphExample(R.string.graph_ex_line3d, listOf("(1 + 2t, -1 + t, 3t/2)", "(1, -1, 0)")),
+                GraphExample(R.string.graph_ex_vectors, listOf("vector((0, 0, 0), (3, 2, 4))", "vector((0, 0, 0), (-2, 3, 1))", "(3, 2, 4)")),
+            ),
+        ),
+        GraphExampleCategory(
+            R.string.graph_ex_cat_volumes,
+            listOf(
+                GraphExample(R.string.graph_ex_double_integral, listOf("∫_0^2 ∫_0^1 (x + y) dy dx")),
+                GraphExample(R.string.graph_ex_revolution, listOf("revolvex(sqrt(x), 0, 4)")),
+                GraphExample(R.string.graph_ex_washer, listOf("revolvex(x, x^2, 0, 1)")),
+                GraphExample(R.string.graph_ex_shell, listOf("revolvey(4 - x^2, 0, 2)")),
+            ),
+        ),
+    )
 }

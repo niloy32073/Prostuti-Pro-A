@@ -4,9 +4,9 @@ import com.prostuti.student.data.model.enums.ExamTypes
 import com.prostuti.student.data.model.enums.Level
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.MCQExam
-import com.prostuti.student.data.repository.MCQExamRepository
+import com.prostuti.student.data.repository.ExamRepository
 
-class FetchMCQExamsUseCase(private val repository: MCQExamRepository) {
+class FetchMCQExamsUseCase(private val repository: ExamRepository) {
     suspend operator fun invoke(
         subjectId: String,
         examType: ExamTypes,

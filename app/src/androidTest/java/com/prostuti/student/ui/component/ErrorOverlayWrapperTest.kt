@@ -11,8 +11,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -90,5 +92,38 @@ class ErrorOverlayWrapperTest {
         assertEquals(0, composeTestRule.onAllNodesWithTag(ERROR_OVERLAY_TAG).fetchSemanticsNodes().size)
         composeTestRule.onNodeWithTag("underlying").performClick()
         assertEquals(1, clicks)
+    }
+
+    /** Hosts the wrapper with pull-to-refresh on, refreshing or idle. */
+    private fun setRefreshContent(isRefreshing: Boolean) {
+        composeTestRule.setContent {
+            ProstutiTheme {
+                PullToRefreshErrorOverlayWrapper(
+                    errors = emptyMap(),
+                    errorCleaner = {},
+                    pullToRefreshEnabled = true,
+                    isRefreshing = isRefreshing,
+                ) {
+                    Box(modifier = Modifier.fillMaxSize())
+                }
+            }
+        }
+    }
+
+    @Test
+    fun whileRefreshingTheProstutiSpinnerIsShown() {
+        setRefreshContent(isRefreshing = true)
+
+        composeTestRule.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertExists()
+    }
+
+    @Test
+    fun whenIdleAndNotPulledNoSpinnerIsComposed() {
+        setRefreshContent(isRefreshing = false)
+
+        assertEquals(
+            0,
+            composeTestRule.onAllNodes(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).fetchSemanticsNodes().size
+        )
     }
 }

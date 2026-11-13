@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -65,10 +64,9 @@ fun PrimaryButton(
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
             if (loading) {
-                CircularProgressIndicator(
+                ProstutiSpinner(
                     modifier = Modifier.size(22.dp),
-                    color = contentColor,
-                    strokeWidth = 2.5.dp
+                    color = contentColor
                 )
             } else {
                 Text(text = text, style = ProstutiTypography.bnLabelLarge, color = contentColor)

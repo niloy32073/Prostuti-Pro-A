@@ -85,7 +85,7 @@ class AuthSignupViewModelTest {
     @Test
     fun signUpSuccessUpdatesIsSignedUpAndDerivesUserName() = runTest {
         fakeRepository.signUpResult = ApiResponse.Success(
-            PasswordBasedSignUpResponse(userId = 1, userName = "rahimislam", status = UserStatus.PENDING)
+            PasswordBasedSignUpResponse(userId = "018f3c7e-007b-7000-8000-000000000001", userName = "rahimislam", status = UserStatus.PENDING)
         )
         val viewModel = viewModel(identifier = "test@example.com")
         viewModel.updateFirstName("Rahim")

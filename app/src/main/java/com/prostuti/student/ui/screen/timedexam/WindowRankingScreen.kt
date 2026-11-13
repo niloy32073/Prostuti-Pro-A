@@ -18,7 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -56,12 +56,12 @@ fun WindowRankingScreen(
         ) {
             if (state.isLoading) {
                 Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    ProstutiSpinner()
                 }
                 return@PullToRefreshErrorOverlayWrapper
             }
             val ranking = state.ranking ?: return@PullToRefreshErrorOverlayWrapper
-            val kindLabel = if (kind == TimedExamKind.LIVE) "লাইভ এক্সাম · সম্পূর্ণ স্ট্রিম · উইন্ডো শেষ" else "গ্রুপ এক্সাম · উইন্ডো শেষ"
+            val kindLabel = "লাইভ এক্সাম · সম্পূর্ণ স্ট্রিম · উইন্ডো শেষ"
 
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp)) {

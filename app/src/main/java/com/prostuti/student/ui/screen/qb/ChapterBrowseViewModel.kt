@@ -1,6 +1,12 @@
 package com.prostuti.student.ui.screen.qb
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.prostuti.student.data.model.enums.BookmarkResourceType
+import com.prostuti.student.domain.AddBookmarkUseCase
+import com.prostuti.student.domain.ObserveBookmarkedIdsUseCase
+import com.prostuti.student.domain.RemoveBookmarkUseCase
+import com.prostuti.student.ui.screen.bookmark.BookmarkToggler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,10 +20,16 @@ data class ChapterBrowseUiState(
     val sourceFilter: ChapterSourceFilter = ChapterSourceFilter.ALL,
     val questions: List<DummyQuestion> = emptyList(),
     val revealedAnswers: Set<String> = emptySet(),
-    val favoriteIds: Set<String> = emptySet()
+    val favoriteIds: Set<String> = emptySet(),
+    val errors: Map<String, String> = emptyMap()
 )
 
-class ChapterBrowseViewModel(val subjectId: String) : ViewModel() {
+class ChapterBrowseViewModel(
+    val subjectId: String,
+    observeBookmarkedIdsUseCase: ObserveBookmarkedIdsUseCase,
+    addBookmarkUseCase: AddBookmarkUseCase,
+    removeBookmarkUseCase: RemoveBookmarkUseCase
+) : ViewModel() {
     // TODO: Replace dummyChapters() with FetchChaptersUseCase(subjectId) when API is available
     //       API endpoint needed: GET /curriculum/subject/{subjectId}/chapters
     // TODO: Replace dummyQuestionsForChapter() with FetchChapterQuestionsUseCase(chapterId, source)
@@ -33,6 +45,16 @@ class ChapterBrowseViewModel(val subjectId: String) : ViewModel() {
         )
     )
     val state: StateFlow<ChapterBrowseUiState> = _state.asStateFlow()
+
+    private val bookmarks = BookmarkToggler(
+        scope = viewModelScope,
+        type = BookmarkResourceType.MCQ,
+        observeBookmarkedIds = observeBookmarkedIdsUseCase,
+        addBookmark = addBookmarkUseCase,
+        removeBookmark = removeBookmarkUseCase,
+        onChange = { ids -> _state.update { it.copy(favoriteIds = ids) } },
+        onError = { message -> _state.update { it.copy(errors = it.errors + (ERR_BOOKMARK to message)) } }
+    )
 
     fun selectChapter(chapterId: String) {
         _state.update { s ->
@@ -62,18 +84,16 @@ class ChapterBrowseViewModel(val subjectId: String) : ViewModel() {
         }
     }
 
-    fun toggleFavorite(questionId: String) {
-        _state.update { s ->
-            // TODO: persist with ToggleFavoriteUseCase(questionId) when API is available
-            //       API endpoint needed: POST /mcq/{questionId}/favorite (toggle)
-            val updated = if (questionId in s.favoriteIds) s.favoriteIds - questionId
-                          else s.favoriteIds + questionId
-            s.copy(favoriteIds = updated)
-        }
-    }
+    fun toggleFavorite(questionId: String) = bookmarks.toggle(questionId)
+
+    fun clearError(tag: String) = _state.update { it.copy(errors = it.errors - tag) }
 
     fun submitReport(questionId: String, reason: String, detail: String) {
         // TODO: call SubmitMCQReportUseCase(questionId, reason, detail) when API is available
         //       API endpoint needed: POST /mcq/{questionId}/report { reason, detail }
+    }
+
+    private companion object {
+        const val ERR_BOOKMARK = "BOOKMARK"
     }
 }

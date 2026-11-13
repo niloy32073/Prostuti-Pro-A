@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PasswordBasedSignUpResponse(
-    @SerialName("user_id") val userId: Int,
+    @SerialName("user_id") val userId: String,
     @SerialName("username") val userName: String,
     val status: UserStatus
 )

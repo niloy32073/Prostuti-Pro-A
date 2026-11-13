@@ -28,7 +28,9 @@ data class PracticeChapterGroup(
 data class PracticeSubjectGroup(
     val subjectId: String,
     val subjectNameBn: String,
-    val chapters: List<PracticeChapterGroup>
+    val chapters: List<PracticeChapterGroup>,
+    /** Blank when unknown; English mode then shows [subjectNameBn]. */
+    val subjectNameEn: String = ""
 )
 
 /**
@@ -104,7 +106,8 @@ class PracticeChapterSelectViewModel(
                     PracticeSubjectGroup(
                         subjectId = subjectId,
                         subjectNameBn = subjectsById[subjectId]?.nameBn ?: subjectId,
-                        chapters = chapterGroups
+                        chapters = chapterGroups,
+                        subjectNameEn = subjectsById[subjectId]?.nameEn.orEmpty()
                     )
                 }
             }.awaitAll()

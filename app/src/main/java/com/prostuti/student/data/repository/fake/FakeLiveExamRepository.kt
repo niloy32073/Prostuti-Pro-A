@@ -27,7 +27,9 @@ class FakeLiveExamRepository(
             windowStartEpochMillis = start, windowEndEpochMillis = end,
             examDurationMinutes = seed.examDurationMinutes, questionCount = seed.questionCount,
             markPerQuestion = seed.markPerQuestion, negativeMark = seed.negativeMark,
-            totalParticipants = seed.totalParticipants
+            totalParticipants = seed.totalParticipants,
+            titleEn = seed.titleEn,
+            subtitleEn = "Live exam · whole stream together"
         )
     }
 }

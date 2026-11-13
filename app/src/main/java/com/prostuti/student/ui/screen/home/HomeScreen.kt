@@ -1,5 +1,6 @@
 package com.prostuti.student.ui.screen.home
 
+import com.prostuti.student.domain.FeatureAccess
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -54,11 +55,16 @@ import com.prostuti.student.ui.screen.home.component.AdmissionReminderCard
 import com.prostuti.student.data.model.response.UnfinishedAttemptSummary
 import com.prostuti.student.ui.screen.home.component.ContinueAttemptCard
 import com.prostuti.student.ui.screen.home.component.ExamPreviewCardView
+import com.prostuti.student.ui.screen.home.component.GroupExamPreviewCard
+import com.prostuti.student.ui.screen.routine.slot.RefreshAtWindowEdges
+import com.prostuti.student.ui.screen.routine.slot.rememberNow
+import java.time.Instant
 import com.prostuti.student.ui.screen.home.component.LeaderboardSection
 import com.prostuti.student.ui.screen.home.component.QuickMenuItem
 import com.prostuti.student.ui.screen.home.component.QuickMenuSection
 import com.prostuti.student.ui.theme.MonoFontFamily
 import com.prostuti.student.ui.theme.ProstutiTypography
+import com.prostuti.student.ui.screen.home.component.WidgetPromoCard
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -72,15 +78,32 @@ fun HomeScreen(
     onContinueAttempt: (attemptId: String, titleBn: String) -> Unit = { _, _ -> },
     onNavigateToProfile: () -> Unit = {},
     onNavigateToPlayground: () -> Unit = {},
-    viewModel: HomeViewModel = koinViewModel()
+    onNavigateToRoutine: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
+    viewModel: HomeViewModel = koinViewModel(),
+    groupExamViewModel: HomeGroupExamViewModel = koinViewModel(),
+    notificationsViewModel: HomeNotificationsViewModel = koinViewModel(),
+    widgetPromoViewModel: HomeWidgetPromoViewModel = koinViewModel()
 ) {
+    val widgetPromo by widgetPromoViewModel.state.collectAsStateWithLifecycle()
+    val hasUnreadNotifications by notificationsViewModel.hasUnread.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val groupExamState by groupExamViewModel.state.collectAsStateWithLifecycle()
+    val now by rememberNow()
+    // No `group:use` scope: no group menu item and no group exam card (§6.20).
+    val access = FeatureAccess.of(state.profile)
+    val hiddenMenu = if (access.group) emptySet() else setOf(R.string.qm_group)
+    val groupExam = groupExamState.exam.takeIf { access.group }
 
     // Re-fetch on every return to Home so a just-finished or just-started exam shows up at once.
     LifecycleResumeEffect(Unit) {
         viewModel.refreshContinueAttempt()
+        groupExamViewModel.refresh()
+        notificationsViewModel.refresh()
+        widgetPromoViewModel.refresh()
         onPauseOrDispose { }
     }
+    RefreshAtWindowEdges(slots = groupExamState.todaySlots, onRefresh = groupExamViewModel::refresh)
     val continueFallbackTitle = stringResource(R.string.home_continue_exam_fallback)
     fun onContinueClick(attempt: UnfinishedAttemptSummary) {
         onContinueAttempt(attempt.attemptId, attempt.titleBn ?: continueFallbackTitle)
@@ -95,21 +118,19 @@ fun HomeScreen(
     val practiceLabelRes = R.string.qm_practice
     val groupLabelRes = R.string.qm_group
     val playgroundLabelRes = R.string.qm_playground
+    val routineLabelRes = R.string.qm_routine
     fun onQuickMenuClick(item: QuickMenuItem) {
         when (item.labelRes) {
             qbLabelRes -> onNavigateToQB()
             practiceLabelRes -> onNavigateToPractice()
             groupLabelRes -> onNavigateToGroupList()
             playgroundLabelRes -> onNavigateToPlayground()
+            routineLabelRes -> onNavigateToRoutine()
             else -> showComingSoon()
         }
     }
-    // Mirrors ExamDummyData.GROUP_HSC27 — Home's own demo data (see HomeUiState) is still a
-    // separate, hand-picked upcoming card, not fetched from the group repository.
-    val demoGroupCardGroupId = "g_hsc27"
-    fun onUpcomingCardClick(card: ExamPreviewCard) {
-        if (card.isPrimary) onNavigateToLiveExamList() else onNavigateToGroupDetail(demoGroupCardGroupId)
-    }
+    // Only the live-exam card is left in upcomingExams; today's group exam has its own real card.
+    fun onUpcomingCardClick(@Suppress("UNUSED_PARAMETER") card: ExamPreviewCard) = onNavigateToLiveExamList()
 
     // Compact: one scrolling column (phones). Medium/expanded: a genuine two-pane dashboard —
     // live/upcoming content on the left, glanceable generic data (quick menu, leaderboard) on
@@ -134,7 +155,8 @@ fun HomeScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             HomeHeaderRow(
                 state = state,
-                onNotificationsClick = ::showComingSoon,
+                hasUnreadNotifications = hasUnreadNotifications,
+                onNotificationsClick = dropUnlessResumed { onNavigateToNotifications() },
                 onProfileClick = dropUnlessResumed { onNavigateToProfile() }
             )
 
@@ -150,7 +172,8 @@ fun HomeScreen(
                     ) {
                         QuickMenuSection(
                             onItemClick = ::onQuickMenuClick,
-                            iconSize = 60.dp
+                            iconSize = 60.dp,
+                            hiddenLabels = hiddenMenu
                         )
                         LeaderboardSection(state, onClick = ::showComingSoon)
                         Spacer(modifier = Modifier.padding(bottom = 12.dp))
@@ -170,8 +193,14 @@ fun HomeScreen(
                             state = state,
                             onAction = ::showComingSoon,
                             onCardClick = ::onUpcomingCardClick,
+                            groupExam = groupExam,
+                            now = now,
+                            onGroupExamClick = { onNavigateToGroupDetail(it) },
                             onContinueClick = ::onContinueClick
                         )
+                        if (widgetPromo.visible) {
+                            WidgetPromoCard(onAdd = widgetPromoViewModel::add, onClose = widgetPromoViewModel::dismiss)
+                        }
                         Spacer(modifier = Modifier.padding(bottom = 12.dp))
                     }
                 }
@@ -186,9 +215,19 @@ fun HomeScreen(
                             state = state,
                             onAction = ::showComingSoon,
                             onCardClick = ::onUpcomingCardClick,
+                            groupExam = groupExam,
+                            now = now,
+                            onGroupExamClick = { onNavigateToGroupDetail(it) },
                             onContinueClick = ::onContinueClick
                         )
-                    QuickMenuSection(onItemClick = ::onQuickMenuClick)
+                    if (widgetPromo.visible) {
+                        WidgetPromoCard(
+                            onAdd = widgetPromoViewModel::add,
+                            onClose = widgetPromoViewModel::dismiss,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                    QuickMenuSection(onItemClick = ::onQuickMenuClick, hiddenLabels = hiddenMenu)
                     LeaderboardSection(state, onClick = ::showComingSoon)
                     Spacer(modifier = Modifier.padding(bottom = 12.dp))
                 }
@@ -203,6 +242,9 @@ private fun LiveAndUpcomingContent(
     state: HomeUiState,
     onAction: () -> Unit,
     onCardClick: (ExamPreviewCard) -> Unit,
+    groupExam: HomeGroupExam?,
+    now: Instant,
+    onGroupExamClick: (groupId: String) -> Unit,
     onContinueClick: (UnfinishedAttemptSummary) -> Unit
 ) {
     Row(
@@ -213,6 +255,9 @@ private fun LiveAndUpcomingContent(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         state.upcomingExams.forEach { card -> ExamPreviewCardView(card, onClick = { onCardClick(card) }) }
+        groupExam?.let { exam ->
+            GroupExamPreviewCard(exam, now, onClick = dropUnlessResumed { exam.slot.groupId?.let(onGroupExamClick) })
+        }
     }
 
     if (state.hasAdmissionReminder) {
@@ -238,9 +283,11 @@ private fun LiveAndUpcomingContent(
 const val HOME_GREETING_TAG = "home_greeting"
 const val HOME_USERNAME_TAG = "home_username"
 const val HOME_PROFILE_BUTTON_TAG = "home_profile_button"
+const val HOME_BELL_TAG = "home_bell"
+const val HOME_BELL_DOT_TAG = "home_bell_dot"
 
 @Composable
-private fun HomeHeaderRow(state: HomeUiState, onNotificationsClick: () -> Unit, onProfileClick: () -> Unit) {
+private fun HomeHeaderRow(state: HomeUiState, hasUnreadNotifications: Boolean, onNotificationsClick: () -> Unit, onProfileClick: () -> Unit) {
     val profile = state.profile
     val fullName = profile?.fullName?.takeIf { it.isNotBlank() }
     val openProfile = stringResource(R.string.profile_open)
@@ -278,11 +325,17 @@ private fun HomeHeaderRow(state: HomeUiState, onNotificationsClick: () -> Unit, 
                     .size(44.dp)
                     .background(MaterialTheme.colorScheme.surfaceContainerLow, CircleShape)
             ) {
-                IconButton(onClick = onNotificationsClick) {
+                IconButton(onClick = onNotificationsClick, modifier = Modifier.testTag(HOME_BELL_TAG)) {
                     Icon(
                         Icons.Filled.NotificationsNone,
-                        contentDescription = stringResource(R.string.notifications),
+                        contentDescription = stringResource(if (hasUnreadNotifications) R.string.notif_bell_unread_cd else R.string.notifications),
                         tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (hasUnreadNotifications) {
+                    Box(
+                        Modifier.align(Alignment.TopEnd).padding(top = 9.dp, end = 10.dp).size(9.dp)
+                            .background(MaterialTheme.colorScheme.error, CircleShape).testTag(HOME_BELL_DOT_TAG)
                     )
                 }
             }

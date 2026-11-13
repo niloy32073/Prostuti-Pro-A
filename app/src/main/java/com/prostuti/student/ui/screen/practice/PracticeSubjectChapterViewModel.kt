@@ -138,8 +138,10 @@ class PracticeSubjectChapterViewModel(
                 }
             }.awaitAll()
 
-            val subjectName = _state.value.subjects.find { it.id == subjectId }?.nameBn ?: subjectId
-            val group = PracticeSubjectGroup(subjectId = subjectId, subjectNameBn = subjectName, chapters = chapterGroups)
+            val subject = _state.value.subjects.find { it.id == subjectId }
+            val group = PracticeSubjectGroup(
+                subjectId = subjectId, subjectNameBn = subject?.nameBn ?: subjectId, chapters = chapterGroups, subjectNameEn = subject?.nameEn.orEmpty()
+            )
             val newTopicIds = chapterGroups.flatMap { c -> c.topics.map { it.id } }
 
             _state.update {

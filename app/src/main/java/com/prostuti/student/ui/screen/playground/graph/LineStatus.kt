@@ -18,5 +18,11 @@ data class LineStatus(
     val integralBetweenCurves: Boolean = false,
     val riemannSum: Double? = null,
     val isExplicit: Boolean = false,
+    /** Data tables: number of usable rows and the fit's quality. */
+    val pointCount: Int = 0,
+    val fitRSquared: Double? = null,
+    val fitR: Double? = null,
+    /** The fitted equation, rounded for reading (data tables). */
+    val fitText: String? = null,
     val drawsSomething: Boolean = false,
 )

@@ -17,7 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /** The viewModel param is overridden with a fake-repo-backed real ViewModel instead of going
- * through Koin, so this test never touches the real (network-backed) MCQExamRepository that's
+ * through Koin, so this test never touches the real (network-backed) ExamRepository that's
  * wired into the app's Koin graph. */
 @RunWith(AndroidJUnit4::class)
 class MCQExamListScreenTest {

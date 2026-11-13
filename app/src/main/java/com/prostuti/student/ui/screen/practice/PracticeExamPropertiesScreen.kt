@@ -22,7 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -222,9 +222,8 @@ fun PracticeExamPropertiesScreen(
                             modifier = Modifier.fillMaxWidth().height(48.dp)
                         ) {
                             if (state.isGenerating) {
-                                CircularProgressIndicator(
+                                ProstutiSpinner(
                                     modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                             } else {

@@ -14,6 +14,8 @@ class LineGeometry(
     val segments: FloatArray? = null,
     /** Shaded polygons: regions, inequalities, positive integral area. */
     val fills: List<FloatArray> = emptyList(),
+    /** Fills drawn opaque in the line colour (arrow heads), not as a light shade. */
+    val solidFills: Boolean = false,
     /** Integral area below the x-axis (negative contribution). */
     val negativeFills: List<FloatArray> = emptyList(),
     /** Region interior as rectangles (l, t, r, b)…. */
@@ -25,6 +27,10 @@ class LineGeometry(
     val riemannPolygons: List<FloatArray> = emptyList(),
     val riemannSum: Double? = null,
     val points: List<Pair<Double, Double>> = emptyList(),
+    /** Label each point with its coordinates (single points yes, table data no). */
+    val pointLabels: Boolean = true,
+    /** Draw curves thin (field arrows), not as the main graph stroke. */
+    val thinCurves: Boolean = false,
     val pointsOfInterest: List<PointOfInterest> = emptyList(),
     val tangent: TangentInfo? = null,
 )

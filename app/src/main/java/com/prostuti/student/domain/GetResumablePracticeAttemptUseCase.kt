@@ -4,7 +4,7 @@ import com.prostuti.student.data.model.enums.AttemptMode
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.UnfinishedAttemptSummary
 import com.prostuti.student.data.repository.AttemptProgressRepository
-import com.prostuti.student.data.repository.MCQExamRepository
+import com.prostuti.student.data.repository.ExamRepository
 
 /** How many unfinished attempts are looked at in one go (the API allows up to 100). */
 private const val UNFINISHED_PAGE_SIZE = 20
@@ -20,7 +20,7 @@ private const val UNFINISHED_PAGE_SIZE = 20
  * with those fields null, so Home can still offer "continue".
  */
 class GetResumablePracticeAttemptUseCase(
-    private val repository: MCQExamRepository,
+    private val repository: ExamRepository,
     private val progressRepository: AttemptProgressRepository
 ) {
     suspend operator fun invoke(): ApiResponse<UnfinishedAttemptSummary?> {
@@ -42,7 +42,8 @@ class GetResumablePracticeAttemptUseCase(
                 titleBn = exam?.titleBn ?: exam?.titleEn,
                 durationMinutes = exam?.duration,
                 usedMs = practiceElapsedMs(saved, progressRepository.getElapsedMs(latest.id)),
-                otherUnfinishedCount = practice.size - 1
+                otherUnfinishedCount = practice.size - 1,
+                titleEn = exam?.titleEn
             )
         )
     }

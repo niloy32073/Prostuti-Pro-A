@@ -13,4 +13,16 @@ data class LineOptions(
     /** Parameter range for parametric/polar curves; null = a full turn. */
     val rangeMin: Double? = null,
     val rangeMax: Double? = null,
+    /** Second parameter range (v) of a parametric surface. */
+    val vMin: Double? = null,
+    val vMax: Double? = null,
+    // ── 3D ──
+    /** Thin grid lines on a surface, like graph paper bent onto it. */
+    val showWireframe: Boolean = true,
+    /** Level curves z = c drawn on a surface. */
+    val showContours: Boolean = false,
+    /** Colour a surface by height (blue low → yellow high) instead of one colour. */
+    val colorByHeight: Boolean = false,
+    /** 1 = solid, lower = see-through. */
+    val opacity: Double = 1.0,
 )

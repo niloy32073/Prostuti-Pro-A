@@ -29,7 +29,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -67,6 +67,7 @@ import com.prostuti.student.ui.theme.ProstutiTypography
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun MCQExamListScreen(
@@ -157,7 +158,7 @@ fun MCQExamListScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = nameBn,
+                                text = localized(nameBn, nameEn),
                                 style = ProstutiTypography.bnTitleMedium,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
@@ -171,7 +172,7 @@ fun MCQExamListScreen(
                     }
 
                     OutlinedButton(
-                        onClick = { onNavigateToChapterBrowse(ChapterBrowse(subjectId, nameBn)) },
+                        onClick = { onNavigateToChapterBrowse(ChapterBrowse(subjectId, nameBn, nameEn)) },
                         shape = RoundedCornerShape(50.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -284,7 +285,7 @@ fun MCQExamListScreen(
                     if (state.selectedTab == MCQListTab.BOARD) {
                         if (state.isLoading && filteredBoard.isEmpty()) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                ProstutiSpinner()
                             }
                         } else {
                             LazyVerticalGrid(
@@ -306,7 +307,7 @@ fun MCQExamListScreen(
                     } else {
                         if (state.isLoading && filteredCollege.isEmpty()) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                ProstutiSpinner()
                             }
                         } else {
                             LazyVerticalGrid(

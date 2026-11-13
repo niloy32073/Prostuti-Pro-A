@@ -10,10 +10,13 @@ import com.prostuti.student.data.model.response.Topic
 @Database(
     entities = [
         Subject::class, Chapter::class, Topic::class,
-        GroupRoutineEntity::class, TimedExamAttemptEntity::class,
-        DemoExamWindowEntity::class, CreatedGroupEntity::class,
+        TimedExamAttemptEntity::class,
+        DemoExamWindowEntity::class,
         AttemptProgressEntity::class,
-        CurrentUserEntity::class
+        CurrentUserEntity::class,
+        SavedGraphEntity::class,
+        BookmarkEntity::class,
+        ReportedResourceEntity::class
     ],
     version = 1,
     exportSchema = true
@@ -24,9 +27,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun subjectDao(): SubjectDao
     abstract fun chapterDao(): ChapterDao
     abstract fun topicDao(): TopicDao
-    abstract fun groupRoutineDao(): GroupRoutineDao
     abstract fun timedExamAttemptDao(): TimedExamAttemptDao
     abstract fun demoExamWindowDao(): DemoExamWindowDao
-    abstract fun createdGroupDao(): CreatedGroupDao
     abstract fun currentUserDao(): CurrentUserDao
+    abstract fun savedGraphDao(): SavedGraphDao
+    abstract fun bookmarkDao(): BookmarkDao
+    abstract fun reportedResourceDao(): ReportedResourceDao
 }

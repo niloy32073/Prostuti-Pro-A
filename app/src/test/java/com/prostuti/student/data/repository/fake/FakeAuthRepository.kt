@@ -39,7 +39,7 @@ fun fakeLogInResponse() = LogInResponse(
 class FakeAuthRepository(
     var checkUserResult: ApiResponse<CheckUserResponse> = ApiResponse.Success(CheckUserResponse(exists = false, firstName = null)),
     var signUpResult: ApiResponse<PasswordBasedSignUpResponse> = ApiResponse.Success(
-        PasswordBasedSignUpResponse(userId = 1, userName = "testuser", status = UserStatus.PENDING)
+        PasswordBasedSignUpResponse(userId = "018f3c7e-007b-7000-8000-000000000001", userName = "testuser", status = UserStatus.PENDING)
     ),
     var signInResult: ApiResponse<LogInResponse> = ApiResponse.Success(fakeLogInResponse()),
     var socialSignInResult: ApiResponse<LogInResponse> = ApiResponse.Success(fakeLogInResponse()),

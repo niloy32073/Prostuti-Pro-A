@@ -1,10 +1,5 @@
 package com.prostuti.student.data.repository.fake
 
-import com.prostuti.student.data.model.enums.GroupRole
-import com.prostuti.student.data.model.response.Group
-import com.prostuti.student.data.model.response.GroupMember
-import com.prostuti.student.data.model.response.GroupPastExam
-import com.prostuti.student.data.model.response.GroupRoutineSummary
 import com.prostuti.student.data.model.response.Option
 import com.prostuti.student.data.model.response.Question
 import com.prostuti.student.data.model.response.RankRow
@@ -12,15 +7,12 @@ import com.prostuti.student.data.model.response.WindowRanking
 import com.prostuti.student.util.toBengaliDigits
 
 /**
- * All STATIC dummy content for group/live exams in one place — group names, members, the shared
- * MCQ bank, past-exam and ranking numbers. None of this is Room-backed: it never changes at
- * runtime. What a student actually *does* (routines they create, exams they submit, groups they
- * create/join) lives in Room instead (see `GroupRoutineDao` / `TimedExamAttemptDao` / `CreatedGroupDao` / `DemoExamWindowDao`) so it survives the app restarting — this
- * file only seeds the baseline a fresh install starts from.
+ * All STATIC dummy content for the live-exam demo in one place: the shared MCQ bank and the
+ * ranking numbers. None of this is Room-backed; what a student does (exams they submit) lives in
+ * Room (`TimedExamAttemptDao` / `DemoExamWindowDao`) so it survives the app restarting.
  *
- * NOTE on declaration order: every `val` below that depends on another (e.g. [pastExamsByGroupId]
- * reading [historicalScoreLabel]) is declared AFTER it — `object` properties initialize top to
- * bottom once, in source order, so a forward reference would read an unset value.
+ * NOTE on declaration order: `object` properties initialize top to bottom once, in source order,
+ * so a `val` that reads another must be declared after it.
  */
 object ExamDummyData {
 
@@ -195,96 +187,6 @@ object ExamDummyData {
         "${correct.toBengaliDigits()}/২৫"
     }
 
-    // ───────────────────────── groups ─────────────────────────
-
-    const val GROUP_HSC27 = "g_hsc27"
-    const val GROUP_CHEM = "g_chem"
-    const val GROUP_DHAKA = "g_dhaka"
-    const val GROUP_NEW = "g_new"
-
-    val staticGroups = listOf(
-        Group(id = GROUP_HSC27, nameBn = "HSC ব্যাচ ২৭", memberCount = 38, myRole = GroupRole.ADMIN, joinCode = "HSC27X"),
-        Group(id = GROUP_CHEM, nameBn = "রসায়ন স্টাডি সার্কেল", memberCount = 12, myRole = GroupRole.MEMBER, joinCode = "CHEM12Y"),
-        Group(id = GROUP_DHAKA, nameBn = "ঢাকা কলেজ — একদল বন্ধু", memberCount = 6, myRole = GroupRole.MEMBER, joinCode = "DHK06Z"),
-        Group(id = GROUP_NEW, nameBn = "ফিজিক্স ক্র্যাক টিম", memberCount = 4, myRole = GroupRole.ADMIN, joinCode = "PHY04W")
-    )
-
-    /** A 6-letter code that joins the student into a brand new demo group (not one of the 4 above). */
-    const val PUBLIC_JOIN_CODE = "PHY27X"
-    const val PUBLIC_JOIN_GROUP_NAME = "প্রিমিয়াম ব্যাচ গ্রুপ"
-
-    private fun member(name: String, initial: String, isAdmin: Boolean = false, isMe: Boolean = false) =
-        GroupMember(id = "m_$name", name = name, initial = initial, isAdmin = isAdmin, isMe = isMe)
-
-    private val namedHsc27Members = listOf(
-        member("সাদিয়া ইসলাম", "সা"),
-        member("রাফি হাসান", "র", isAdmin = true),
-        member("ইমন চৌধুরী", "ই"),
-        member("তানিয়া আক্তার", "তা"),
-        member("মাহির রহমান", "মা"),
-        member("নিফা রহমান", "নি", isAdmin = true, isMe = true)
-    )
-
-    private val fillerNamePool = listOf(
-        "অর্পা দাস" to "অ", "সাকিব আহমেদ" to "সা", "নুসরাত জাহান" to "নু", "ফাহিম হোসেন" to "ফা",
-        "প্রিয়া রায়" to "প্রি", "তাহসিন ইকবাল" to "তা", "মিম খান" to "মি", "রাকিব উদ্দিন" to "রা",
-        "সুমাইয়া বিনতে" to "সু", "জুনায়েদ করিম" to "জু", "অনিক মণ্ডল" to "অনি", "লামিয়া ফেরদৌস" to "লা"
-    )
-
-    private fun fillerMembers(count: Int, seedOffset: Int = 0): List<GroupMember> =
-        (0 until count).map { i ->
-            val (name, initial) = fillerNamePool[(i + seedOffset) % fillerNamePool.size]
-            member("$name ${i + 1}".takeIf { (i + seedOffset) >= fillerNamePool.size } ?: name, initial)
-        }
-
-    /** For a group created/joined at runtime (not one of the 4 fixed demo groups), which has no
-     * entry in [membersByGroupId]. */
-    fun membersForDynamicGroup(role: GroupRole): List<GroupMember> {
-        val me = member("নিফা রহমান", "নি", isAdmin = role == GroupRole.ADMIN, isMe = true)
-        return if (role == GroupRole.ADMIN) listOf(me) else listOf(me) + fillerMembers(23, seedOffset = 5)
-    }
-
-    val membersByGroupId: Map<String, List<GroupMember>> = mapOf(
-        GROUP_HSC27 to namedHsc27Members + fillerMembers(38 - namedHsc27Members.size),
-        GROUP_CHEM to fillerMembers(12, seedOffset = 3),
-        GROUP_DHAKA to fillerMembers(6, seedOffset = 7),
-        GROUP_NEW to listOf(member("নিফা রহমান", "নি", isAdmin = true, isMe = true)) + fillerMembers(3, seedOffset = 1)
-    )
-
-    // ───────────────────────── static routines (the 2 groups that already have one) ─────────────────────────
-
-    /** সন্ধ্যা ৭:০০ */
-    private const val WINDOW_START_MINUTE = 19 * 60
-
-    /** রাত ১১:০০ */
-    private const val WINDOW_END_MINUTE = 23 * 60
-
-    /** বুধ ও শনি — bit 2 (বুধ) ও bit 5 (শনি), Mon=0..Sun=6 */
-    private const val WEEK_DAYS_WED_SAT = (1 shl 2) or (1 shl 5)
-
-    val staticRoutineByGroupId: Map<String, GroupRoutineSummary> = mapOf(
-        GROUP_HSC27 to GroupRoutineSummary(
-            subjectCount = 3, chapterCount = 33, topicCount = 162, routineDurationDays = 30,
-            examWeekDaysBitmask = WEEK_DAYS_WED_SAT,
-            windowStartMinuteOfDay = WINDOW_START_MINUTE, windowEndMinuteOfDay = WINDOW_END_MINUTE,
-            questionCount = 25, markPerQuestion = 1f, negativeMarkingEnabled = true, negativeMark = 0.25f,
-            examDurationMinutes = 30
-        ),
-        GROUP_DHAKA to GroupRoutineSummary(
-            subjectCount = 1, chapterCount = 11, topicCount = 48, routineDurationDays = 21,
-            examWeekDaysBitmask = WEEK_DAYS_WED_SAT,
-            windowStartMinuteOfDay = WINDOW_START_MINUTE, windowEndMinuteOfDay = WINDOW_END_MINUTE,
-            questionCount = 25, markPerQuestion = 1f, negativeMarkingEnabled = true, negativeMark = 0.25f,
-            examDurationMinutes = 30
-        )
-    )
-
-    // ───────────────────────── current exam occurrence per group (windows are Room-anchored) ─────────────────────────
-
-    /** examId used for "today's" group-exam occurrence. Works for the 2 static-routine groups and
-     * for any group whose admin just created a routine (brand new or user-created). */
-    fun currentExamIdFor(groupId: String) = "grp_$groupId"
-
     data class WindowBaseline(val startOffsetMillis: Long, val endOffsetMillis: Long)
 
     private const val HOUR = 60 * 60 * 1000L
@@ -294,21 +196,15 @@ object ExamDummyData {
      * up — see `DemoExamWindowEntity`. Group-current ids here cover only the 2 statically-seeded
      * groups; a freshly created routine computes its own baseline from the admin's chosen window. */
     val windowBaselineByExamId: Map<String, WindowBaseline> = mapOf(
-        currentExamIdFor(GROUP_HSC27) to WindowBaseline(-HOUR, 3 * HOUR),
-        currentExamIdFor(GROUP_DHAKA) to WindowBaseline(-50 * HOUR, -46 * HOUR),
         "live_phy_mt04" to WindowBaseline(-10 * MINUTE, 110 * MINUTE),
         "live_chem_mt03" to WindowBaseline(5 * MINUTE, 125 * MINUTE),
         "live_math_mt02" to WindowBaseline(-48 * HOUR, -46 * HOUR)
     )
 
-    val groupCurrentExamTitle: Map<String, Pair<String, String>> = mapOf(
-        GROUP_HSC27 to ("সাপ্তাহিক টেস্ট — পদার্থবিজ্ঞান ১ম পত্র" to "২৫টি প্রশ্ন · প্রতি প্রশ্নে ১ মার্ক · নেগেটিভ ০.২৫"),
-        GROUP_DHAKA to ("সাপ্তাহিক টেস্ট — পদার্থবিজ্ঞান ২য় পত্র" to "২৫টি প্রশ্ন · প্রতি প্রশ্নে ১ মার্ক · নেগেটিভ ০.২৫")
-    )
-
     data class LiveExamSeed(
         val examId: String,
         val titleBn: String,
+        val titleEn: String,
         val totalParticipants: Int,
         val questionCount: Int = 25,
         val markPerQuestion: Float = 1f,
@@ -317,32 +213,12 @@ object ExamDummyData {
     )
 
     val liveExams = listOf(
-        LiveExamSeed("live_phy_mt04", "পদার্থবিজ্ঞান — মডেল টেস্ট ০৪", totalParticipants = 2410),
-        LiveExamSeed("live_chem_mt03", "রসায়ন — মডেল টেস্ট ০৩", totalParticipants = 1840),
-        LiveExamSeed("live_math_mt02", "উচ্চতর গণিত — মডেল টেস্ট ০২", totalParticipants = 1520)
+        LiveExamSeed("live_phy_mt04", "পদার্থবিজ্ঞান — মডেল টেস্ট ০৪", "Physics — Model Test 04", totalParticipants = 2410),
+        LiveExamSeed("live_chem_mt03", "রসায়ন — মডেল টেস্ট ০৩", "Chemistry — Model Test 03", totalParticipants = 1840),
+        LiveExamSeed("live_math_mt02", "উচ্চতর গণিত — মডেল টেস্ট ০২", "Higher Mathematics — Model Test 02", totalParticipants = 1520)
     )
 
-    // ───────────────────────── past exams (always closed, purely static) ─────────────────────────
-
-    val pastExamsByGroupId: Map<String, List<GroupPastExam>> = mapOf(
-        GROUP_HSC27 to listOf(
-            GroupPastExam("past_hsc27_1", "সাপ্তাহিক টেস্ট — রসায়ন ১ম পত্র", "১২ অক্টোবর", 36, 38, 72, historicalScoreLabel),
-            GroupPastExam("past_hsc27_2", "সাপ্তাহিক টেস্ট — উচ্চতর গণিত ১ম পত্র", "৫ অক্টোবর", 33, 38, 65, historicalScoreLabel),
-            GroupPastExam("past_hsc27_3", "সাপ্তাহিক টেস্ট — পদার্থবিজ্ঞান ২য় পত্র", "২৮ সেপ্টেম্বর", 38, 38, 58, historicalScoreLabel),
-            GroupPastExam("past_hsc27_4", "সাপ্তাহিক টেস্ট — জীববিজ্ঞান ১ম পত্র", "২১ সেপ্টেম্বর", 35, 38, 61, historicalScoreLabel),
-            GroupPastExam("past_hsc27_5", "সাপ্তাহিক টেস্ট — রসায়ন ২য় পত্র", "১৪ সেপ্টেম্বর", 31, 38, 55, null),
-            GroupPastExam("past_hsc27_6", "সাপ্তাহিক টেস্ট — উচ্চতর গণিত ২য় পত্র", "৭ সেপ্টেম্বর", 34, 38, 70, historicalScoreLabel),
-            GroupPastExam("past_hsc27_7", "সাপ্তাহিক টেস্ট — পদার্থবিজ্ঞান ১ম পত্র", "৩১ আগস্ট", 30, 38, 63, null),
-            GroupPastExam("past_hsc27_8", "সাপ্তাহিক টেস্ট — জীববিজ্ঞান ২য় পত্র", "২৪ আগস্ট", 32, 38, 59, historicalScoreLabel),
-            GroupPastExam("past_hsc27_9", "সাপ্তাহিক টেস্ট — রসায়ন ১ম পত্র", "১৭ আগস্ট", 29, 38, 52, historicalScoreLabel),
-            GroupPastExam("past_hsc27_10", "সাপ্তাহিক টেস্ট — উচ্চতর গণিত ১ম পত্র", "১০ আগস্ট", 27, 38, 49, historicalScoreLabel)
-        ),
-        GROUP_DHAKA to listOf(
-            GroupPastExam("past_dhaka_1", "সাপ্তাহিক টেস্ট — পদার্থবিজ্ঞান ১ম পত্র", "১৮ অক্টোবর", 5, 6, 58, historicalScoreLabel)
-        )
-    )
-
-    // ───────────────────────── ranking numbers, keyed by any exam id (current or past) ─────────────────────────
+    // ───────────────────────── ranking numbers, keyed by exam id ─────────────────────────
 
     data class RankingSeed(
         val submittedCount: Int,
@@ -354,31 +230,9 @@ object ExamDummyData {
         val extraRows: List<RankRow>
     )
 
-    private val smallHistogram = listOf(38, 52, 68, 44, 30, 60, 48, 36)
     private val liveHistogram = listOf(30, 46, 62, 74, 68, 54, 40, 32, 24, 18)
 
     val rankingByExamId: Map<String, RankingSeed> = mapOf(
-        currentExamIdFor(GROUP_HSC27) to RankingSeed(
-            submittedCount = 34, totalParticipants = 38, averagePercent = 68, myRank = 4,
-            histogramBars = smallHistogram, myHistogramBarIndex = 5,
-            extraRows = listOf(
-                RankRow(1, "সাদিয়া ইসলাম", "সা", "২৩/২৫", false),
-                RankRow(2, "রাফি হাসান", "র", "২২/২৫", false),
-                RankRow(3, "ইমন চৌধুরী", "ই", "২০/২৫", false),
-                RankRow(5, "তানিয়া আক্তার", "তা", "১৭/২৫", false),
-                RankRow(6, "মাহির রহমান", "মা", "১৫/২৫", false)
-            )
-        ),
-        currentExamIdFor(GROUP_DHAKA) to RankingSeed(
-            submittedCount = 5, totalParticipants = 6, averagePercent = 58, myRank = 2,
-            histogramBars = smallHistogram.takeLast(5), myHistogramBarIndex = 1,
-            extraRows = listOf(
-                RankRow(1, "অর্পা দাস", "অ", "২১/২৫", false),
-                RankRow(3, "সাকিব আহমেদ", "সা", "১৫/২৫", false),
-                RankRow(4, "নুসরাত জাহান", "নু", "১৩/২৫", false),
-                RankRow(5, "ফাহিম হোসেন", "ফা", "১১/২৫", false)
-            )
-        ),
         "live_phy_mt04" to RankingSeed(
             submittedCount = 2318, totalParticipants = 2410, averagePercent = 64, myRank = 142,
             histogramBars = liveHistogram, myHistogramBarIndex = 3,
@@ -400,5 +254,5 @@ object ExamDummyData {
             histogramBars = liveHistogram.shuffled(kotlin.random.Random(7)), myHistogramBarIndex = 2,
             extraRows = emptyList()
         )
-    ) + ExamDummyDataPastRankings.build()
+    )
 }

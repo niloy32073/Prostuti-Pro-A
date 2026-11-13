@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -41,6 +41,9 @@ import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.MathText
 import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.adaptiveColumnCount
+import com.prostuti.student.ui.screen.examengine.component.McqImage
+import com.prostuti.student.ui.screen.examengine.component.PassageBlock
+import androidx.compose.ui.platform.testTag
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -52,7 +55,11 @@ fun ExamAnswerSheetScreen(
     attemptId: String,
     titleBn: String,
     onBack: () -> Unit,
-    viewModel: ExamAnswerSheetViewModel = koinViewModel(parameters = { parametersOf(attemptId) })
+    topicFilter: String? = null,
+    topicName: String? = null,
+    /** False when shown beside the exam result (list-detail): the result stays on screen, so no back arrow. */
+    showBack: Boolean = true,
+    viewModel: ExamAnswerSheetViewModel = koinViewModel(parameters = { parametersOf(attemptId, topicFilter) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -71,8 +78,10 @@ fun ExamAnswerSheetScreen(
                         .padding(horizontal = 16.dp, vertical = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    BackButton(onClick = onBack)
-                    Spacer(modifier = Modifier.width(12.dp))
+                    if (showBack) {
+                        BackButton(onClick = onBack)
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
                     Column {
                         Text(
                             text = "অ্যান্সার শিট",
@@ -80,7 +89,7 @@ fun ExamAnswerSheetScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = titleBn,
+                            text = topicName?.let { "$titleBn · $it" } ?: titleBn,
                             style = ProstutiTypography.enLabelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
@@ -90,7 +99,7 @@ fun ExamAnswerSheetScreen(
 
                 if (state.isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        ProstutiSpinner()
                     }
                     return@Column
                 }
@@ -246,6 +255,22 @@ private fun AnswerSheetItem(
                     .padding(start = 14.dp, end = 14.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // The shared উদ্দীপক first, so the question reads in context.
+                question.passage?.let { passage ->
+                    PassageBlock(
+                        passage = passage,
+                        label = "উদ্দীপক",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .padding(12.dp)
+                            .testTag(ANSWER_SHEET_PASSAGE_TAG + question.mcqId)
+                    )
+                }
+                if (!question.questionImageLink.isNullOrBlank()) {
+                    McqImage(imageUrl = question.questionImageLink, contentDescription = "প্রশ্নের ছবি")
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -266,6 +291,9 @@ private fun AnswerSheetItem(
                         horizontalPadding = 0.dp,
                         modifier = Modifier.weight(1f)
                     )
+                }
+                if (selectedOption != null && !selectedOption.optionImageLink.isNullOrBlank()) {
+                    McqImage(imageUrl = selectedOption.optionImageLink, contentDescription = "তোমার উত্তরের ছবি")
                 }
                 Row(
                     modifier = Modifier
@@ -288,6 +316,9 @@ private fun AnswerSheetItem(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                if (correctOption != null && correctOption.id != selectedOption?.id && !correctOption.optionImageLink.isNullOrBlank()) {
+                    McqImage(imageUrl = correctOption.optionImageLink, contentDescription = "সঠিক উত্তরের ছবি")
+                }
                 if (!question.explanationText.isNullOrBlank()) {
                     MathText(
                         text = question.explanationText,
@@ -296,7 +327,12 @@ private fun AnswerSheetItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                if (!question.explanationImageLink.isNullOrBlank()) {
+                    McqImage(imageUrl = question.explanationImageLink, contentDescription = "ব্যাখ্যার ছবি")
+                }
             }
         }
     }
 }
+
+const val ANSWER_SHEET_PASSAGE_TAG = "answer_sheet_passage_"

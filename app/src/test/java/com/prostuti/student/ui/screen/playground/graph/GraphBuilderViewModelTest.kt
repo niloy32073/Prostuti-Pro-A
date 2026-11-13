@@ -3,7 +3,13 @@ package com.prostuti.student.ui.screen.playground.graph
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.prostuti.student.R
+import com.prostuti.student.domain.graph.Axis3
+import com.prostuti.student.data.repository.fake.FakeSavedGraphRepository
+import com.prostuti.student.domain.GetSavedGraphUseCase
+import com.prostuti.student.domain.SaveGraphUseCase
 import com.prostuti.student.domain.graph.GraphCompiler
+import com.prostuti.student.domain.graph.space.SpacePlotter
+import com.prostuti.student.domain.graph.GraphSpace
 import com.prostuti.student.domain.graph.GraphErrorKind
 import com.prostuti.student.domain.graph.GraphLineKind
 import com.prostuti.student.domain.graph.plot.GraphPlotter
@@ -34,8 +40,13 @@ class GraphBuilderViewModelTest {
 
     @After fun teardown() = Dispatchers.resetMain()
 
-    private fun viewModel(handle: SavedStateHandle = SavedStateHandle()) =
-        GraphBuilderViewModel(GraphCompiler(), GraphPlotter(), dispatcher, handle)
+    private val library = FakeSavedGraphRepository()
+
+    private fun viewModel(handle: SavedStateHandle = SavedStateHandle(), savedGraphId: Long? = null) =
+        GraphBuilderViewModel(
+            GraphCompiler(), GraphPlotter(), dispatcher, handle, SpacePlotter(),
+            GetSavedGraphUseCase(library), SaveGraphUseCase(library), savedGraphId,
+        )
 
     private fun GraphBuilderViewModel.type(vararg keys: String) =
         keys.forEach { onKey(MathKeyAction.Insert(it)) }
@@ -231,5 +242,189 @@ class GraphBuilderViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
         assertNotNull(vm.state.value.lines.single())
+    }
+
+    // ── 3D ──────────────────────────────────────────────────────────────────────────────────
+
+    @Test fun twoAndThreeDimensionalListsAreSeparate() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.addExample(GraphExample(R.string.graph_ex_line, listOf("y = x")))
+        vm.setSpace(GraphSpace.SPACE)
+        assertEquals(listOf(""), vm.lineTexts())
+        vm.addExample(GraphExample(R.string.graph_ex_sphere, listOf("x^2 + y^2 + z^2 = 9"), space = true))
+        advanceUntilIdle()
+        assertEquals(1, vm.state.value.spaceGeometries.size)
+        assertEquals(GraphLineKind.IMPLICIT_SURFACE, vm.state.value.status(vm.state.value.lines.single().id).kind)
+        vm.setSpace(GraphSpace.PLANE)
+        assertEquals(listOf("y = x"), vm.lineTexts())
+    }
+
+    @Test fun revolveWritesTheSolidAndItsDefinitionsInto3D() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.addExample(GraphExample(R.string.graph_ex_integral, listOf("k = 2", "f(t) = k t^2", "∫_0^1 f(t) dt")))
+        advanceUntilIdle()
+        val integral = vm.state.value.lines.last().id
+        vm.revolve(integral, Axis3.X)
+        advanceUntilIdle()
+        assertTrue(vm.state.value.isSpace)
+        val texts = vm.lineTexts()
+        assertEquals(listOf("k = 2", "f(t) = k t^2"), texts.dropLast(1))
+        assertTrue(texts.last().startsWith("revolvex("))
+        val status = vm.state.value.status(vm.state.value.lines.last().id)
+        assertEquals(GraphLineKind.REVOLUTION, status.kind)
+        // π∫_0^1 (2x²)² dx = 4π/5
+        assertEquals(4 * Math.PI / 5, status.value!!, 1e-9)
+        // the box fits the solid: radius up to f(1) = 2, plus a margin
+        assertEquals(2.5, vm.state.value.spaceSettings.range, 1e-6)
+    }
+
+    @Test fun pinchInThreeDChangesTheBox() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.setSpace(GraphSpace.SPACE)
+        val before = vm.state.value.spaceSettings.range
+        vm.zoomSpace(2f)
+        assertEquals(before / 2, vm.state.value.spaceSettings.range, 1e-12)
+        vm.rotateCamera(30f, 100f)
+        assertEquals(89f, vm.state.value.camera.pitch, 0f) // never flips over the top
+        vm.resetCamera()
+        assertEquals(before, vm.state.value.spaceSettings.range, 0.0)
+    }
+
+    // ── Phase 3: templates, tables, saving ──────────────────────────────────────────────────
+
+    @Test fun templateAddsNoteSlidersAndWindow() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.onCanvasSize(1000, 1000)
+        val projectile = PhysicsTemplates.categories.first().examples.first()
+        vm.addExample(projectile, "note text", replace = true)
+        advanceUntilIdle()
+        val lines = vm.state.value.lines
+        assertEquals("# note text", lines.first().text)
+        assertEquals(GraphLineKind.NOTE, vm.state.value.status(lines.first().id).kind)
+        assertEquals(SliderRange(0.0, 60.0, 0.5), lines.first { it.text.startsWith("v_0") }.slider)
+        val vp = vm.state.value.plotViewport!!
+        assertEquals(-5.0, vp.xMin, 1e-9)
+        assertEquals(50.0, vp.xMax, 1e-9)
+        assertTrue(vm.state.value.statuses.values.none { it.error != null })
+    }
+
+    @Test fun replacingClearsTheListAndSpaceTemplatesOpen3D() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.addExample(GraphExample(R.string.graph_ex_line, listOf("g = 3", "y = g x")))
+        val helix = PhysicsTemplates.categories.flatMap { it.examples }.first { it.space }
+        vm.addExample(helix, null, replace = true)
+        advanceUntilIdle()
+        assertTrue(vm.state.value.isSpace)
+        assertTrue(vm.state.value.spaceGeometries.isNotEmpty())
+        vm.setSpace(GraphSpace.PLANE)
+        assertEquals(listOf("g = 3", "y = g x"), vm.lineTexts()) // the 2D list was not touched
+    }
+
+    @Test fun tablesFitAsYouType() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.addTable()
+        val id = vm.state.value.lines.single { it.table != null }.id
+        vm.setTable(id, TableState(listOf("1", "2", "3"), listOf("3", "5", "7")))
+        advanceUntilIdle()
+        val status = vm.state.value.status(id)
+        assertEquals(GraphLineKind.TABLE, status.kind)
+        assertEquals(3, status.pointCount)
+        assertEquals("y = 2 x + 1", status.fitText)
+        assertEquals(1.0, status.fitRSquared!!, 1e-12)
+        assertEquals(1.0, status.fitR!!, 1e-12)
+    }
+
+    @Test fun firstSaveAsksForANameThenOverwrites() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.addExample(GraphExample(R.string.graph_ex_line, listOf("y = x^2")))
+        assertTrue(vm.state.value.isDirty)
+        vm.requestSave()
+        assertEquals(GraphDialog.SaveName(false), vm.state.value.dialog)
+        vm.saveAs("Parabola")
+        advanceUntilIdle()
+        assertEquals(1, library.all.size)
+        assertEquals("Parabola", library.all.single().name)
+        assertEquals("y = x^2", library.all.single().preview)
+        assertFalse(vm.state.value.isDirty)
+        assertEquals(GraphMessage.SAVED, vm.state.value.message)
+        // later saves keep the same entry
+        vm.addExample(GraphExample(R.string.graph_ex_line, listOf("y = x")))
+        vm.requestSave()
+        advanceUntilIdle()
+        assertEquals(1, library.all.size)
+        assertTrue(library.all.single().preview.contains("y = x"))
+    }
+
+    @Test fun panningIsNotAnUnsavedChange() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.onCanvasSize(800, 800)
+        vm.addExample(GraphExample(R.string.graph_ex_line, listOf("y = x")))
+        vm.saveAs("Line")
+        advanceUntilIdle()
+        vm.onTransform(120f, 40f, 1.5f, 400f, 400f)
+        vm.rotateCamera(30f, 10f)
+        assertFalse(vm.state.value.isDirty)
+    }
+
+    @Test fun leavingWithChangesAsksFirst() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.requestExit()
+        assertTrue(vm.state.value.exitRequested) // nothing typed: leave at once
+        vm.onExitHandled()
+        vm.addExample(GraphExample(R.string.graph_ex_line, listOf("y = x")))
+        vm.requestExit()
+        assertEquals(GraphDialog.UnsavedChanges, vm.state.value.dialog)
+        assertFalse(vm.state.value.exitRequested)
+        vm.requestSave(exitAfter = true)
+        vm.saveAs("Mine", exitAfter = true)
+        advanceUntilIdle()
+        assertTrue(vm.state.value.exitRequested)
+    }
+
+    @Test fun openingASavedGraphRestoresIt() = runTest(dispatcher) {
+        val first = viewModel()
+        first.addExample(GraphExample(R.string.graph_ex_line, listOf("a = 3", "y = a x")))
+        first.setSpace(GraphSpace.SPACE)
+        first.addExample(GraphExample(R.string.graph_ex_sphere, listOf("x^2 + y^2 + z^2 = 4"), space = true))
+        first.saveAs("Both")
+        advanceUntilIdle()
+        val id = library.all.single().id
+        val reopened = viewModel(savedGraphId = id)
+        advanceUntilIdle()
+        assertEquals("Both", reopened.state.value.savedName)
+        assertTrue(reopened.state.value.isSpace)
+        assertEquals(listOf("x^2 + y^2 + z^2 = 4"), reopened.lineTexts())
+        reopened.setSpace(GraphSpace.PLANE)
+        assertEquals(listOf("a = 3", "y = a x"), reopened.lineTexts())
+        assertFalse(reopened.state.value.isDirty || reopened.state.value.dialog != null)
+    }
+
+    @Test fun missingSavedGraphShowsAMessage() = runTest(dispatcher) {
+        val vm = viewModel(savedGraphId = 42)
+        advanceUntilIdle()
+        assertEquals(GraphMessage.OPEN_FAILED, vm.state.value.message)
+    }
+
+    @Test fun collapsingThePanelEndsEditingAndEditingBringsItBack() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+        val first = vm.state.value.lines.first().id
+        vm.onFocus(first)
+        vm.setPanelCollapsed(true)
+        with(vm.state.value) {
+            assertTrue(panelCollapsed)
+            assertNull(focusedId)
+            assertFalse(keyboardVisible)
+        }
+        vm.setPanelCollapsed(false)
+        assertFalse(vm.state.value.panelCollapsed)
+
+        vm.setPanelCollapsed(true)
+        vm.onFocus(first)
+        assertFalse("focusing a line opens the panel", vm.state.value.panelCollapsed)
+        vm.setPanelCollapsed(true)
+        vm.addLine()
+        assertFalse("a new line opens the panel", vm.state.value.panelCollapsed)
+        assertTrue(vm.state.value.keyboardVisible)
     }
 }

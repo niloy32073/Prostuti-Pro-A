@@ -146,6 +146,7 @@ internal class ExpressionCompiler(
 
     private fun call(n: MathNode.Call, scope: Map<String, Int>): Eval {
         val fn = MathFunctions.lookup(n.name) ?: undefined(n.name)
+        if (fn.structural) throw CompileException(GraphError(GraphErrorKind.UNSUPPORTED_EQUATION))
         var args = n.args.map { node(it, scope) }
         if (fn.angle == AngleRole.INPUT && toRadians != 1.0) {
             val a = args[0]

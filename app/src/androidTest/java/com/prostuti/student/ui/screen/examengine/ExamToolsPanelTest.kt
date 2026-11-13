@@ -12,7 +12,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.window.core.layout.WindowSizeClass
 import com.prostuti.student.R
 import com.prostuti.student.data.model.response.ApiResponse
-import com.prostuti.student.data.repository.MCQExamRepository
+import com.prostuti.student.data.repository.ExamRepository
+import com.prostuti.student.data.repository.MCQRepository
 import com.prostuti.student.data.repository.fake.FakeExamAttemptRepositoryForEngineTest
 import com.prostuti.student.ui.screen.examengine.calculator.CalcKey
 import com.prostuti.student.ui.screen.examengine.calculator.keyTag
@@ -48,7 +49,7 @@ class ExamToolsPanelTest {
                 )
             )
         )
-        GlobalContext.get().loadModules(listOf(module { single<MCQExamRepository> { repo } }), allowOverride = true)
+        GlobalContext.get().loadModules(listOf(module { single<ExamRepository> { repo }; single<MCQRepository> { repo } }), allowOverride = true)
         composeTestRule.setContent {
             panelShown = currentWindowAdaptiveInfoV2().windowSizeClass
                 .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)

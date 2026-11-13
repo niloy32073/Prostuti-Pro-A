@@ -13,12 +13,16 @@ internal object MathKeyboardLayout {
     private fun digit(d: String) = k(d, style = KeyStyle.DIGIT)
     private fun op(label: String, text: String = label) = k(label, text, style = KeyStyle.OPERATOR)
 
-    fun rows(page: KeyboardPage): List<List<MathKey>> = when (page) {
+    /** [space]: the 3D list gets z (and u, v, vector) where 2D has θ and r. */
+    fun rows(page: KeyboardPage, space: Boolean = false): List<List<MathKey>> = when (page) {
         KeyboardPage.MAIN -> listOf(
-            listOf(k("x"), k("y"), k("a²", "^2", id = "square"), k("aᵇ", "^", id = "power"), digit("7"), digit("8"), digit("9"), op("÷")),
+            listOf(
+                k("x"), k("y"), if (space) k("z") else k("a²", "^2", id = "square"), k("aᵇ", "^", id = "power"),
+                digit("7"), digit("8"), digit("9"), op("÷"),
+            ),
             listOf(k("("), k(")"), k("<"), k(">"), digit("4"), digit("5"), digit("6"), op("×")),
             listOf(k("|a|", "||", 1, id = "abs"), k(","), k("≤"), k("≥"), digit("1"), digit("2"), digit("3"), op("−")),
-            listOf(k("√", "√()", 1, id = "sqrt"), k("π"), k("θ"), op("="), digit("0"), digit("."), k("e"), op("+")),
+            listOf(k("√", "√()", 1, id = "sqrt"), k("π"), if (space) k("a²", "^2", id = "square") else k("θ"), op("="), digit("0"), digit("."), k("e"), op("+")),
         )
         KeyboardPage.FUNCTIONS -> listOf(
             listOf(k("sin", "sin()", 1), k("cos", "cos()", 1), k("tan", "tan()", 1), k("sec", "sec()", 1), k("csc", "csc()", 1), k("cot", "cot()", 1)),
@@ -44,8 +48,16 @@ internal object MathKeyboardLayout {
                 k("{ : }", "{x<0: , }", 3, id = "piecewise"), k("{a<x<b}", " {0<x<1}", id = "restriction"),
                 k("∞"), k("∏", "∏_(k=1)^(5) ", id = "product"), k("min", "min(, )", 3),
             ),
-            listOf(k("y ="), k("x ="), k("r ="), k("f(x) =", id = "define"), k("(a, b)", "(, )", 3, id = "point")),
-            listOf(k("t"), k("θ"), k("r"), k("eˣ", "e^()", 1, id = "exp2"), k("max", "max(, )", 3)),
+            if (space) {
+                listOf(k("z ="), k("(a,b,c)", "(, , )", 5, id = "point3"), k("vector", "vector((0, 0, 0), ( , , ))", 7), k("f(x) =", id = "define"), k("t"))
+            } else {
+                listOf(k("y ="), k("x ="), k("r ="), k("f(x) =", id = "define"), k("(a, b)", "(, )", 3, id = "point"))
+            },
+            if (space) {
+                listOf(k("u"), k("v"), k("θ"), k("eˣ", "e^()", 1, id = "exp2"), k("max", "max(, )", 3))
+            } else {
+                listOf(k("t"), k("θ"), k("r"), k("eˣ", "e^()", 1, id = "exp2"), k("max", "max(, )", 3))
+            },
         )
         KeyboardPage.LETTERS -> listOf(
             "qwertyuiop".map { k(it.toString()) },

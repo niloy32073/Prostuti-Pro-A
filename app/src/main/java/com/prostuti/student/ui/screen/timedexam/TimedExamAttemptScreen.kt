@@ -24,7 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +57,7 @@ import com.prostuti.student.data.model.response.Question
 import com.prostuti.student.ui.component.MathText
 import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.screen.examengine.component.DISABLED_OPTION_ALPHA
+import com.prostuti.student.ui.screen.examengine.component.TimeUpDialog
 import com.prostuti.student.ui.theme.ProstutiTypography
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -84,13 +86,29 @@ fun TimedExamAttemptScreen(
         }
     }
 
-    LaunchedEffect(state.isSubmitted) {
-        if (state.isSubmitted) onSubmitted()
+    // Ticks stop while the screen is in the background; catch up with the clock on return.
+    LifecycleResumeEffect(Unit) {
+        viewModel.tickTimer()
+        onPauseOrDispose { }
     }
 
-    BackHandler(enabled = !state.isLoading && !state.isSubmitted) { showLeaveDialog = true }
+    // A time-up submit waits on the dialog below, so the student sees why the exam ended.
+    LaunchedEffect(state.isSubmitted, state.isTimeUp) {
+        if (state.isSubmitted && !state.isTimeUp) onSubmitted()
+    }
 
-    if (showLeaveDialog) {
+    BackHandler(enabled = !state.isLoading && !state.isSubmitted && !state.isTimeUp) { showLeaveDialog = true }
+
+    if (state.isTimeUp) {
+        TimeUpDialog(
+            isSubmitting = state.isSubmitting,
+            isSubmitted = state.isSubmitted,
+            onViewResult = onSubmitted,
+            onRetry = viewModel::submitExam
+        )
+    }
+
+    if (showLeaveDialog && !state.isTimeUp) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
             title = { Text("এক্সাম ছেড়ে যাবে?", style = ProstutiTypography.bnTitleMedium) },
@@ -104,7 +122,7 @@ fun TimedExamAttemptScreen(
         )
     }
 
-    if (state.showSubmitDialog) {
+    if (state.showSubmitDialog && !state.isTimeUp) {
         val unanswered = state.questions.count { it.mcqId !in state.answers }
         AlertDialog(
             onDismissRequest = viewModel::dismissSubmitDialog,
@@ -133,7 +151,7 @@ fun TimedExamAttemptScreen(
         ) {
             if (state.isLoading) {
                 Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    ProstutiSpinner()
                 }
                 return@PullToRefreshErrorOverlayWrapper
             }
@@ -142,7 +160,7 @@ fun TimedExamAttemptScreen(
             val minutes = state.timeRemainingSeconds / 60
             val seconds = state.timeRemainingSeconds % 60
             val timeText = "%d:%02d".format(minutes, seconds)
-            val kindLabel = if (kind == TimedExamKind.LIVE) "লাইভ এক্সাম" else "গ্রুপ এক্সাম"
+            val kindLabel = "লাইভ এক্সাম"
 
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {

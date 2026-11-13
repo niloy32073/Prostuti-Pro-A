@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,12 +41,12 @@ fun LockedResultScreen(
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                ProstutiSpinner()
             }
             return@Scaffold
         }
 
-        val kindLabel = if (state.kind == TimedExamKind.LIVE) "লাইভ এক্সাম" else "গ্রুপ এক্সাম"
+        val kindLabel = "লাইভ এক্সাম"
         val timeTakenText = state.submission?.timeTakenSeconds?.let { "%d:%02d".format(it / 60, it % 60) } ?: "—"
 
         Column(
@@ -77,16 +77,14 @@ fun LockedResultScreen(
                 ) {
                     LockedRow(label = "সময় লেগেছে", value = timeTakenText)
                     LockedRow(label = "চূড়ান্ত মার্ক", value = "উইন্ডো শেষে দেখা যাবে")
-                    if (state.kind == TimedExamKind.LIVE) {
-                        LockedRow(label = "র‍্যাংক", value = "উইন্ডো শেষে দেখা যাবে")
-                    }
+                    LockedRow(label = "র‍্যাংক", value = "উইন্ডো শেষে দেখা যাবে")
                 }
 
                 PrimaryButton(text = "অ্যান্সার শিট (লকড)", enabled = false, onClick = {}, modifier = Modifier.padding(top = 20.dp))
             }
 
             Text(
-                text = if (state.kind == TimedExamKind.LIVE) "এক্সাম ডিটেইলে ফিরে যাও" else "গ্রুপ ডিটেইলে ফিরে যাও",
+                text = "এক্সাম ডিটেইলে ফিরে যাও",
                 style = ProstutiTypography.bnLabelLarge, color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 16.dp).clickable(onClick = onBack)
             )

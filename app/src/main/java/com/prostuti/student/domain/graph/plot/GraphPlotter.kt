@@ -80,6 +80,17 @@ class GraphPlotter {
                 id, viewport,
                 points = if (p.x.isFinite() && p.y.isFinite()) listOf(p.x to p.y) else emptyList(),
             )
+            is GraphPlot.Vector2 -> vector(id, p, viewport)
+            is GraphPlot.VectorField -> field(id, p, viewport)
+            is GraphPlot.Table -> LineGeometry(
+                id, viewport,
+                curves = p.fit?.let { ExplicitSampler(fn(it.f), viewport).sample() } ?: emptyList(),
+                points = p.xs.indices.map { p.xs[it] to p.ys[it] },
+                pointLabels = false,
+            )
+            is GraphPlot.Surface, is GraphPlot.ImplicitSurface, is GraphPlot.ParametricSurface,
+            is GraphPlot.SpaceCurve, is GraphPlot.Point3, is GraphPlot.Vector3,
+            is GraphPlot.VolumeUnder, is GraphPlot.Revolution -> null // drawn by the 3D view
             is GraphPlot.IntegralArea -> {
                 val top = fn(p.top)
                 val bottom = p.bottom?.let { fn(it) }
@@ -138,6 +149,69 @@ class GraphPlotter {
         return TangentInfo(x0, y0, slope, line)
     }
 
+    /** Shaft as a curve, head as a filled triangle; the head is a fixed size in pixels. */
+    private fun vector(id: Long, p: GraphPlot.Vector2, viewport: PlotViewport): LineGeometry {
+        val x0 = viewport.px(p.x0)
+        val y0 = viewport.py(p.y0)
+        val x1 = viewport.px(p.x1)
+        val y1 = viewport.py(p.y1)
+        val len = kotlin.math.hypot(x1 - x0, y1 - y0)
+        if (len < 1e-3f) return LineGeometry(id, viewport, points = listOf(p.x1 to p.y1))
+        val ux = (x1 - x0) / len
+        val uy = (y1 - y0) / len
+        val head = minOf(ARROW_HEAD_PX, len * 0.45f)
+        val bx = x1 - ux * head
+        val by = y1 - uy * head
+        val half = head * 0.45f
+        val tip = floatArrayOf(x1, y1, bx - uy * half, by + ux * half, bx + uy * half, by - ux * half)
+        return LineGeometry(id, viewport, curves = listOf(floatArrayOf(x0, y0, bx, by)), fills = listOf(tip), solidFills = true)
+    }
+
+    /**
+     * Arrows on a ~18-across grid. Lengths grow with the square root of the field strength (so weak
+     * and strong regions both stay readable) and are capped at one cell; the direction is exact.
+     */
+    private fun field(id: Long, p: GraphPlot.VectorField, viewport: PlotViewport): LineGeometry {
+        val cell = minOf(viewport.widthPx, viewport.heightPx) / FIELD_ARROWS_ACROSS
+        val cols = (viewport.widthPx / cell).toInt().coerceAtLeast(1)
+        val rows = (viewport.heightPx / cell).toInt().coerceAtLeast(1)
+        val ep = p.p.newEnv()
+        val eq = p.q.newEnv()
+        val samples = ArrayList<FloatArray>(cols * rows)
+        var maxMagnitude = 0.0
+        for (r in 0 until rows) for (c in 0 until cols) {
+            val px = (c + 0.5f) * viewport.widthPx / cols
+            val py = (r + 0.5f) * viewport.heightPx / rows
+            val x = viewport.worldX(px)
+            val y = viewport.worldY(py)
+            ep[0] = x; ep[1] = y; eq[0] = x; eq[1] = y
+            val u = p.p.eval(ep)
+            val v = p.q.eval(eq)
+            val m = kotlin.math.hypot(u, v)
+            if (!m.isFinite() || m == 0.0) continue
+            maxMagnitude = maxOf(maxMagnitude, m)
+            // screen direction: y grows downward
+            samples += floatArrayOf(px, py, (u / m).toFloat(), (-v / m).toFloat(), m.toFloat())
+        }
+        val shafts = ArrayList<FloatArray>()
+        val heads = ArrayList<FloatArray>()
+        val reference = kotlin.math.sqrt(maxMagnitude).takeIf { it > 0 } ?: 1.0
+        for ((px, py, dx, dy, m) in samples.map { it.toList() }) {
+            val len = (cell * 0.85f * (kotlin.math.sqrt(m.toDouble()) / reference).toFloat()).coerceIn(cell * 0.25f, cell * 0.85f)
+            val x0 = px - dx * len / 2
+            val y0 = py - dy * len / 2
+            val x1 = px + dx * len / 2
+            val y1 = py + dy * len / 2
+            val head = len * 0.35f
+            val bx = x1 - dx * head
+            val by = y1 - dy * head
+            val half = head * 0.5f
+            shafts += floatArrayOf(x0, y0, bx, by)
+            heads += floatArrayOf(x1, y1, bx - dy * half, by + dx * half, bx + dy * half, by - dx * half)
+        }
+        return LineGeometry(id, viewport, curves = shafts, fills = heads, solidFills = true, thinCurves = true)
+    }
+
     /** Polyline + its two ends dropped to [edge]: the shaded side of y > f(x) or x < g(y). */
     private fun closeToEdge(curve: FloatArray, edge: Float, vertical: Boolean): FloatArray {
         val n = curve.size
@@ -163,5 +237,10 @@ class GraphPlotter {
             val v = c.eval(env)
             if (v.isInfinite()) Double.NaN else v
         }
+    }
+
+    private companion object {
+        const val ARROW_HEAD_PX = 34f
+        const val FIELD_ARROWS_ACROSS = 18f
     }
 }

@@ -20,6 +20,9 @@ interface SubjectDao {
     @Query("SELECT * FROM subject")
     fun observeAll(): Flow<List<Subject>>
 
+    @Query("SELECT * FROM subject WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<Subject>
+
     @Query("SELECT * FROM subject WHERE id = :id")
     suspend fun getById(id: String): Subject?
 

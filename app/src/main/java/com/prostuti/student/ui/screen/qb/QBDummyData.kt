@@ -1,7 +1,7 @@
 package com.prostuti.student.ui.screen.qb
 
 // ---------------------------------------------------------------------------
-// Local demo models — used by QuestionReaderScreen & ChapterBrowseScreen
+// Local demo models — used by ChapterBrowseScreen
 // until the real "read without attempt" API is available.
 // ---------------------------------------------------------------------------
 
@@ -17,7 +17,8 @@ data class DummyQuestion(
 data class ChapterItem(
     val id: String,
     val nameBn: String,
-    val questionCount: Int
+    val questionCount: Int,
+    val nameEn: String = ""
 )
 
 // ---------------------------------------------------------------------------
@@ -25,14 +26,14 @@ data class ChapterItem(
 // TODO: replace with FetchChaptersUseCase(subjectId) when API is available
 // ---------------------------------------------------------------------------
 fun dummyChapters(): List<ChapterItem> = listOf(
-    ChapterItem("ch1", "১ম অধ্যায়: ভৌত রাশি ও পরিমাপ", 18),
-    ChapterItem("ch2", "২য় অধ্যায়: গতিবিদ্যা", 24),
-    ChapterItem("ch3", "৩য় অধ্যায়: গতির সূত্র", 20),
-    ChapterItem("ch4", "৪র্থ অধ্যায়: কাজ, শক্তি ও ক্ষমতা", 16),
-    ChapterItem("ch5", "৫ম অধ্যায়: মহাকর্ষ ও অভিকর্ষ", 22),
-    ChapterItem("ch6", "৬ষ্ঠ অধ্যায়: পদার্থের গুণাগুণ", 14),
-    ChapterItem("ch7", "৭ম অধ্যায়: পর্যায়বৃত্ত গতি", 19),
-    ChapterItem("ch8", "৮ম অধ্যায়: তাপগতিবিদ্যা", 17)
+    ChapterItem("ch1", "১ম অধ্যায়: ভৌত রাশি ও পরিমাপ", 18, "Chapter 1: Physical quantities and measurement"),
+    ChapterItem("ch2", "২য় অধ্যায়: গতিবিদ্যা", 24, "Chapter 2: Kinematics"),
+    ChapterItem("ch3", "৩য় অধ্যায়: গতির সূত্র", 20, "Chapter 3: Laws of motion"),
+    ChapterItem("ch4", "৪র্থ অধ্যায়: কাজ, শক্তি ও ক্ষমতা", 16, "Chapter 4: Work, energy and power"),
+    ChapterItem("ch5", "৫ম অধ্যায়: মহাকর্ষ ও অভিকর্ষ", 22, "Chapter 5: Gravitation"),
+    ChapterItem("ch6", "৬ষ্ঠ অধ্যায়: পদার্থের গুণাগুণ", 14, "Chapter 6: Properties of matter"),
+    ChapterItem("ch7", "৭ম অধ্যায়: পর্যায়বৃত্ত গতি", 19, "Chapter 7: Periodic motion"),
+    ChapterItem("ch8", "৮ম অধ্যায়: তাপগতিবিদ্যা", 17, "Chapter 8: Thermodynamics")
 )
 
 // ---------------------------------------------------------------------------
@@ -66,24 +67,3 @@ fun dummyQuestionsForChapter(chapterId: String): List<DummyQuestion> = when (cha
         DummyQuestion("${chapterId}q4", "এই অধ্যায়ের নমুনা প্রশ্ন ৪", listOf("বিকল্প ক", "বিকল্প খ", "বিকল্প গ", "বিকল্প ঘ"), 3),
     )
 }
-
-// ---------------------------------------------------------------------------
-// Dummy questions for a full exam read (no attempt)
-// TODO: replace with FetchExamQuestionsUseCase(examId) when API is available
-// (endpoint needed: GET /mcq/exam/{examId}/questions — no attempt required)
-// ---------------------------------------------------------------------------
-fun dummyExamQuestions(): List<DummyQuestion> = listOf(
-    DummyQuestion("eq1", "আলোর বেগ শূন্য মাধ্যমে কত?", listOf("2×10⁸ m/s", "3×10⁸ m/s", "1×10⁸ m/s", "4×10⁸ m/s"), 1,
-        explanation = "শূন্য মাধ্যমে আলোর বেগ c = 3×10⁸ m/s। এটি পদার্থবিজ্ঞানের সর্বোচ্চ সীমার একটি মৌলিক ধ্রুবক।"),
-    DummyQuestion("eq2", "নিউটনের গতির কয়টি সূত্র আছে?", listOf("২টি", "৩টি", "৪টি", "৫টি"), 1,
-        explanation = "নিউটনের গতিসূত্র তিনটি: (১) জড়তার সূত্র, (২) বলের সূত্র (F = ma), (৩) ক্রিয়া-প্রতিক্রিয়ার সূত্র।"),
-    DummyQuestion("eq3", "বলের SI একক কী?", listOf("জুল", "নিউটন", "ওয়াট", "পাস্কাল"), 1,
-        explanation = "বলের SI একক নিউটন (N)। জুল শক্তির, ওয়াট ক্ষমতার এবং পাস্কাল চাপের একক।"),
-    DummyQuestion("eq4", "ভরবেগের মাত্রা কোনটি?", listOf("[MLT⁻¹]", "[MLT⁻²]", "[ML²T⁻¹]", "[ML⁻¹T]"), 0),
-    DummyQuestion("eq5", "কোনটি রক্ষণশীল বল?", listOf("ঘর্ষণ বল", "মহাকর্ষীয় বল", "বায়ু প্রতিরোধ", "সান্দ্রতা বল"), 1),
-    DummyQuestion("eq6", "গতিশক্তির সূত্র কোনটি?", listOf("mgh", "½mv²", "mv", "Fs"), 1),
-    DummyQuestion("eq7", "তরঙ্গদৈর্ঘ্যের একক কোনটি?", listOf("Hz", "m", "m/s", "J"), 1),
-    DummyQuestion("eq8", "শব্দের বেগ বায়ুতে প্রায় কত m/s?", listOf("160", "230", "340", "450"), 2),
-    DummyQuestion("eq9", "তড়িৎ ক্ষেত্রের একক কী?", listOf("N/m", "N/C", "N/A", "N/kg"), 1),
-    DummyQuestion("eq10", "অর্ধপরিবাহীর ব্যান্ড গ্যাপ সাধারণত কত eV?", listOf("0 – 0.5", "0.5 – 3", "3 – 8", "8 – 15"), 1),
-)

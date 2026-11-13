@@ -30,8 +30,8 @@ import com.prostuti.student.R
 import com.prostuti.student.ui.theme.ProstutiTypography
 
 @Composable
-fun QuickMenuSection(onItemClick: (QuickMenuItem) -> Unit, iconSize: Dp = 48.dp) {
-    val items = quickMenuItems()
+fun QuickMenuSection(onItemClick: (QuickMenuItem) -> Unit, iconSize: Dp = 48.dp, hiddenLabels: Set<Int> = emptySet()) {
+    val items = quickMenuItems().filterNot { it.labelRes in hiddenLabels }
     Column {
         Text(
             text = stringResource(R.string.home_quick_menu_title),

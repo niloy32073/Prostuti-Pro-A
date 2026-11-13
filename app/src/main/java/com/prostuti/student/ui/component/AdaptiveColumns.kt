@@ -4,10 +4,10 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.window.core.layout.WindowSizeClass
 
-/** List column count from the window width size class: compact 1, medium 2, expanded and up 3. */
+/** List column count from the width size class of the screen's pane (the window, outside list-detail): compact 1, medium 2, expanded and up 3. */
 @Composable
 fun adaptiveColumnCount(): Int {
-    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+    val windowSizeClass = paneSizeClass()
     return when {
         windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> 3
         windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> 2

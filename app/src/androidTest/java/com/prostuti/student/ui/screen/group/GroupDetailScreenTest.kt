@@ -1,70 +1,87 @@
 package com.prostuti.student.ui.screen.group
 
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.prostuti.student.data.repository.fake.ExamDummyData
-import com.prostuti.student.data.service.local.AppDatabase
+import androidx.test.platform.app.InstrumentationRegistry
+import com.prostuti.student.R
+import com.prostuti.student.data.model.enums.GroupRole
+import com.prostuti.student.data.model.response.StudyGroup
+import com.prostuti.student.data.model.response.StudyGroupMember
 import com.prostuti.student.ui.theme.ProstutiTheme
-import org.junit.Before
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.koin.core.context.GlobalContext
 
-/** GroupDetailScreen's "no routine yet" card must read differently for an admin (a CTA to
- * create one) than for a member (a waiting message, no CTA) — the same role-based branch the
- * design calls out. Both [ExamDummyData.GROUP_CHEM] (member) and [ExamDummyData.GROUP_NEW]
- * (admin) start with no routine, by construction. */
+/** GroupDetail shows the invite code (with copy and share) to admins only — the server only sends
+ * `invite_code` to admins, and the card must not appear for a member even if one slipped through. */
 @RunWith(AndroidJUnit4::class)
 class GroupDetailScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    @Before
-    fun resetDatabase() {
-        GlobalContext.get().get<AppDatabase>().clearAllTables()
-    }
+    private fun group(role: GroupRole, code: String?) = StudyGroup(
+        id = "g1", name = "HSC ব্যাচ ২৭", description = "সাপ্তাহিক প্র্যাকটিস", isPublic = false, maxMembers = 500,
+        memberCount = 38, createdAt = "2026-11-02T10:00:00", myRole = role, inviteCode = code,
+    )
 
-    private fun setGroupDetail(groupId: String) {
+    private val members = listOf(
+        StudyGroupMember(userId = "u1", username = "rafi", role = GroupRole.ADMIN, joinedAt = "2026-11-02T10:05:00"),
+        StudyGroupMember(userId = "u2", username = "sadia", role = GroupRole.MEMBER, joinedAt = "2026-11-02T10:06:00"),
+    )
+
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+    private var copied: String? = null
+    private var seeAllClicks = 0
+
+    private fun show(state: GroupDetailUiState) {
         composeTestRule.setContent {
             ProstutiTheme {
-                GroupDetailScreen(
-                    groupId = groupId,
+                GroupDetailContent(
+                    state = state,
                     onBack = {},
-                    onNavigateToRoutineCreate = {},
-                    onNavigateToCalendar = {},
-                    onNavigateToPastExams = {},
-                    onNavigateToMembers = {},
-                    onNavigateToPastExam = {},
-                    onNavigateToAttempt = {},
-                    onNavigateToLockedResult = {},
-                    onNavigateToRanking = {}
+                    onSeeAllMembers = { seeAllClicks++ },
+                    onCopyCode = { copied = it },
+                    onShareCode = { _, _ -> },
+                    onRefresh = {},
+                    onClearError = {},
                 )
             }
         }
     }
 
-    private fun waitForText(text: String) {
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
-        }
+    @Test
+    fun adminSeesTheInviteCodeAndCanCopyIt() {
+        show(GroupDetailUiState(isLoading = false, group = group(GroupRole.ADMIN, "K7M2XQ9P"), memberPreview = members))
+
+        composeTestRule.onNodeWithTag(TAG_INVITE_CODE).assertIsDisplayed()
+        composeTestRule.onNodeWithText("K7M2XQ9P").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.group_copy_code_cd)).performClick()
+        assertEquals("K7M2XQ9P", copied)
     }
 
     @Test
-    fun memberWithNoRoutineSeesWaitingMessageNotTheCreateButton() {
-        setGroupDetail(ExamDummyData.GROUP_CHEM)
+    fun memberDoesNotSeeAnInviteCode() {
+        show(GroupDetailUiState(isLoading = false, group = group(GroupRole.MEMBER, "LEAKED01"), memberPreview = members))
 
-        waitForText("এখনও অ্যাডমিন গ্রুপের রুটিন সেট করেনি — রুটিন সেট হলে নির্দিষ্ট দিনে এক্সাম এখানে অটো দেখাবে।")
-        composeTestRule.onNodeWithText("গ্রুপ রুটিন তৈরি করুন").assertDoesNotExist()
+        composeTestRule.onNodeWithTag(TAG_INVITE_CODE).assertDoesNotExist()
+        composeTestRule.onNodeWithText("LEAKED01").assertDoesNotExist()
     }
 
     @Test
-    fun adminWithNoRoutineSeesTheCreateButton() {
-        setGroupDetail(ExamDummyData.GROUP_NEW)
+    fun memberPreviewShowsUsernamesAndAdminBadge() {
+        show(GroupDetailUiState(isLoading = false, group = group(GroupRole.MEMBER, null), memberPreview = members))
 
-        waitForText("গ্রুপ রুটিন তৈরি করুন")
-        composeTestRule.onNodeWithText("এখনও অ্যাডমিন গ্রুপের রুটিন সেট করেনি — রুটিন সেট হলে নির্দিষ্ট দিনে এক্সাম এখানে অটো দেখাবে।").assertDoesNotExist()
+        composeTestRule.onNodeWithText("HSC ব্যাচ ২৭").assertIsDisplayed()
+        composeTestRule.onNodeWithText("rafi").assertIsDisplayed()
+        composeTestRule.onNodeWithText("sadia").assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.group_admin_badge)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.group_see_all)).performClick()
+        assertEquals(1, seeAllClicks)
     }
 }

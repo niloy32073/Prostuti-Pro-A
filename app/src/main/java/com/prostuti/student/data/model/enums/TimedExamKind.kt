@@ -2,9 +2,8 @@ package com.prostuti.student.data.model.enums
 
 import kotlinx.serialization.Serializable
 
-/** Live and group exams share every screen in the attempt/result/ranking flow; this is the one
- * thing that differs between them (back-destination, a few labels). */
+/** Which kind of timed exam the attempt/result/ranking flow is showing. Group exams now use the real exam engine, so only LIVE is left. */
 @Serializable
 enum class TimedExamKind {
-    LIVE, GROUP
+    LIVE
 }

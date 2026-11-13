@@ -2,49 +2,51 @@ package com.prostuti.student.ui.screen.group
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.prostuti.student.data.model.enums.GroupRole
-import com.prostuti.student.data.model.enums.TimedExamState
+import com.prostuti.student.data.model.request.GroupCreateRequest
 import com.prostuti.student.data.model.response.ApiResponse
-import com.prostuti.student.data.model.response.Group
-import com.prostuti.student.domain.CreateGroupUseCase
-import com.prostuti.student.domain.FetchGroupDetailUseCase
-import com.prostuti.student.domain.FetchMyGroupsUseCase
-import com.prostuti.student.domain.JoinGroupUseCase
-import com.prostuti.student.domain.TimedExamStateDeriver
-import com.prostuti.student.util.TimeProvider
+import com.prostuti.student.data.model.response.RoutineSlot
+import com.prostuti.student.data.model.response.StudyGroup
+import com.prostuti.student.domain.group.CreateGroupUseCase
+import com.prostuti.student.domain.group.FetchMyGroupsUseCase
+import com.prostuti.student.domain.group.JoinGroupByCodeUseCase
+import com.prostuti.student.domain.routine.FetchSlotsUseCase
+import com.prostuti.student.util.ApiErrorMessages
+import com.prostuti.student.util.DhakaTime
+import com.prostuti.student.util.fetchAllPages
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-private const val ERR_LOAD = "LOAD"
-
-enum class GroupListBadge { NONE, NO_ROUTINE, OPEN, SUBMITTED, CLOSED }
-
-data class GroupListRow(val group: Group, val badge: GroupListBadge, val badgeLabelBn: String)
+import java.time.Instant
 
 data class GroupListUiState(
     val isLoading: Boolean = true,
-    val rows: List<GroupListRow> = emptyList(),
+    val groups: List<StudyGroup> = emptyList(),
+    /** Today's exams by group id, for each card's badge. */
+    val todaySlots: Map<String, List<RoutineSlot>> = emptyMap(),
     val errors: Map<String, String> = emptyMap(),
     val showCreateJoinSheet: Boolean = false,
     val isSubmittingCreateJoin: Boolean = false,
-    val createJoinErrorBn: String? = null,
+    val createJoinError: String? = null,
     /** One-shot: the screen navigates to this group right after creating/joining it, then clears it. */
-    val navigateToGroupId: String? = null
+    val navigateToGroupId: String? = null,
 )
 
+/**
+ * "আমার গ্রুপ": the groups I belong to (`GET /groups/manage`, newest membership first) and the
+ * create / join-by-code sheet. Each card shows where that group's exams stand today: all groups'
+ * slots for today come in one call, matched by group id (GROUP_ROUTINE_PLAN.md §6.4).
+ */
 class GroupListViewModel(
     private val fetchMyGroupsUseCase: FetchMyGroupsUseCase,
-    private val fetchGroupDetailUseCase: FetchGroupDetailUseCase,
     private val createGroupUseCase: CreateGroupUseCase,
-    private val joinGroupUseCase: JoinGroupUseCase,
-    private val timeProvider: TimeProvider
+    private val joinGroupByCodeUseCase: JoinGroupByCodeUseCase,
+    private val fetchSlotsUseCase: FetchSlotsUseCase,
+    private val errorMessages: ApiErrorMessages,
+    private val now: () -> Instant = Instant::now,
 ) : ViewModel() {
     private val _state = MutableStateFlow(GroupListUiState())
     val state: StateFlow<GroupListUiState> = _state.asStateFlow()
@@ -59,74 +61,57 @@ class GroupListViewModel(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            fetchMyGroupsUseCase().collect { r ->
-                when (r) {
-                    is ApiResponse.Success -> {
-                        val rows = buildRows(r.data)
-                        _state.update { it.copy(isLoading = false, rows = rows) }
+            val today = DhakaTime.dateAt(now().toEpochMilli())
+            // A failure here only hides the badges.
+            val slotsCall = async { fetchSlotsUseCase(dateFrom = today, dateTo = today, limit = SLOT_LIMIT) }
+            when (val r = fetchAllPages(PAGE_LIMIT) { page, limit -> fetchMyGroupsUseCase(page, limit) }) {
+                is ApiResponse.Success -> {
+                    val slots = (slotsCall.await() as? ApiResponse.Success)?.data
+                    _state.update {
+                        it.copy(
+                            isLoading = false, groups = r.data, errors = it.errors - ERR_LOAD,
+                            todaySlots = slots?.filter { s -> s.groupId != null }?.groupBy { s -> s.groupId!! } ?: it.todaySlots,
+                        )
                     }
-                    is ApiResponse.Failure -> _state.update {
-                        it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to r.message))
-                    }
+                }
+                is ApiResponse.Failure -> _state.update {
+                    it.copy(isLoading = false, errors = it.errors + (ERR_LOAD to errorMessages.messageFor(r)))
                 }
             }
         }
     }
 
-    private suspend fun buildRows(groups: List<Group>): List<GroupListRow> = coroutineScope {
-        groups.map { group -> async { group to fetchGroupDetailUseCase(group.id) } }.awaitAll().map { (group, result) ->
-            val detail = (result as? ApiResponse.Success)?.data
-            when {
-                detail?.routine == null -> GroupListRow(
-                    group, GroupListBadge.NO_ROUTINE,
-                    if (group.myRole == GroupRole.ADMIN) "রুটিন তৈরি করো" else "কোনো চলমান এক্সাম নেই"
-                )
-                else -> {
-                    val exam = detail.currentExam
-                    val state = if (exam != null) {
-                        TimedExamStateDeriver.derive(exam.windowStartEpochMillis, exam.windowEndEpochMillis, detail.mySubmission?.submittedAtEpochMillis, timeProvider.nowEpochMillis())
-                    } else null
-                    when (state) {
-                        TimedExamState.OPEN_NOT_SUBMITTED -> GroupListRow(group, GroupListBadge.OPEN, "উইন্ডো খোলা আছে")
-                        TimedExamState.UPCOMING -> GroupListRow(group, GroupListBadge.NONE, "এক্সাম আসছে")
-                        TimedExamState.OPEN_SUBMITTED -> GroupListRow(group, GroupListBadge.SUBMITTED, "তুমি সাবমিট করেছো")
-                        TimedExamState.CLOSED -> GroupListRow(group, GroupListBadge.CLOSED, "সম্পন্ন")
-                        null -> GroupListRow(group, GroupListBadge.NONE, "কোনো চলমান এক্সাম নেই")
-                    }
-                }
-            }
-        }
+    fun openCreateJoinSheet() = _state.update { it.copy(showCreateJoinSheet = true, createJoinError = null) }
+    fun dismissCreateJoinSheet() = _state.update { it.copy(showCreateJoinSheet = false, createJoinError = null) }
+
+    fun createGroup(name: String, description: String, isPublic: Boolean) = submit {
+        createGroupUseCase(GroupCreateRequest(name = name.trim(), description = description.trim().ifEmpty { null }, isPublic = isPublic))
     }
 
-    fun openCreateJoinSheet() { _state.update { it.copy(showCreateJoinSheet = true, createJoinErrorBn = null) } }
-    fun dismissCreateJoinSheet() { _state.update { it.copy(showCreateJoinSheet = false, createJoinErrorBn = null) } }
+    fun joinGroup(code: String) = submit { joinGroupByCodeUseCase(code) }
 
-    fun createGroup(nameBn: String) {
+    private fun submit(call: suspend () -> ApiResponse<StudyGroup>) {
+        if (_state.value.isSubmittingCreateJoin) return
         viewModelScope.launch {
-            _state.update { it.copy(isSubmittingCreateJoin = true, createJoinErrorBn = null) }
-            when (val r = createGroupUseCase(nameBn)) {
+            _state.update { it.copy(isSubmittingCreateJoin = true, createJoinError = null) }
+            when (val r = call()) {
                 is ApiResponse.Success -> {
                     _state.update { it.copy(isSubmittingCreateJoin = false, showCreateJoinSheet = false, navigateToGroupId = r.data.id) }
                     load()
                 }
-                is ApiResponse.Failure -> _state.update { it.copy(isSubmittingCreateJoin = false, createJoinErrorBn = r.message) }
-            }
-        }
-    }
-
-    fun joinGroup(code: String) {
-        viewModelScope.launch {
-            _state.update { it.copy(isSubmittingCreateJoin = true, createJoinErrorBn = null) }
-            when (val r = joinGroupUseCase(code)) {
-                is ApiResponse.Success -> {
-                    _state.update { it.copy(isSubmittingCreateJoin = false, showCreateJoinSheet = false, navigateToGroupId = r.data.id) }
-                    load()
+                is ApiResponse.Failure -> _state.update {
+                    it.copy(isSubmittingCreateJoin = false, createJoinError = errorMessages.messageFor(r))
                 }
-                is ApiResponse.Failure -> _state.update { it.copy(isSubmittingCreateJoin = false, createJoinErrorBn = r.message) }
             }
         }
     }
 
-    fun consumeNavigation() { _state.update { it.copy(navigateToGroupId = null) } }
-    fun clearError(tag: String) { _state.update { it.copy(errors = it.errors - tag) } }
+    fun consumeNavigation() = _state.update { it.copy(navigateToGroupId = null) }
+    fun clearError(tag: String) = _state.update { it.copy(errors = it.errors - tag) }
+
+    private companion object {
+        const val ERR_LOAD = "LOAD"
+        const val PAGE_LIMIT = 50
+        const val SLOT_LIMIT = 100
+    }
 }

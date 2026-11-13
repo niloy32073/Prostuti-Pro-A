@@ -24,8 +24,8 @@ class ProfileViewModel(private val getMeUseCase: GetMeUseCase) : ViewModel() {
 
     private var loadJob: Job? = null
 
-    // Home has already fetched a fresh profile, so opening this screen reads the cache;
-    // pull-to-refresh / retry go to the network.
+    // Opening this screen reads the cache (Home already filled it); pull-to-refresh / retry
+    // go to the network.
     init { load() }
 
     fun refresh() = load(refresh = true)

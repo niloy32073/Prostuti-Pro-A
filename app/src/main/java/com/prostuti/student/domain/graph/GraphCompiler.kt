@@ -20,7 +20,12 @@ class GraphCompiler {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ParseResult>?): Boolean = size > 400
     }
 
-    fun compile(inputs: List<GraphLineInput>, angleUnit: AngleUnit): CompiledGraph = Run(inputs, angleUnit).compile()
+    /** Compiles a plane (2D) or space (3D) list; in space z, u and v are variables too. */
+    fun compile(
+        inputs: List<GraphLineInput>,
+        angleUnit: AngleUnit,
+        space: GraphSpace = GraphSpace.PLANE,
+    ): CompiledGraph = Run(inputs, angleUnit, space).compile()
 
     private fun parse(text: String, functions: Set<String>): ParseResult {
         val key = text + '\u0000' + functions.sorted().joinToString(",")
@@ -30,7 +35,12 @@ class GraphCompiler {
     private class FunctionDef(val lineId: Long, val name: String, val params: List<String>, val body: MathNode)
     private class Assignment(val lineId: Long, val name: String, val rhs: MathNode)
 
-    private inner class Run(private val inputs: List<GraphLineInput>, private val angleUnit: AngleUnit) {
+    private inner class Run(
+        private val inputs: List<GraphLineInput>,
+        private val angleUnit: AngleUnit,
+        private val space: GraphSpace,
+    ) {
+        private val reserved = if (space == GraphSpace.SPACE) RESERVED_VARIABLES + SPACE_ONLY_VARIABLES else RESERVED_VARIABLES
         private val differentiator = Differentiator(angleUnit)
         private var fresh = 0
 
@@ -83,7 +93,7 @@ class GraphCompiler {
                         }
                         byName.getOrPut(left.name) { mutableListOf() } += input.id
                     }
-                    left is MathNode.Sym && left.name !in RESERVED_VARIABLES -> {
+                    left is MathNode.Sym && left.name !in reserved -> {
                         if (left.name in BUILTIN_CONSTANTS) {
                             lineErrors[input.id] = GraphError(GraphErrorKind.RESERVED_NAME, names = listOf(left.name))
                         } else {
@@ -128,7 +138,7 @@ class GraphCompiler {
             try {
                 val rhs = prepare(assignments.getValue(name).rhs)
                 val free = MathTree.freeSymbols(rhs)
-                if (free.any { it in RESERVED_VARIABLES }) {
+                if (free.any { it in reserved }) {
                     throw CompileException(GraphError(GraphErrorKind.INVALID_DEFINITION, names = listOf(name)))
                 }
                 val undefined = free.filter { it !in BUILTIN_CONSTANTS && it !in assignments && it !in brokenNames }
@@ -177,9 +187,9 @@ class GraphCompiler {
             val free = MathTree.freeSymbols(node)
             val broken = free.filter { it in brokenNames }
             if (broken.isNotEmpty()) throw CompileException(GraphError(GraphErrorKind.BROKEN_DEPENDENCY, names = broken))
-            val undefined = free.filter { it !in RESERVED_VARIABLES && it !in constants }
+            val undefined = free.filter { it !in reserved && it !in constants }
             if (undefined.isNotEmpty()) throw CompileException(GraphError(GraphErrorKind.UNDEFINED_VARIABLE, names = undefined.sorted()))
-            return free.filterTo(LinkedHashSet()) { it in RESERVED_VARIABLES }
+            return free.filterTo(LinkedHashSet()) { it in reserved }
         }
 
         private fun compiler(polar: Boolean = false) = ExpressionCompiler(angleUnit, constants, polar)
@@ -191,6 +201,8 @@ class GraphCompiler {
 
         private fun line(input: GraphLineInput): CompiledLine {
             val id = input.id
+            input.table?.let { return tableLine(id, it) }
+            if (input.text.trimStart().startsWith("#")) return CompiledLine(id, GraphLineKind.NOTE, null)
             if (input.text.isBlank()) return CompiledLine(id, GraphLineKind.EMPTY, null)
             val statement = when (val p = parsed.getValue(id)) {
                 is ParseResult.Failure -> return CompiledLine(id, GraphLineKind.ERROR, null, p.error)
@@ -214,10 +226,10 @@ class GraphCompiler {
             val free = MathTree.freeSymbols(body) - def.params.toSet()
             val broken = free.filter { it in brokenNames }
             if (broken.isNotEmpty()) throw CompileException(GraphError(GraphErrorKind.BROKEN_DEPENDENCY, names = broken))
-            val undefined = free.filter { it !in RESERVED_VARIABLES && it !in constants }
+            val undefined = free.filter { it !in reserved && it !in constants }
             if (undefined.isNotEmpty()) throw CompileException(GraphError(GraphErrorKind.UNDEFINED_VARIABLE, names = undefined.sorted()))
             // Only one-input functions that use nothing but their input are drawn as y = f(x).
-            val plot = if (def.params.size == 1 && free.none { it in RESERVED_VARIABLES }) explicit(body, def.params[0]) else null
+            val plot = if (def.params.size == 1 && free.none { it in reserved }) explicit(body, def.params[0]) else null
             return CompiledLine(id, GraphLineKind.FUNCTION_DEFINITION, latex, plot = plot)
         }
 
@@ -228,6 +240,16 @@ class GraphCompiler {
         }
 
         private fun statementLine(id: Long, latex: String, statement: MathStatement): CompiledLine {
+            if (space == GraphSpace.SPACE) return spaceLine(id, latex, statement)
+            val whole = statement.operands[0]
+            if (statement.relations.isEmpty() && whole is MathNode.Call && MathFunctions.lookup(whole.name)?.structural == true) {
+                if (whole.name == "field") return vectorField(id, latex, whole)
+                if (whole.name != "vector") return CompiledLine(id, GraphLineKind.ERROR, latex, GraphError(GraphErrorKind.NEEDS_3D))
+                val ends = vectorEnds(whole, 2)
+                    ?: return CompiledLine(id, GraphLineKind.ERROR, latex, GraphError(GraphErrorKind.NEEDS_3D))
+                val (from, to) = ends
+                return CompiledLine(id, GraphLineKind.VECTOR, latex, plot = GraphPlot.Vector2(from[0], from[1], to[0], to[1]))
+            }
             val ops = statement.operands.map(::prepare)
             val isTuple = ops.size == 1 && ops[0] is MathNode.Tuple
             if (!isTuple && ops.any(MathTree::containsTuple)) throw unsupported(GraphErrorKind.TUPLE_NOT_ALLOWED)
@@ -281,7 +303,7 @@ class GraphCompiler {
         /** ∫_a^b f dx with constant bounds: shade it. f − g shades between the two curves. */
         private fun integralArea(id: Long, latex: String, node: MathNode.Integral): CompiledLine? {
             val v = node.variable
-            val bodyVars = MathTree.freeSymbols(node.body).filter { it in RESERVED_VARIABLES && it != v }
+            val bodyVars = MathTree.freeSymbols(node.body).filter { it in reserved && it != v }
             if (bodyVars.isNotEmpty()) return null
             val lower = fn(node.lower).evaluate()
             val upper = fn(node.upper).evaluate()
@@ -352,6 +374,215 @@ class GraphCompiler {
             Relation.EQ -> throw unsupported()
         }
 
+        // ── Tables and fields ───────────────────────────────────────────────────────────────
+
+        /** field(P, Q): both components may use x and y only. */
+        private fun vectorField(id: Long, latex: String, call: MathNode.Call): CompiledLine {
+            val (p, q) = call.args.map(::prepare)
+            if (!setOf("x", "y").containsAll(variablesOf(p) + variablesOf(q))) throw unsupported()
+            return CompiledLine(id, GraphLineKind.VECTOR_FIELD, latex, plot = GraphPlot.VectorField(fn(p, "x", "y"), fn(q, "x", "y")))
+        }
+
+        /** Cells are numbers or constant expressions (2π, a + 1); blank or bad rows are skipped. */
+        private fun tableLine(id: Long, table: TableInput): CompiledLine {
+            if (space == GraphSpace.SPACE) throw unsupported()
+            fun cell(text: String): Double {
+                if (text.isBlank()) return Double.NaN
+                val statement = (MathParser.parse(text, functionNames) as? ParseResult.Success)?.statement ?: return Double.NaN
+                if (statement.relations.isNotEmpty()) return Double.NaN
+                return runCatching {
+                    val node = prepare(statement.single)
+                    if (variablesOf(node).isNotEmpty()) Double.NaN else fn(node).evaluate()
+                }.getOrDefault(Double.NaN)
+            }
+            val rows = table.xs.indices.mapNotNull { i ->
+                val x = cell(table.xs[i])
+                val y = cell(table.ys.getOrElse(i) { "" })
+                if (x.isFinite() && y.isFinite()) x to y else null
+            }
+            val xs = rows.map { it.first }.toDoubleArray()
+            val ys = rows.map { it.second }.toDoubleArray()
+            val result = Regression.fit(xs, ys, table.model)
+            val fit = result?.let { r ->
+                val statement = (MathParser.parse(r.equation) as? ParseResult.Success)?.statement ?: return@let null
+                explicit(statement.operands[1])
+            }
+            val latex = result?.let { r -> (MathParser.parse(r.display) as? ParseResult.Success)?.let { LatexWriter.write(it.statement) } }
+            return CompiledLine(id, GraphLineKind.TABLE, latex, plot = GraphPlot.Table(xs, ys, fit, result))
+        }
+
+        // ── Space (3D) ──────────────────────────────────────────────────────────────────────
+
+        /** vector(A, B) or vector(B) (from the origin), each a [dims]-tuple of constants. */
+        private fun vectorEnds(call: MathNode.Call, dims: Int): Pair<DoubleArray, DoubleArray>? {
+            val points = call.args.map { prepare(it) as? MathNode.Tuple ?: return null }
+            if (points.any { it.items.size != dims }) return null
+            val values = points.map { p ->
+                DoubleArray(dims) { i ->
+                    if (variablesOf(p.items[i]).isNotEmpty()) return null
+                    fn(p.items[i]).evaluate()
+                }
+            }
+            return if (values.size == 1) DoubleArray(dims) to values[0] else values[0] to values[1]
+        }
+
+        private fun spaceLine(id: Long, latex: String, statement: MathStatement): CompiledLine {
+            val whole = statement.operands[0]
+            if (statement.relations.isEmpty() && whole is MathNode.Call) {
+                when (whole.name) {
+                    "vector" -> {
+                        val (from, to) = vectorEnds(whole, 3) ?: throw unsupported()
+                        return CompiledLine(id, GraphLineKind.VECTOR, latex, plot = GraphPlot.Vector3(from, to))
+                    }
+                    "revolvex", "revolvey" -> return revolution(id, latex, whole)
+                }
+            }
+            val ops = statement.operands.map(::prepare)
+            val isTuple = ops.size == 1 && ops[0] is MathNode.Tuple
+            if (!isTuple && ops.any(MathTree::containsTuple)) throw unsupported(GraphErrorKind.TUPLE_NOT_ALLOWED)
+            val vars = ops.map(::variablesOf)
+            return when {
+                statement.relations.isEmpty() -> spaceBare(id, latex, ops[0], vars[0])
+                statement.relations == listOf(Relation.EQ) -> spaceEquation(id, latex, ops[0], ops[1], vars[0], vars[1])
+                else -> throw unsupported()
+            }
+        }
+
+        private fun spaceBare(id: Long, latex: String, node: MathNode, vars: Set<String>): CompiledLine {
+            if (node is MathNode.Tuple) {
+                if (node.items.size != 3) throw unsupported()
+                val (a, b, c) = node.items
+                return when {
+                    vars.isEmpty() -> CompiledLine(
+                        id, GraphLineKind.POINT, latex,
+                        plot = GraphPlot.Point3(fn(a).evaluate(), fn(b).evaluate(), fn(c).evaluate()),
+                    )
+                    vars == setOf("t") -> CompiledLine(
+                        id, GraphLineKind.SPACE_CURVE, latex,
+                        plot = GraphPlot.SpaceCurve(fn(a, "t"), fn(b, "t"), fn(c, "t"), fullTurn()),
+                    )
+                    setOf("u", "v").containsAll(vars) -> CompiledLine(
+                        id, GraphLineKind.PARAMETRIC_SURFACE, latex,
+                        plot = GraphPlot.ParametricSurface(
+                            fn(a, "u", "v"), fn(b, "u", "v"), fn(c, "u", "v"), fullTurn(), halfTurn(),
+                        ),
+                    )
+                    else -> throw unsupported()
+                }
+            }
+            if (node is MathNode.Integral && vars.isEmpty()) volumeUnder(id, latex, node)?.let { return it }
+            return when {
+                vars.isEmpty() -> CompiledLine(id, GraphLineKind.VALUE, latex, value = fn(node).evaluate())
+                setOf("x", "y").containsAll(vars) -> surface(id, latex, Axis3.Z, node)
+                else -> throw unsupported()
+            }
+        }
+
+        private fun spaceEquation(
+            id: Long,
+            latex: String,
+            left: MathNode,
+            right: MathNode,
+            leftVars: Set<String>,
+            rightVars: Set<String>,
+        ): CompiledLine {
+            val all = leftVars + rightVars
+            if (all.isEmpty() || all.any { it in setOf("t", "u", "v") }) throw unsupported()
+            fun isSym(n: MathNode, name: String) = n is MathNode.Sym && n.name == name
+            for (axis in Axis3.entries) {
+                val name = axis.name.lowercase()
+                val others = axisInputs(axis).toSet()
+                if (isSym(left, name) && others.containsAll(rightVars)) return surface(id, latex, axis, right)
+                if (isSym(right, name) && others.containsAll(leftVars)) return surface(id, latex, axis, left)
+            }
+            if (!setOf("x", "y", "z", "r", "θ").containsAll(all)) throw unsupported()
+            val field = MathNode.Bin(BinOp.SUB, left, right)
+            val f = fn(field, "x", "y", "z", polar = true)
+            val usesPolar = MathTree.freeSymbols(field).any { it == "r" || it == "θ" }
+            val gradient = if (usesPolar) {
+                null
+            } else {
+                runCatching { listOf("x", "y", "z").map { fn(differentiator.derivative(field, it), "x", "y", "z") } }.getOrNull()
+            }
+            return CompiledLine(id, GraphLineKind.IMPLICIT_SURFACE, latex, plot = GraphPlot.ImplicitSurface(f, gradient))
+        }
+
+        /** The two inputs of a surface solved for [axis], in x, y, z order. */
+        private fun axisInputs(axis: Axis3): List<String> = when (axis) {
+            Axis3.X -> listOf("y", "z")
+            Axis3.Y -> listOf("x", "z")
+            Axis3.Z -> listOf("x", "y")
+        }
+
+        private fun surface(id: Long, latex: String, axis: Axis3, body: MathNode): CompiledLine {
+            val (a, b) = axisInputs(axis)
+            val f = fn(body, a, b)
+            val partials = runCatching {
+                listOf(fn(differentiator.derivative(body, a), a, b), fn(differentiator.derivative(body, b), a, b))
+            }.getOrNull()
+            return CompiledLine(id, GraphLineKind.SURFACE, latex, plot = GraphPlot.Surface(axis, f, partials))
+        }
+
+        /** ∫_a^b ∫_c(x)^d(x) f(x, y) dy dx (either order): the solid under the surface over the region. */
+        private fun volumeUnder(id: Long, latex: String, node: MathNode.Integral): CompiledLine? {
+            val inner = node.body as? MathNode.Integral ?: return null
+            val outer = node.variable
+            val innerVar = inner.variable
+            if (setOf(outer, innerVar) != setOf("x", "y")) return null
+            if (variablesOf(node.lower).isNotEmpty() || variablesOf(node.upper).isNotEmpty()) return null
+            val boundVars = MathTree.freeSymbols(inner.lower) + MathTree.freeSymbols(inner.upper)
+            if (boundVars.any { it in reserved && it != outer }) return null
+            if (MathTree.freeSymbols(inner.body).any { it in reserved && it != "x" && it != "y" }) return null
+            val value = fn(node).evaluate()
+            return CompiledLine(
+                id, GraphLineKind.VOLUME, latex,
+                value = value,
+                plot = GraphPlot.VolumeUnder(
+                    f = fn(inner.body, "x", "y"),
+                    outerIsX = outer == "x",
+                    outerMin = fn(node.lower).evaluate(),
+                    outerMax = fn(node.upper).evaluate(),
+                    innerMin = fn(inner.lower, outer),
+                    innerMax = fn(inner.upper, outer),
+                    value = value,
+                ),
+            )
+        }
+
+        /** revolvex(f, a, b) / revolvex(f, g, a, b), and the same about the y-axis. */
+        private fun revolution(id: Long, latex: String, call: MathNode.Call): CompiledLine {
+            val args = call.args.map(::prepare)
+            val top = args[0]
+            val bottom = if (args.size == 4) args[1] else null
+            val lower = args[args.size - 2]
+            val upper = args[args.size - 1]
+            if (!setOf("x").containsAll(variablesOf(top)) || (bottom != null && !setOf("x").containsAll(variablesOf(bottom)))) {
+                throw unsupported()
+            }
+            if (variablesOf(lower).isNotEmpty() || variablesOf(upper).isNotEmpty()) throw unsupported()
+            val a = fn(lower).evaluate()
+            val b = fn(upper).evaluate()
+            val f = fn(top, "x")
+            val g = bottom?.let { fn(it, "x") }
+            val about = if (call.name == "revolvex") Axis3.X else Axis3.Y
+            val fEnv = f.newEnv()
+            val gEnv = g?.newEnv()
+            val integrand = RealFunction { x ->
+                fEnv[0] = x
+                val fv = f.eval(fEnv)
+                val gv = if (g != null) { gEnv!![0] = x; g.eval(gEnv) } else 0.0
+                if (about == Axis3.X) PI * kotlin.math.abs(fv * fv - gv * gv) else 2 * PI * kotlin.math.abs(x) * kotlin.math.abs(fv - gv)
+            }
+            val volume = Integrator.integrate(integrand, a, b)
+            return CompiledLine(
+                id, GraphLineKind.REVOLUTION, latex,
+                value = volume.value,
+                plot = GraphPlot.Revolution(about, f, g, a, b, volume),
+            )
+        }
+
+        private fun halfTurn(): ClosedFloatingPointRange<Double> = if (angleUnit == AngleUnit.DEG) 0.0..180.0 else 0.0..PI
+
         private fun polar(id: Long, latex: String, body: MathNode): CompiledLine {
             val toRadians = if (angleUnit == AngleUnit.DEG) PI / 180 else 1.0
             return CompiledLine(id, GraphLineKind.POLAR, latex, plot = GraphPlot.Polar(fn(body, "θ"), toRadians, fullTurn()))
@@ -363,6 +594,9 @@ class GraphCompiler {
     companion object {
         /** Variables a graph line may use; they can't be assigned (x = 3 is a vertical line, not a parameter). */
         val RESERVED_VARIABLES = setOf("x", "y", "z", "t", "θ", "r")
+
+        /** Parametric-surface parameters; in the plane they stay ordinary letters (u = 2 is a slider). */
+        val SPACE_ONLY_VARIABLES = setOf("u", "v")
         private val POLAR_XY = setOf("x", "y", "r", "θ")
 
         val BUILTIN_CONSTANTS = mapOf(

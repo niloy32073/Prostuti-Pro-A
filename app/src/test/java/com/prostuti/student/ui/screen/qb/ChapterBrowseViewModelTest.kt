@@ -1,16 +1,43 @@
 package com.prostuti.student.ui.screen.qb
 
+import com.prostuti.student.data.repository.fake.FakeBookmarkRepository
+import com.prostuti.student.domain.AddBookmarkUseCase
+import com.prostuti.student.domain.ObserveBookmarkedIdsUseCase
+import com.prostuti.student.domain.RemoveBookmarkUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** ChapterBrowseViewModel is currently dummy-data-driven (no repository yet, see its TODOs) —
- * these tests cover its selection/toggle logic, which is real even though the data source isn't. */
+/** ChapterBrowseViewModel's questions are still dummy data (see its TODOs) — these tests cover its
+ * selection/toggle logic, which is real even though the data source isn't. Bookmarks use a fake repository. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChapterBrowseViewModelTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+    private val bookmarkRepo = FakeBookmarkRepository()
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun teardown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun buildViewModel() = ChapterBrowseViewModel("phy", ObserveBookmarkedIdsUseCase(bookmarkRepo), AddBookmarkUseCase(bookmarkRepo), RemoveBookmarkUseCase(bookmarkRepo))
 
     @Test
     fun `initial state selects the first chapter and loads its questions`() {
-        val viewModel = ChapterBrowseViewModel("phy")
+        val viewModel = buildViewModel()
         val state = viewModel.state.value
 
         assertEquals(8, state.chapters.size)
@@ -21,7 +48,7 @@ class ChapterBrowseViewModelTest {
 
     @Test
     fun `selecting a chapter swaps its questions and clears revealed answers`() {
-        val viewModel = ChapterBrowseViewModel("phy")
+        val viewModel = buildViewModel()
         viewModel.toggleAnswer(viewModel.state.value.questions.first().id)
         assertTrue(viewModel.state.value.revealedAnswers.isNotEmpty())
 
@@ -35,7 +62,7 @@ class ChapterBrowseViewModelTest {
 
     @Test
     fun `changing the source filter clears revealed answers but keeps the chapter`() {
-        val viewModel = ChapterBrowseViewModel("phy")
+        val viewModel = buildViewModel()
         viewModel.toggleAnswer(viewModel.state.value.questions.first().id)
 
         viewModel.selectSourceFilter(ChapterSourceFilter.BOARD)
@@ -48,7 +75,7 @@ class ChapterBrowseViewModelTest {
 
     @Test
     fun `toggleAnswer is a set toggle`() {
-        val viewModel = ChapterBrowseViewModel("phy")
+        val viewModel = buildViewModel()
         val qid = viewModel.state.value.questions.first().id
 
         viewModel.toggleAnswer(qid)
@@ -60,7 +87,7 @@ class ChapterBrowseViewModelTest {
 
     @Test
     fun `toggleFavorite is a set toggle independent of revealed answers`() {
-        val viewModel = ChapterBrowseViewModel("phy")
+        val viewModel = buildViewModel()
         val qid = viewModel.state.value.questions.first().id
 
         viewModel.toggleFavorite(qid)

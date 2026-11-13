@@ -50,9 +50,6 @@
     <string name="onboarding_card5_desc">চলো শুরু করি — তোমার HSC প্রস্তুতি আরও সহজ করে তুলি।</string>
 
     <!-- AuthStart -->
-    <string name="auth_exit_title">অ্যাপ থেকে বের হতে চাও?</string>
-    <string name="auth_exit_yes">হ্যাঁ</string>
-    <string name="auth_exit_no">না</string>
     <string name="auth_start_title">চলো শুরু করি</string>
     <string name="auth_start_subtitle">ইমেইল বা মোবাইল নম্বর দিয়ে চালিয়ে যাও</string>
     <string name="auth_continue_with_google">Google দিয়ে চালিয়ে যাও</string>
@@ -100,11 +97,15 @@
     <string name="auth_reset_password_action">পাসওয়ার্ড পরিবর্তন করো</string>
 
     <!-- Bottom nav / rail -->
+    <string name="main_exit_title">অ্যাপ বন্ধ করবে?</string>
+    <string name="main_exit_message">তুমি কি সত্যিই প্রস্তুতি থেকে বের হতে চাও?</string>
+    <string name="main_exit_confirm">বের হব</string>
+    <string name="main_exit_stay">থাকব</string>
     <string name="nav_home">হোম</string>
     <string name="nav_question_bank">প্রশ্ন ব্যাংক</string>
     <string name="nav_leaderboard">লিডারবোর্ড</string>
     <string name="nav_routine">রুটিন</string>
-    <string name="nav_settings">সেটিংস</string>
+    <string name="nav_account">অ্যাকাউন্ট</string>
 
     <!-- Generic -->
     <string name="error_dismiss">ইররটা সরাও</string>
@@ -116,9 +117,6 @@
     <string name="home_live_exam_badge_demo">লাইভ এক্সাম · আগামীকাল ৮:০০ PM</string>
     <string name="home_live_exam_title_demo">পদার্থবিজ্ঞান — মডেল টেস্ট ০৪</string>
     <string name="home_live_exam_subtitle_demo">সম্পূর্ণ স্ট্রিমের সাথে একসাথে</string>
-    <string name="home_group_exam_badge_demo">গ্রুপ এক্সাম · ইনভাইট</string>
-    <string name="home_group_exam_title_demo">HSC ব্যাচ ২৭ · সাপ্তাহিক টেস্ট</string>
-    <string name="home_group_exam_subtitle_demo">উইন্ডো খোলা আছে আরও ৩ ঘণ্টা</string>
     <string name="home_admission_title_demo">ঢাবি ক-ইউনিট ভর্তি ফরম</string>
     <string name="home_admission_subtitle_demo">শেষ তারিখ আর ৫ দিন বাকি</string>
     <string name="home_leaderboard_title">লিডারবোর্ড</string>
@@ -146,6 +144,12 @@
     <string name="qm_ebook">ইবুক</string>
     <string name="home_magazine_ebook_note">ম্যাগাজিন ও ইবুক শীঘ্রই আসছে</string>
     <string name="exam_attempt_no_questions">এই পরীক্ষায় কোনো প্রশ্ন পাওয়া যায়নি। পেছনে গিয়ে আবার চেষ্টা করো।</string>
+    <string name="exam_time_up_title">সময় শেষ!</string>
+    <string name="exam_time_up_submitting">পরীক্ষার সময় শেষ হয়ে গেছে। তোমার উত্তরগুলো সাবমিট করা হচ্ছে…</string>
+    <string name="exam_time_up_submitted">পরীক্ষার সময় শেষ হয়ে গেছে, তাই তোমার উত্তরগুলো নিজে থেকেই সাবমিট হয়ে গেছে।</string>
+    <string name="exam_time_up_failed">সময় শেষ, কিন্তু উত্তরগুলো সাবমিট করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করো।</string>
+    <string name="exam_time_up_view_result">ফলাফল দেখো</string>
+    <string name="exam_time_up_retry">আবার চেষ্টা করো</string>
     <string name="home_continue_title">চালিয়ে যাও</string>
     <string name="home_continue_exam_fallback">তোমার চলমান পরীক্ষা</string>
     <string name="home_continue_minutes_left">%1$d মিনিট বাকি</string>
@@ -161,6 +165,8 @@
     <string name="settings_language">ভাষা</string>
     <string name="settings_language_bangla">বাংলা</string>
     <string name="settings_language_english">English</string>
+    <string name="settings_bookmarks">বুকমার্ক হিস্টোরি</string>
+    <string name="settings_bookmarks_subtitle">যে প্রশ্নগুলো হার্ট দিয়ে সেভ করেছ</string>
 
     <!-- Generic tab placeholder -->
     <string name="tab_coming_soon_body">এই সেকশনটা শীঘ্রই আসছে।</string>
@@ -305,7 +311,6 @@
     <string name="graph_key_page_calculus">ক্যালকুলাস</string>
     <string name="graph_key_page_letters">অক্ষর</string>
     <string name="graph_empty_graph">নিচে একটা ইকুয়েশন লিখো, অথবা উদাহরণ থেকে বেছে নাও</string>
-    <string name="graph_three_d_soon">3D ভিউ পরের আপডেটে আসছে</string>
     <string name="graph_error_syntax">লেখাটা বোঝা যাচ্ছে না — চিহ্নগুলো আবার দেখো</string>
     <string name="graph_error_brackets">বন্ধনী মিলছে না</string>
     <string name="graph_error_character">“%1$s” চিহ্নটা চেনা নেই</string>
@@ -320,7 +325,7 @@
     <string name="graph_error_invalid_definition">প্যারামিটারের মান x বা y-এর উপর নির্ভর করতে পারে না</string>
     <string name="graph_error_reserved">%1$s একটা ধ্রুবক, এতে মান বসানো যায় না</string>
     <string name="graph_error_unsupported">এই ধরনের ইকুয়েশন আঁকা যাচ্ছে না</string>
-    <string name="graph_error_3d">এটা 3D গ্রাফ — পরের আপডেটে 3D ভিউতে দেখা যাবে</string>
+    <string name="graph_error_3d">এটা 3D গ্রাফ — উপরের 3D ট্যাবে লেখো</string>
     <string name="graph_error_complex">ইকুয়েশনটা অনেক বড়</string>
     <string name="graph_ex_cat_basic">মৌলিক ফাংশন</string>
     <string name="graph_ex_cat_conics">কনিক</string>
@@ -368,4 +373,676 @@
     <string name="graph_ex_slider_wave">a sin(bx) তরঙ্গ</string>
     <string name="graph_ex_slider_quadratic">ax² + bx + c পরিবার</string>
     <string name="graph_ex_slider_line">y = mx + c</string>
+
+    <!-- Graph Builder · 3D -->
+    <string name="graph_mode_2d">2D</string>
+    <string name="graph_mode_3d">3D</string>
+    <string name="graph_mode_switch">২D আর ৩D-এর মধ্যে বদলাও</string>
+    <string name="graph_revolve_x">x-অক্ষের চারদিকে ঘোরাও (3D)</string>
+    <string name="graph_revolve_y">y-অক্ষের চারদিকে ঘোরাও (3D)</string>
+    <string name="graph_revolve_title">ঘূর্ণনজাত ঘনবস্তু</string>
+    <string name="graph_volume_value">আয়তন V ≈ %1$s</string>
+    <string name="graph_volume_note">বক্ররেখার নিচের অংশ ঘুরিয়ে তৈরি ঘনবস্তুর আয়তন</string>
+    <string name="graph_double_integral_note">তলের নিচের ঘনবস্তুর আয়তন (z &lt; 0 অংশ ঋণাত্মক)</string>
+    <string name="graph_space_settings">3D সেটিংস</string>
+    <string name="graph_space_range">দৃশ্যের সীমা: −r থেকে r</string>
+    <string name="graph_space_box">বাক্স</string>
+    <string name="graph_space_grid">মেঝের গ্রিড</string>
+    <string name="graph_gyroscope">ফোন ঘুরিয়ে গ্রাফ ঘোরাও (জাইরোস্কোপ)</string>
+    <string name="graph_reset_camera">সামনের দৃশ্য</string>
+    <string name="graph_wireframe">জালি রেখা</string>
+    <string name="graph_contours">উচ্চতা-রেখা (কন্টুর)</string>
+    <string name="graph_color_by_height">উচ্চতা অনুযায়ী রং</string>
+    <string name="graph_opacity">স্বচ্ছতা</string>
+    <string name="graph_range_u">u-এর পরিসর</string>
+    <string name="graph_range_v">v-এর পরিসর</string>
+    <string name="graph_range_t">t-এর পরিসর</string>
+    <string name="graph_space_hint">এক আঙুলে টেনে ঘোরাও, দুই আঙুলে জুম</string>
+    <string name="graph_empty_space">নিচে একটা 3D ইকুয়েশন লিখো, যেমন z = x² + y²</string>
+    <string name="graph_ex_cat_surfaces">তল (z = f(x, y))</string>
+    <string name="graph_ex_cat_solids">গোলক, শঙ্কু ও অন্যান্য</string>
+    <string name="graph_ex_cat_space_curves">রেখা, বিন্দু ও ভেক্টর</string>
+    <string name="graph_ex_cat_volumes">আয়তন</string>
+    <string name="graph_ex_paraboloid">প্যারাবোলয়েড</string>
+    <string name="graph_ex_saddle">স্যাডল (ঘোড়ার জিন)</string>
+    <string name="graph_ex_ripple">ঢেউ</string>
+    <string name="graph_ex_gaussian">ঘণ্টা আকৃতির তল</string>
+    <string name="graph_ex_plane">সমতল</string>
+    <string name="graph_ex_sphere">গোলক</string>
+    <string name="graph_ex_ellipsoid">উপগোলক</string>
+    <string name="graph_ex_cone">শঙ্কু</string>
+    <string name="graph_ex_cylinder">বেলন</string>
+    <string name="graph_ex_hyperboloid">অধিগোলক</string>
+    <string name="graph_ex_torus">টোরাস (ডোনাট)</string>
+    <string name="graph_ex_helix">হেলিক্স (স্প্রিং)</string>
+    <string name="graph_ex_line3d">3D সরলরেখা</string>
+    <string name="graph_ex_vectors">ভেক্টর ও বিন্দু</string>
+    <string name="graph_ex_double_integral">ডাবল ইন্টিগ্রালের আয়তন</string>
+    <string name="graph_ex_revolution">ঘূর্ণনজাত ঘনবস্তু</string>
+    <string name="graph_ex_washer">ওয়াশার পদ্ধতি</string>
+    <string name="graph_ex_shell">শেল পদ্ধতি</string>
+
+    <!-- Graph Builder · physics templates, tables -->
+    <string name="graph_tab_math">গণিত</string>
+    <string name="graph_tab_physics">পদার্থবিজ্ঞান</string>
+    <string name="graph_template_replace_title">টেমপ্লেট বসাবো?</string>
+    <string name="graph_template_replace_body">এখনকার তালিকা মুছে টেমপ্লেটটা বসালে স্লাইডারের নাম (যেমন g, v₀) মিলে যাবে না। শুধু যোগ করলে একই নামের দুটো লাইন হতে পারে।</string>
+    <string name="graph_template_replace">মুছে বসাও</string>
+    <string name="graph_template_add">শুধু যোগ করো</string>
+    <string name="graph_cancel">বাতিল</string>
+    <string name="phys_cat_motion">গতি ও প্রক্ষেপণ</string>
+    <string name="phys_cat_waves">সরল ছন্দিত গতি ও তরঙ্গ</string>
+    <string name="phys_cat_electricity">তড়িৎ ও মহাকর্ষ</string>
+    <string name="phys_cat_fields">ভেক্টর ও ফিল্ড</string>
+    <string name="phys_cat_magnetism">চৌম্বক ক্ষেত্র</string>
+    <string name="phys_cat_light">আলো</string>
+    <string name="phys_cat_modern">আধুনিক পদার্থবিজ্ঞান ও তাপ</string>
+    <string name="phys_cat_lab">ল্যাবের ডেটা ও best-fit</string>
+    <string name="phys_projectile">প্রক্ষেপকের গতিপথ</string>
+    <string name="phys_projectile_note">v₀ = আদিবেগ (m/s), α = নিক্ষেপ কোণ (ডিগ্রি), g = অভিকর্ষজ ত্বরণ। মাঝের বিন্দু সর্বোচ্চ উচ্চতা H, শেষ বিন্দু পাল্লা R। α = 45° এ পাল্লা সবচেয়ে বেশি।</string>
+    <string name="phys_vt_area">বেগ–সময় লেখ ও সরণ</string>
+    <string name="phys_vt_area_note">x-অক্ষে সময় t, y-অক্ষে বেগ v = u + at। রেখার নিচের ক্ষেত্রফলই সরণ s = ut + ½at² — ইন্টিগ্রালের মান দেখো।</string>
+    <string name="phys_free_fall">মুক্তভাবে পড়ন্ত বস্তু</string>
+    <string name="phys_free_fall_note">x-অক্ষে সময় t (s)। প্রথম লেখ অতিক্রান্ত দূরত্ব h = ½gt², দ্বিতীয় লেখ বেগ v = gt।</string>
+    <string name="phys_circular">সমবৃত্তীয় গতি</string>
+    <string name="phys_circular_note">R = ব্যাসার্ধ, ω = কৌণিক বেগ, T = সময় (▶ চাপলে বস্তুটি ঘুরবে)। একটি তীর রৈখিক বেগ (স্পর্শক বরাবর), অন্যটি কেন্দ্রমুখী ত্বরণ।</string>
+    <string name="phys_shm">সরল ছন্দিত গতি</string>
+    <string name="phys_shm_note">x-অক্ষে সময়। প্রথম লেখ সরণ, দ্বিতীয় বেগ, তৃতীয় ত্বরণ। খেয়াল করো: ত্বরণ সবসময় সরণের উল্টো দিকে, আর সরণ শূন্য হলে বেগ সর্বোচ্চ।</string>
+    <string name="phys_damped">অবমন্দিত দোলন</string>
+    <string name="phys_damped_note">b = অবমন্দন ধ্রুবক। দোলনের বিস্তার A e^(−bx) হারে কমে — বাইরের দুটি রেখা সেই খাম (envelope)।</string>
+    <string name="phys_travelling">অগ্রগামী তরঙ্গ</string>
+    <string name="phys_travelling_note">λ = তরঙ্গদৈর্ঘ্য, f = কম্পাঙ্ক, T = সময়। T-এর ▶ চাপলে তরঙ্গ ডান দিকে v = fλ বেগে এগোবে।</string>
+    <string name="phys_standing">স্থির তরঙ্গ</string>
+    <string name="phys_standing_note">T-এর ▶ চাপলে দেখো: নিস্পন্দ বিন্দুগুলো (node) নড়ে না, সুস্পন্দ বিন্দুতে (antinode) বিস্তার সবচেয়ে বেশি। দুটি নিস্পন্দ বিন্দুর দূরত্ব λ/2।</string>
+    <string name="phys_beats">তরঙ্গের উপরিপাতন ও বিট</string>
+    <string name="phys_beats_note">কাছাকাছি কম্পাঙ্কের দুটি তরঙ্গ যোগ করলে তৃতীয় লেখের বিস্তার ওঠানামা করে — বিট কম্পাঙ্ক = |f₁ − f₂|।</string>
+    <string name="phys_inverse_square">বিপরীত বর্গীয় সূত্র (কুলম্ব/মহাকর্ষ)</string>
+    <string name="phys_inverse_square_note">প্রথম লেখ বল F = K/r², দ্বিতীয় বিভব V = K/r। দূরত্ব দ্বিগুণ হলে বল এক-চতুর্থাংশ, বিভব অর্ধেক। K = kq₁q₂ বা GMm।</string>
+    <string name="phys_earth_gravity">পৃথিবীর ভেতরে ও বাইরে g</string>
+    <string name="phys_earth_gravity_note">x = কেন্দ্র থেকে দূরত্ব (×10⁶ m)। ভেতরে g দূরত্বের সমানুপাতিক, বাইরে দূরত্বের বর্গের ব্যস্তানুপাতিক — পৃষ্ঠে (বিন্দুটি) g সর্বোচ্চ।</string>
+    <string name="phys_ohm">ওহমের সূত্র</string>
+    <string name="phys_ohm_note">x = বিভব পার্থক্য V (volt), y = প্রবাহ I (ampere)। রেখার ঢাল = 1/R।</string>
+    <string name="phys_rc">ধারকের চার্জ ও ডিসচার্জ</string>
+    <string name="phys_rc_note">x = সময়। τ = RC সময় পর চার্জিং-এ বিভব শেষ মানের 63.2% হয় (বিন্দুটি), ডিসচার্জিং-এ 36.8% থাকে।</string>
+    <string name="phys_ac">পরিবর্তী প্রবাহ (AC)</string>
+    <string name="phys_ac_note">x = সময় (মিলিসেকেন্ড)। V₀ = শীর্ষমান; সরলরেখাটি গড় বর্গমূল মান V_rms = V₀/√2 (বাংলাদেশে 220 V, 50 Hz)।</string>
+    <string name="phys_vector_add">ভেক্টরের যোগ</string>
+    <string name="phys_vector_add_note">a = (a₁, a₂), b = (b₁, b₂)। দ্বিতীয় তীরটি প্রথমটির মাথা থেকে শুরু; তৃতীয় তীরটি লব্ধি a + b (ত্রিভুজ সূত্র)।</string>
+    <string name="phys_point_charge">বিন্দু চার্জের তড়িৎ ক্ষেত্র</string>
+    <string name="phys_point_charge_note">তীরগুলো তড়িৎ ক্ষেত্রের দিক। q ঋণাত্মক করলে তীরগুলো চার্জের দিকে ঘুরে যাবে। তীর যত লম্বা, ক্ষেত্র তত শক্তিশালী।</string>
+    <string name="phys_dipole">তড়িৎ দ্বিমেরু ও সমবিভব রেখা</string>
+    <string name="phys_dipole_note">+q আছে (1, 0) এ, −q আছে (−1, 0) এ। c বদলালে সমবিভব রেখা সরে যায় — খেয়াল করো, ক্ষেত্ররেখা সবসময় সমবিভব রেখার লম্ব।</string>
+    <string name="phys_gravity_field">মহাকর্ষীয় ক্ষেত্র</string>
+    <string name="phys_gravity_field_note">একটি গ্রহের চারপাশে মহাকর্ষীয় ক্ষেত্র — সব তীর কেন্দ্রের দিকে, আর দূরে গেলে দুর্বল হয়।</string>
+    <string name="phys_wire_field">সোজা তারের চৌম্বক ক্ষেত্র</string>
+    <string name="phys_wire_field_note">তারটি কাগজের তল থেকে তোমার দিকে বেরিয়ে আসছে (মূলবিন্দুতে)। ডান-হাতি নিয়মে ক্ষেত্ররেখা ঘড়ির কাঁটার উল্টো দিকে বৃত্তাকার।</string>
+    <string name="phys_wire_b">তার থেকে দূরত্বে চৌম্বক ক্ষেত্র</string>
+    <string name="phys_wire_b_note">B = μ₀I/(2πr) = 2×10⁻⁷ I/r। x = দূরত্ব r (m), y = B (×10⁻⁷ T)। দূরত্ব দ্বিগুণ হলে B অর্ধেক।</string>
+    <string name="phys_helix">চৌম্বক ক্ষেত্রে আধানের পথ (3D)</string>
+    <string name="phys_helix_note">সুষম চৌম্বক ক্ষেত্র z-অক্ষ বরাবর (তীর)। বেগের লম্ব অংশ বৃত্ত বানায় (ব্যাসার্ধ R), সমান্তরাল অংশ সামনে টানে (p) — তাই পথটা হেলিক্স। p = 0 করলে শুধু বৃত্ত।</string>
+    <string name="phys_radius">চৌম্বক ক্ষেত্রে বৃত্তপথের ব্যাসার্ধ</string>
+    <string name="phys_radius_note">r = mv/(qB)। x = বেগ v, y = ব্যাসার্ধ r। বেগ বা ভর বাড়লে বৃত্ত বড়, চার্জ বা B বাড়লে ছোট।</string>
+    <string name="phys_lens">উত্তল লেন্সে বস্তু ও বিম্বের দূরত্ব</string>
+    <string name="phys_lens_note">1/u + 1/v = 1/f। x = বস্তুর দূরত্ব u, y = বিম্বের দূরত্ব v। u = 2f হলে v = 2f; u &lt; f হলে v ঋণাত্মক (অবাস্তব বিম্ব)। দুটি সরলরেখা অসীমতট।</string>
+    <string name="phys_snell">স্নেলের সূত্র ও সংকট কোণ</string>
+    <string name="phys_snell_note">x = আপতন কোণ (ডিগ্রি)। প্রথম লেখ: হালকা থেকে ঘন মাধ্যমে প্রতিসরণ কোণ। দ্বিতীয় লেখ: ঘন থেকে হালকা মাধ্যমে — যেখানে শেষ হয় সেটাই সংকট কোণ, এর পরে পূর্ণ অভ্যন্তরীণ প্রতিফলন। y = x তুলনার জন্য।</string>
+    <string name="phys_double_slit">ইয়ং-এর দ্বিচিড় পরীক্ষা</string>
+    <string name="phys_double_slit_note">d = চিড়ের দূরত্ব (mm), D = পর্দার দূরত্ব (m), λ = তরঙ্গদৈর্ঘ্য (nm)। x = পর্দায় দূরত্ব (mm), y = তীব্রতা। ডোরার প্রস্থ β = λD/d।</string>
+    <string name="phys_single_slit">একক চিড়ে অপবর্তন</string>
+    <string name="phys_single_slit_note">a = চিড়ের প্রস্থ (mm)। মাঝের উজ্জ্বল পট্টি পাশেরগুলোর দ্বিগুণ চওড়া। চিড় সরু করলে নকশা ছড়িয়ে যায়।</string>
+    <string name="phys_malus">মালুসের সূত্র (সমবর্তন)</string>
+    <string name="phys_malus_note">I = I₀ cos²θ। x = পোলারাইজার ও অ্যানালাইজারের মাঝের কোণ (ডিগ্রি)। 90° এ আলো একদম নেই।</string>
+    <string name="phys_decay">তেজস্ক্রিয় ক্ষয়</string>
+    <string name="phys_decay_note">N = N₀e^(−λt)। বিন্দুটি অর্ধায়ু T½ = ln2/λ — তখন অর্ধেক পরমাণু থাকে। λ বাড়ালে ক্ষয় দ্রুত।</string>
+    <string name="phys_photoelectric">ফটোতড়িৎ ক্রিয়া</string>
+    <string name="phys_photoelectric_note">x = কম্পাঙ্ক (×10¹⁴ Hz), y = সর্বোচ্চ গতিশক্তি (eV), W = কার্যাপেক্ষক। ঢাল = প্ল্যাঙ্ক ধ্রুবক h; বিন্দুটি সূচন কম্পাঙ্ক — এর নিচে কোনো ইলেকট্রন বের হয় না।</string>
+    <string name="phys_boyle">বয়েলের সূত্র (সমোষ্ণ রেখা)</string>
+    <string name="phys_boyle_note">1 mol গ্যাস: x = আয়তন (L), y = চাপ (kPa)। দুটি রেখা T আর 2T তাপমাত্রায় — বেশি তাপমাত্রার রেখা উপরে।</string>
+    <string name="phys_charles">চার্লসের সূত্র ও পরম শূন্য</string>
+    <string name="phys_charles_note">x = তাপমাত্রা (°C), y = আয়তন (L)। রেখাটি বাড়িয়ে দিলে −273.15°C এ আয়তন শূন্য — এটাই পরম শূন্য।</string>
+    <string name="phys_cooling">নিউটনের শীতলীকরণ সূত্র</string>
+    <string name="phys_cooling_note">x = সময় (মিনিট), y = তাপমাত্রা (°C)। বস্তু ধীরে ধীরে পরিবেশের তাপমাত্রা Tₛ (সরলরেখা) এর দিকে নামে।</string>
+    <string name="phys_lab_hooke">হুকের সূত্র (স্প্রিং)</string>
+    <string name="phys_lab_hooke_note">x = বল (N), y = প্রসারণ (cm)। best-fit রেখার ঢাল থেকে স্প্রিং ধ্রুবক k = 1/ঢাল (N/cm)।</string>
+    <string name="phys_lab_ohm">ওহমের সূত্রের পরীক্ষা</string>
+    <string name="phys_lab_ohm_note">x = বিভব (V), y = প্রবাহ (A)। রোধ R = 1/ঢাল। r ও R² দেখায় মাপগুলো রেখার কত কাছে।</string>
+    <string name="phys_lab_pendulum">সরল দোলকের দোলনকাল</string>
+    <string name="phys_lab_pendulum_note">x = দৈর্ঘ্য L (m), y = দোলনকাল T (s)। ঘাত-ফিট T = aL^b এ b ≈ 0.5 আসে, কারণ T = 2π√(L/g)। a থেকে g = 4π²/a²।</string>
+    <string name="phys_lab_decay">তেজস্ক্রিয় গণনা</string>
+    <string name="phys_lab_decay_note">x = সময় (ঘণ্টা), y = গণনা। সূচকীয় ফিট N = N₀e^(bx) থেকে ক্ষয় ধ্রুবক λ = −b আর অর্ধায়ু = ln2/λ।</string>
+    <string name="graph_add_table">নতুন টেবিল</string>
+    <string name="graph_table_x">x</string>
+    <string name="graph_table_y">y</string>
+    <string name="graph_table_add_row">সারি যোগ করো</string>
+    <string name="graph_table_remove_row">সারি মুছো</string>
+    <string name="graph_fit">best-fit</string>
+    <string name="graph_fit_none">নেই</string>
+    <string name="graph_fit_linear">সরলরেখা</string>
+    <string name="graph_fit_quadratic">দ্বিঘাত</string>
+    <string name="graph_fit_cubic">ত্রিঘাত</string>
+    <string name="graph_fit_exponential">সূচকীয়</string>
+    <string name="graph_fit_power">ঘাত</string>
+    <string name="graph_fit_logarithmic">লগারিদমিক</string>
+    <string name="graph_fit_stats">R² = %1$s</string>
+    <string name="graph_fit_stats_r">r = %1$s, R² = %2$s</string>
+    <string name="graph_fit_impossible">এই ডেটায় এই ফিট হয় না (যেমন সূচকীয় ফিটে y ধনাত্মক হতে হবে)</string>
+    <string name="graph_table_points">%1$d টি বিন্দু</string>
+
+    <!-- Graph Builder · save and share -->
+    <string name="playground_my_graphs">আমার গ্রাফ</string>
+    <string name="playground_saved_just_now">এইমাত্র</string>
+    <string name="graph_panel_show">সমীকরণ দেখাও</string>
+    <string name="graph_panel_hide">সমীকরণ লুকাও</string>
+    <plurals name="graph_panel_count">
+        <item quantity="one">%dটি সমীকরণ</item>
+        <item quantity="other">%dটি সমীকরণ</item>
+    </plurals>
+    <string name="playground_my_graphs_empty">এখনো কোনো গ্রাফ সেভ করোনি। গ্রাফ বিল্ডারের ⋮ মেনু থেকে সেভ করো।</string>
+    <string name="graph_more">আরও</string>
+    <string name="graph_rename">নাম বদলাও</string>
+    <string name="graph_delete_confirm_title">গ্রাফটা মুছে ফেলবে?</string>
+    <string name="graph_delete_confirm_body">“%1$s” মুছে ফেললে আর ফেরত আনা যাবে না।</string>
+    <string name="graph_save">সেভ করো</string>
+    <string name="graph_save_title">গ্রাফ সেভ করো</string>
+    <string name="graph_save_name">নাম</string>
+    <string name="graph_save_default_name">আমার গ্রাফ</string>
+    <string name="graph_saved">সেভ হয়েছে — প্লেগ্রাউন্ডের \"আমার গ্রাফ\"-এ পাবে</string>
+    <string name="graph_save_failed">সেভ করা যায়নি, আবার চেষ্টা করো</string>
+    <string name="graph_open_failed">গ্রাফটা খোলা যায়নি</string>
+    <string name="graph_share">ছবি হিসেবে শেয়ার করো</string>
+    <string name="graph_share_failed">ছবি বানানো যায়নি</string>
+    <string name="graph_share_chooser">গ্রাফ শেয়ার করো</string>
+    <string name="graph_unsaved_title">সেভ না করেই বের হবে?</string>
+    <string name="graph_unsaved_body">শেষ সেভের পর কিছু পরিবর্তন করেছ।</string>
+    <string name="graph_unsaved_save">সেভ করে বের হও</string>
+    <string name="graph_unsaved_discard">সেভ ছাড়া বের হও</string>
+
+    <!-- Bookmark history -->
+    <string name="bookmark_history_title">বুকমার্ক হিস্টোরি</string>
+    <string name="bookmark_history_count">%1$dটি প্রশ্ন</string>
+    <string name="bookmark_history_empty">এখনও কোনো প্রশ্ন বুকমার্ক করা হয়নি</string>
+    <string name="bookmark_history_empty_hint">প্রশ্নের পাশের হার্ট চাপলে প্রশ্নটা এখানে জমা হবে।</string>
+    <string name="bookmark_history_load_failed">বুকমার্ক লোড করা যায়নি</string>
+    <string name="bookmark_question_number">প্রশ্ন %1$d</string>
+    <string name="bookmark_remove">বুকমার্ক থেকে সরাও</string>
+    <string name="bookmark_question_loading">প্রশ্ন লোড হচ্ছে…</string>
+    <string name="bookmark_question_failed">প্রশ্নটা লোড করা যায়নি</string>
+    <string name="bookmark_retry">আবার চেষ্টা করো</string>
+    <string name="bookmark_show_answer">উত্তর দেখাও</string>
+    <string name="bookmark_hide_answer">উত্তর লুকাও</string>
+    <string name="bookmark_explanation">ব্যাখ্যা</string>
+    <string name="mcq_report">রিপোর্ট করুন</string>
+    <string name="mcq_reported">রিপোর্ট করা হয়েছে</string>
+    <string name="mcq_report_sent">প্রশ্নটি রিপোর্ট করা হয়েছে।</string>
+    <string name="qb_reader_question_count">%1$dটি প্রশ্ন</string>
+    <string name="qb_reader_no_questions">এই পরীক্ষায় কোনো প্রশ্ন পাওয়া যায়নি।</string>
+    <string name="qb_reader_all_answers">সব উত্তর</string>
+    <string name="qb_reader_show_explanation">ব্যাখ্যা দেখুন</string>
+    <string name="qb_reader_explanation_coming">এই প্রশ্নের ব্যাখ্যা শীঘ্রই যোগ করা হবে।</string>
+    <string name="qb_reader_answer_unavailable">এই প্রশ্নের উত্তর এখনো পাওয়া যায়নি।</string>
+    <string name="qb_reader_close">বন্ধ করো</string>
+    <!-- Settings: "My activity" section -->
+    <string name="settings_section_activity">আমার কার্যক্রম</string>
+    <string name="settings_exam_history">এক্সাম হিস্টোরি</string>
+    <string name="settings_exam_history_subtitle">আগের সব এক্সামের ফলাফল ও বিশ্লেষণ</string>
+    <string name="settings_reports">রিপোর্টস</string>
+    <string name="settings_reports_subtitle">শীঘ্রই আসছে</string>
+
+    <!-- Exam history -->
+    <string name="history_title">এক্সাম হিস্টোরি</string>
+    <string name="history_total_count">মোট %1$sটি এক্সাম</string>
+    <string name="history_status_all">সব</string>
+    <string name="history_status_completed">সম্পন্ন</string>
+    <string name="history_status_missed">মিস করা</string>
+    <string name="history_filter_subject">বিষয়</string>
+    <string name="history_filter_time">সময়</string>
+    <string name="history_filter_reset">রিসেট</string>
+    <string name="history_subject_all">সব বিষয়</string>
+    <string name="history_subject_sheet_title">বিষয় বাছো</string>
+    <string name="history_time_sheet_title">সময় বাছো</string>
+    <string name="history_time_all">সব সময়</string>
+    <string name="history_time_today">আজ</string>
+    <string name="history_time_7_days">গত ৭ দিন</string>
+    <string name="history_time_30_days">গত ৩০ দিন</string>
+    <string name="history_time_custom">নিজে তারিখ বাছো</string>
+    <string name="history_date_picker_ok">ঠিক আছে</string>
+    <string name="history_date_picker_cancel">বাতিল</string>
+    <string name="history_mode_live">লাইভ</string>
+    <string name="history_mode_practice">প্র্যাকটিস</string>
+    <string name="history_missed_meta">উইন্ডো শেষ, অংশ নাওনি</string>
+    <string name="history_missed_badge">মিস করেছো</string>
+    <string name="history_score_unit">মার্ক</string>
+    <string name="history_counts">সঠিক %1$s · ভুল %2$s · স্কিপ %3$s</string>
+    <string name="history_empty">এখনো কোনো এক্সাম দাওনি</string>
+    <string name="history_empty_filtered">এই ফিল্টারে কোনো এক্সাম নেই</string>
+    <string name="history_reset_filters">ফিল্টার রিসেট করো</string>
+
+    <!-- Topic analysis -->
+    <string name="analysis_title">টপিক অ্যানালাইসিস</string>
+    <string name="analysis_subtitle">%1$s · %2$sটি টপিক</string>
+    <string name="analysis_weakest_label">সবচেয়ে দুর্বল টপিক</string>
+    <string name="analysis_weakest_detail">%1$sটি প্রশ্নের মধ্যে %2$sটি ভুল, %3$sটি স্কিপ</string>
+    <string name="analysis_weakest_open">এই টপিকের প্রশ্নগুলো দেখো</string>
+    <string name="analysis_list_title">টপিক অনুযায়ী ফলাফল</string>
+    <string name="analysis_legend_correct">সঠিক</string>
+    <string name="analysis_legend_wrong">ভুল</string>
+    <string name="analysis_legend_skipped">স্কিপ</string>
+    <string name="analysis_no_topic">অন্যান্য</string>
+    <string name="analysis_no_topic_detail">কোনো টপিকে ট্যাগ করা নেই</string>
+    <string name="analysis_unknown_topic">টপিকের নাম পাওয়া যায়নি</string>
+    <string name="analysis_footer">যে টপিকে বেশি ভুল, সেটা উপরে। কোনো টপিকে ট্যাপ করলে শুধু ওই টপিকের প্রশ্ন নিয়ে অ্যান্সার শিট খুলবে।</string>
+    <string name="analysis_empty">এই এক্সামের কোনো টপিক অ্যানালাইসিস নেই</string>
+    <string name="settings_profile_subtitle">প্রোফাইল দেখো ও ইনফো এডিট করো</string>
+    <string name="settings_plan_free">ফ্রি প্ল্যান চলছে</string>
+    <string name="settings_plan_free_subtitle">আপগ্রেড করে সব বিষয় ও ফিচার আনলক করো</string>
+    <string name="settings_playground_subtitle">কোড, সিমুলেশন ও ভিজুয়ালাইজার টুলস</string>
+    <string name="settings_section_preferences">পছন্দসমূহ</string>
+    <string name="settings_theme">থিম</string>
+    <string name="settings_theme_light">লাইট</string>
+    <string name="settings_theme_dark">ডার্ক</string>
+    <string name="settings_theme_system">সিস্টেম</string>
+    <string name="settings_haptics">হ্যাপটিক্স ফিডব্যাক</string>
+    <string name="settings_sound">সাউন্ড ইফেক্ট</string>
+    <string name="settings_section_other">অন্যান্য</string>
+    <string name="settings_version">প্রস্তুতি · সংস্করণ %1$s</string>
+    <!-- Group / routine API error messages (util/ApiErrorMessages.kt) -->
+    <string name="api_err_insufficient_scope">তোমার অ্যাকাউন্টে এই ফিচার চালু নেই</string>
+    <string name="api_err_authz_unavailable">সার্ভার ব্যস্ত, একটু পরে চেষ্টা করো</string>
+    <string name="api_err_group_not_found">গ্রুপটি পাওয়া যায়নি বা তুমি আর সদস্য নও</string>
+    <string name="api_err_not_group_admin">শুধু অ্যাডমিন এটা করতে পারবে</string>
+    <string name="api_err_invalid_group_code">কোডটি সঠিক নয়</string>
+    <string name="api_err_already_member">আগেই এই গ্রুপের সদস্য</string>
+    <string name="api_err_group_full">গ্রুপে আর জায়গা নেই</string>
+    <string name="api_err_last_admin">গ্রুপে অন্তত একজন অ্যাডমিন থাকতে হবে — আগে আরেকজনকে অ্যাডমিন বানাও</string>
+    <string name="api_err_max_members_too_low">সদস্য-সীমা বর্তমান সদস্য সংখ্যার কম হতে পারবে না</string>
+    <string name="api_err_invalid_identifier">সঠিক ইমেইল বা ফোন নম্বর দাও</string>
+    <string name="api_err_user_not_registered">এই ইমেইল/ফোনে কোনো অ্যাকাউন্ট নেই</string>
+    <string name="api_err_member_not_found">এই সদস্য আর গ্রুপে নেই</string>
+    <string name="api_err_join_request_exists">রিকোয়েস্ট আগেই পাঠানো হয়েছে</string>
+    <string name="api_err_join_request_decided">রিকোয়েস্টটির সিদ্ধান্ত আগেই হয়ে গেছে</string>
+    <string name="api_err_try_again">কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করো</string>
+    <string name="api_err_routine_exists">আগে থেকে একটা রুটিন চালু আছে</string>
+    <string name="api_err_routine_not_found">রুটিনটি আর নেই</string>
+    <string name="api_err_date_in_past">অতীতের তারিখ দেওয়া যাবে না</string>
+    <string name="api_err_invalid_window">শেষের সময় শুরুর পরে হতে হবে</string>
+    <string name="api_err_window_in_past">এই সময়ের উইন্ডো পার হয়ে গেছে</string>
+    <string name="api_err_no_exam_days">এই মেয়াদে নির্বাচিত বারগুলোর কোনো দিন পড়েনি</string>
+    <string name="api_err_no_topics">নির্বাচিত অংশে কোনো টপিক নেই</string>
+    <string name="api_err_curriculum_mismatch">নির্বাচনে সমস্যা আছে, আবার বাছাই করো</string>
+    <string name="api_err_slot_not_found">এক্সামটি আর নেই</string>
+    <string name="api_err_slot_not_open">উইন্ডো এখনও খোলেনি</string>
+    <string name="api_err_slot_already_open">উইন্ডো খুলে গেছে, এখন আর তারিখ সরানো যাবে না</string>
+    <string name="api_err_slot_has_attempts">কেউ এক্সামটি দিয়ে ফেলেছে, তাই মুছা যাবে না</string>
+    <string name="api_err_not_adhoc">রুটিনের এক্সাম আলাদা করে মুছা যায় না — পুরো রুটিন মুছতে হবে</string>
+    <string name="api_err_slot_no_questions">এই টপিকগুলোতে এখনও প্রশ্ন নেই</string>
+    <string name="api_err_outside_routine_period">রুটিনের মেয়াদের বাইরে সরানো যাবে না</string>
+    <string name="api_err_invalid_date_range">শুরুর তারিখ শেষের তারিখের পরে হতে পারবে না</string>
+    <string name="api_err_exam_time_over">এক্সামের সময় শেষ</string>
+    <!-- Study groups (P2) -->
+    <string name="group_list_title">আমার গ্রুপ</string>
+    <string name="group_list_count">%1$sটি গ্রুপে আছো</string>
+    <string name="group_list_add_cd">নতুন গ্রুপ তৈরি বা জয়েন করো</string>
+    <string name="group_list_empty">তুমি এখনও কোনো গ্রুপে নেই</string>
+    <string name="group_list_empty_hint">নতুন গ্রুপ তৈরি করো, অথবা অ্যাডমিনের দেওয়া কোড দিয়ে জয়েন করো</string>
+    <string name="group_role_admin_you">তুমি অ্যাডমিন</string>
+    <string name="group_role_member">সাধারণ সদস্য</string>
+    <string name="group_member_count">%1$s সদস্য</string>
+    <string name="group_create_tab">নতুন গ্রুপ তৈরি করো</string>
+    <string name="group_join_tab">কোড দিয়ে জয়েন করো</string>
+    <string name="group_name_label">গ্রুপের নাম</string>
+    <string name="group_description_label">বিবরণ (ঐচ্ছিক)</string>
+    <string name="group_public_label">পাবলিক গ্রুপ</string>
+    <string name="group_public_hint">খুঁজে দেখো ট্যাবে দেখাবে, আর জয়েন রিকোয়েস্ট নেবে</string>
+    <string name="group_create_button">গ্রুপ তৈরি করো</string>
+    <string name="group_code_label">গ্রুপ কোড</string>
+    <string name="group_join_button">জয়েন করো</string>
+    <string name="group_invite_code_title">ইনভাইট কোড</string>
+    <string name="group_invite_code_hint">এই কোড দিয়ে যে কেউ সরাসরি গ্রুপে জয়েন করতে পারবে</string>
+    <string name="group_copy_code_cd">কোড কপি করো</string>
+    <string name="group_share_code_cd">কোড শেয়ার করো</string>
+    <string name="group_code_copied">কোড কপি হয়েছে</string>
+    <string name="group_share_text">প্রস্তুতি অ্যাপে আমার গ্রুপ \"%1$s\"-এ জয়েন করো। কোড: %2$s</string>
+    <string name="group_members_section">সদস্যরা (%1$s)</string>
+    <string name="group_see_all">সবাই দেখো</string>
+    <string name="group_admin_badge">অ্যাডমিন</string>
+    <string name="group_members_title">সদস্যরা</string>
+    <string name="group_members_search">নাম দিয়ে খোঁজো</string>
+    <string name="group_member_you">%1$s (তুমি)</string>
+    <string name="group_members_no_match">এই নামে কোনো সদস্য নেই</string>
+    <!-- Study groups (P3: management) -->
+    <string name="group_add_member_title">সদস্য যোগ করো</string>
+    <string name="group_add_member_hint">প্রস্তুতিতে অ্যাকাউন্ট আছে এমন কারো ইমেইল বা ফোন নম্বর দাও। সে সাথে সাথে সদস্য হয়ে যাবে।</string>
+    <string name="group_add_member_field">ইমেইল বা ফোন নম্বর</string>
+    <string name="group_add_member_button">যোগ করো</string>
+    <string name="group_cancel">বাতিল</string>
+    <string name="group_member_added">%1$s যোগ হয়েছে</string>
+    <string name="group_member_now_admin">%1$s এখন অ্যাডমিন</string>
+    <string name="group_member_now_member">%1$s এখন সাধারণ সদস্য</string>
+    <string name="group_member_removed">%1$s-কে গ্রুপ থেকে বাদ দেওয়া হয়েছে</string>
+    <string name="group_member_actions_cd">%1$s-এর জন্য অপশন</string>
+    <string name="group_make_admin">অ্যাডমিন বানাও</string>
+    <string name="group_remove_admin">অ্যাডমিন থেকে সরাও</string>
+    <string name="group_remove_member_title">সদস্য বাদ দেবে?</string>
+    <string name="group_remove_member_body">%1$s আর এই গ্রুপের এক্সাম দেখতে পারবে না। তার আগের এক্সাম হিস্ট্রি থেকে যাবে। সে একটা নোটিফিকেশন পাবে।</string>
+    <string name="group_remove_member_confirm">গ্রুপ থেকে বাদ দাও</string>
+    <string name="group_self_demote_title">নিজেকে অ্যাডমিন থেকে সরাবে?</string>
+    <string name="group_self_demote_body">এরপর তুমি সদস্য যোগ, রুটিন বা সেটিংস বদলাতে পারবে না। গ্রুপে অন্তত একজন অ্যাডমিন থাকতে হবে।</string>
+    <string name="group_settings_title">গ্রুপ সেটিংস</string>
+    <string name="group_settings_info">গ্রুপের তথ্য</string>
+    <string name="group_settings_save">পরিবর্তন সেভ করো</string>
+    <string name="group_settings_saved">পরিবর্তন সেভ হয়েছে</string>
+    <string name="group_max_members_label">সর্বোচ্চ সদস্য</string>
+    <string name="group_max_members_range">২ থেকে ৫০০০-এর মধ্যে একটা সংখ্যা দাও</string>
+    <string name="group_max_members_now">এখন %1$s জন সদস্য আছে</string>
+    <string name="group_turning_private_warning">প্রাইভেট করলে অপেক্ষমাণ সব জয়েন রিকোয়েস্ট বাতিল হয়ে যাবে, আর গ্রুপটা খুঁজে দেখো ট্যাবে আর দেখাবে না। শুধু কোড দিয়ে জয়েন করা যাবে।</string>
+    <string name="group_regenerate">নতুন কোড বানাও</string>
+    <string name="group_regenerate_title">নতুন কোড বানাবে?</string>
+    <string name="group_regenerate_body">পুরনো কোড সাথে সাথে বন্ধ হয়ে যাবে। যাদের কাছে পুরনো কোড আছে, তারা আর সেটা দিয়ে জয়েন করতে পারবে না।</string>
+    <string name="group_code_regenerated">নতুন কোড তৈরি হয়েছে</string>
+    <string name="group_join_requests_title">জয়েন রিকোয়েস্ট</string>
+    <string name="group_pending_requests">%1$sটি জয়েন রিকোয়েস্ট অপেক্ষায় আছে</string>
+    <string name="group_leave">গ্রুপ ছেড়ে দাও</string>
+    <string name="group_leave_title">গ্রুপ ছেড়ে দেবে?</string>
+    <string name="group_leave_body">তুমি আর এই গ্রুপের এক্সাম দেখতে পারবে না। তোমার আগের এক্সাম হিস্ট্রি থেকে যাবে। আবার জয়েন করতে কোড লাগবে।</string>
+    <string name="group_leave_admin_body">তুমি শেষ অ্যাডমিন হলে ছাড়া যাবে না, আগে আরেকজনকে অ্যাডমিন বানাতে হবে। তোমার আগের এক্সাম হিস্ট্রি থেকে যাবে।</string>
+    <string name="group_delete">গ্রুপ মুছে দাও</string>
+    <string name="group_delete_title">গ্রুপ মুছে দেবে?</string>
+    <string name="group_delete_body">\"%1$s\" মুছে যাবে, আর সব সদস্য নোটিফিকেশন পাবে। সবার এক্সাম হিস্ট্রি থেকে যাবে। নিশ্চিত করতে নিচে গ্রুপের নাম লেখো।</string>
+    <string name="group_delete_hint">গ্রুপ মুছলে সব সদস্য নোটিফিকেশন পাবে; সবার এক্সাম হিস্ট্রি থেকে যাবে।</string>
+    <string name="group_type_name_to_confirm">গ্রুপের নাম</string>
+    <string name="group_tab_mine">আমার গ্রুপ</string>
+    <string name="group_tab_explore">খুঁজে দেখো</string>
+    <string name="group_explore_search">গ্রুপের নাম বা বিবরণ দিয়ে খোঁজো</string>
+    <string name="group_explore_empty">কোনো পাবলিক গ্রুপ পাওয়া যায়নি</string>
+    <string name="group_explore_members">%1$s/%2$s সদস্য</string>
+    <string name="group_explore_open">খোলো</string>
+    <string name="group_explore_request">জয়েন রিকোয়েস্ট পাঠাও</string>
+    <string name="group_explore_requested">রিকোয়েস্ট পাঠানো হয়েছে</string>
+    <string name="group_explore_full">গ্রুপ পূর্ণ</string>
+    <string name="group_requests_pending">অপেক্ষমাণ</string>
+    <string name="group_requests_approved">গৃহীত</string>
+    <string name="group_requests_rejected">বাতিল</string>
+    <string name="group_requests_empty">এখানে কোনো রিকোয়েস্ট নেই</string>
+    <string name="group_request_unknown_user">নাম জানা নেই</string>
+    <string name="group_request_sent_at">পাঠিয়েছে %1$s</string>
+    <string name="group_request_decided_at">সিদ্ধান্ত %1$s</string>
+    <string name="group_request_approve">গ্রহণ করো</string>
+    <string name="group_request_reject">বাতিল করো</string>
+    <string name="group_request_approved">রিকোয়েস্ট গৃহীত হয়েছে — সে এখন সদস্য</string>
+    <string name="group_request_rejected">রিকোয়েস্ট বাতিল হয়েছে</string>
+
+    <!-- Routine builder (GROUP_ROUTINE_PLAN.md §6.9–6.10) -->
+    <string name="routine_builder_title_group">গ্রুপ রুটিন তৈরি</string>
+    <string name="routine_builder_title_personal">ব্যক্তিগত রুটিন তৈরি</string>
+    <string name="routine_builder_title_adhoc">একক এক্সাম নির্ধারণ</string>
+    <string name="routine_builder_step">%1$s · ধাপ %2$s/%3$s</string>
+    <string name="routine_step_subjects">সাবজেক্ট বেছে নাও</string>
+    <string name="routine_step_chapters">অধ্যায় ও টপিক বেছে নাও</string>
+    <string name="routine_step_config">সময় ও নিয়ম</string>
+    <string name="routine_step_preview">প্রিভিউ</string>
+    <string name="routine_subjects_intro_routine">এই সাবজেক্টগুলো থেকেই রুটিনের এক্সাম-দিনগুলো তৈরি হবে। একাধিক বেছে নেওয়া যাবে।</string>
+    <string name="routine_subjects_intro_adhoc">এক্সামের প্রশ্ন এই সাবজেক্টগুলো থেকে আসবে। একাধিক বেছে নেওয়া যাবে।</string>
+    <string name="routine_subjects_selected">%1$sটি সাবজেক্ট নির্বাচিত</string>
+    <string name="routine_subjects_max">সর্বোচ্চ %1$sটি সাবজেক্ট বেছে নেওয়া যায়</string>
+    <string name="routine_subjects_empty">কোনো সাবজেক্ট পাওয়া যায়নি</string>
+    <string name="routine_next">পরবর্তী</string>
+    <string name="routine_chapters_selected">%1$sটি অধ্যায়, %2$sটি টপিক নির্বাচিত</string>
+    <string name="routine_scope_nothing">অন্তত একটা টপিক বেছে নাও</string>
+    <string name="routine_scope_too_many">আলাদা করে অনেক বেশি অধ্যায় বা টপিক বাছা হয়েছে (সীমা: %1$sটি অধ্যায়, %2$sটি টপিক)। পুরো অধ্যায় বা পুরো বই বেছে নাও।</string>
+    <string name="routine_lock_warning_routine">সেভ করার পর এই নিয়মগুলো এডিট করা যাবে না। দরকার হলে রুটিন মুছে নতুন বানাতে হবে, অথবা কোনো একটা এক্সামের তারিখ সরাতে পারবে।</string>
+    <string name="routine_lock_warning_adhoc">কেউ এক্সাম দেওয়ার আগ পর্যন্ত এটা মুছে ফেলা যাবে।</string>
+    <string name="routine_start_date">শুরুর তারিখ</string>
+    <string name="routine_duration_days_label">কত দিনের রুটিন?</string>
+    <string name="routine_duration_days">%1$s দিন</string>
+    <string name="routine_weekdays_label">সপ্তাহের কোন দিনগুলোতে এক্সাম হবে?</string>
+    <string name="routine_weekdays_hint">বাকি দিনগুলোতে এক্সাম নেই — সেদিন পরের এক্সামের টপিক পড়ার জন্য দেখাবে।</string>
+    <string name="routine_window_label">প্রতিটা এক্সাম-দিনে এই সময়ে উইন্ডো খুলবে ও বন্ধ হবে</string>
+    <string name="routine_adhoc_window_label">এই সময়ের মধ্যে এক্সাম দেওয়া যাবে</string>
+    <string name="routine_window_open">উইন্ডো শুরু</string>
+    <string name="routine_window_close">উইন্ডো শেষ</string>
+    <string name="routine_exam_config_label">প্রতিটা এক্সামের নিয়ম</string>
+    <string name="routine_questions">প্রশ্ন সংখ্যা</string>
+    <string name="routine_duration_minutes">সময়সীমা (মিনিট)</string>
+    <string name="routine_mark_per_question">প্রতি প্রশ্নের মান</string>
+    <string name="routine_negative_marking">নেগেটিভ মার্কিং</string>
+    <string name="routine_negative_mark">প্রতি ভুল উত্তরে কাটা যাবে</string>
+    <string name="routine_total_marks">মোট মার্ক</string>
+    <string name="routine_exam_date">এক্সামের তারিখ</string>
+    <string name="routine_exam_title">এক্সামের নাম (ঐচ্ছিক)</string>
+    <string name="routine_exam_title_hint">যেমন: শুক্রবারের মডেল টেস্ট</string>
+    <string name="routine_problem_no_weekday">অন্তত একটা দিন বেছে নাও</string>
+    <string name="routine_problem_window_order">উইন্ডো শেষের সময় শুরুর পরে হতে হবে</string>
+    <string name="routine_problem_duration_over_window">সময়সীমা উইন্ডোর দৈর্ঘ্যের (%1$s মিনিট) বেশি হতে পারবে না</string>
+    <string name="routine_problem_date_in_past">অতীতের তারিখ বেছে নেওয়া যাবে না</string>
+    <string name="routine_problem_window_over">আজকের এই উইন্ডো শেষ হয়ে গেছে, পরের সময় বা অন্য দিন বেছে নাও</string>
+    <string name="routine_problem_title_long">নাম সর্বোচ্চ %1$s অক্ষরের হতে পারে</string>
+    <string name="routine_to_preview">প্রিভিউ দেখো</string>
+    <string name="routine_schedule_adhoc">এক্সাম নির্ধারণ করো</string>
+    <string name="routine_preview_summary">%1$sটি এক্সাম-দিন · %2$s – %3$s</string>
+    <string name="routine_preview_window">প্রতিদিন %1$s – %2$s</string>
+    <string name="routine_preview_warnings">খেয়াল করো</string>
+    <string name="routine_preview_loading">রুটিন সাজানো হচ্ছে…</string>
+    <string name="routine_preview_empty">কোনো এক্সাম-দিন পাওয়া যায়নি</string>
+    <string name="routine_save">রুটিন সেভ করো ও সক্রিয় করো</string>
+    <string name="routine_back_to_edit">পেছনে গিয়ে বদলাও</string>
+    <string name="routine_back_to_step">ধাপ %1$s-এ ফিরে যাও</string>
+    <string name="routine_retry">আবার চেষ্টা করো</string>
+    <string name="routine_exists_title">আগে থেকে একটা রুটিন চালু আছে</string>
+    <string name="routine_exists_body">নতুন রুটিন বানাতে আগেরটা মুছে দিতে হবে।</string>
+    <string name="routine_close">ফিরে যাও</string>
+    <string name="routine_created_group">রুটিন চালু হয়েছে — সব সদস্য নোটিফিকেশন পেয়েছে</string>
+    <string name="adhoc_created">একক এক্সাম নির্ধারণ হয়েছে</string>
+    <string name="routine_topic_chapter">%1$s — %2$s</string>
+    <string name="routine_topic_partial">%1$s (আংশিক: %2$s)</string>
+    <string name="routine_topic_more">%1$s +%2$sটি</string>
+    <string name="routine_topic_count">%1$sটি টপিক</string>
+    <string name="routine_weekday_mon">সোম</string>
+    <string name="routine_weekday_tue">মঙ্গল</string>
+    <string name="routine_weekday_wed">বুধ</string>
+    <string name="routine_weekday_thu">বৃহ</string>
+    <string name="routine_weekday_fri">শুক্র</string>
+    <string name="routine_weekday_sat">শনি</string>
+    <string name="routine_weekday_sun">রবি</string>
+    <string name="routine_decrease">%1$s কমাও</string>
+    <string name="routine_increase">%1$s বাড়াও</string>
+    <string name="routine_pick_date">তারিখ বেছে নাও</string>
+    <string name="routine_date_ok">ঠিক আছে</string>
+    <string name="routine_date_cancel">বাতিল</string>
+    <string name="group_exam_section">গ্রুপ এক্সাম</string>
+    <string name="group_no_routine_admin">এখনও গ্রুপের রুটিন সেট করা হয়নি। রুটিন বানাও, অথবা একটা একক এক্সাম নির্ধারণ করো।</string>
+    <string name="group_routine_active">গ্রুপের রুটিন চালু আছে।</string>
+    <string name="group_create_routine">গ্রুপ রুটিন তৈরি করুন</string>
+    <string name="group_schedule_adhoc">একক এক্সাম নির্ধারণ করো</string>
+
+    <!-- Slots, group exam cards, routine calendar (GROUP_ROUTINE_PLAN.md P5) -->
+    <string name="slot_adhoc_chip">একক এক্সাম</string>
+    <string name="slot_postponed">%1$s বার সরানো হয়েছে</string>
+    <string name="slot_config">%1$sটি প্রশ্ন · %2$s মিনিট · প্রতি প্রশ্নে %3$s মার্ক · নেগেটিভ %4$s</string>
+    <string name="slot_config_no_negative">%1$sটি প্রশ্ন · %2$s মিনিট · প্রতি প্রশ্নে %3$s মার্ক · নেগেটিভ নেই</string>
+    <string name="slot_window">%1$s – %2$s</string>
+    <string name="slot_status_upcoming_today">আজ %1$s-এ উইন্ডো খুলবে</string>
+    <string name="slot_status_upcoming_day">%1$s, %2$s-এ উইন্ডো খুলবে</string>
+    <string name="slot_status_open">উইন্ডো খোলা আছে আরও %1$s</string>
+    <string name="slot_status_in_progress">তুমি এক্সাম শুরু করেছিলে — আবার খুললে যতটুকু দিয়েছো তা জমা হয়ে যাবে।</string>
+    <string name="slot_status_submitted">তুমি সাবমিট করেছো — উইন্ডো শেষে ফলাফল দেখা যাবে</string>
+    <string name="slot_status_ended">উইন্ডো শেষ</string>
+    <string name="slot_status_missed">উইন্ডো শেষ · তুমি অংশ নাওনি</string>
+    <string name="slot_remaining_hm">%1$s ঘণ্টা %2$s মিনিট</string>
+    <string name="slot_remaining_h">%1$s ঘণ্টা</string>
+    <string name="slot_remaining_m">%1$s মিনিট</string>
+    <string name="slot_detail_topics">টপিক</string>
+    <string name="slot_detail_rules">নিয়ম</string>
+    <string name="slot_reschedule">তারিখ সরাও</string>
+    <string name="slot_rescheduled">এক্সামের তারিখ সরানো হয়েছে</string>
+    <string name="slot_delete_adhoc">এক্সাম মুছে দাও</string>
+    <string name="slot_delete_adhoc_title">এক্সামটা মুছবে?</string>
+    <string name="slot_delete_adhoc_body">এটা সব সদস্যের ক্যালেন্ডার থেকে মুছে যাবে।</string>
+    <string name="slot_deleted">এক্সাম মুছে ফেলা হয়েছে</string>
+    <string name="group_member_no_routine">এখনও অ্যাডমিন গ্রুপের রুটিন সেট করেনি। রুটিন বা কোনো এক্সাম নির্ধারণ হলে এখানে দেখাবে।</string>
+    <string name="group_no_exam_today_next">আজ এক্সাম নেই — পরের এক্সাম %1$s</string>
+    <string name="group_no_exam_today">আজ এক্সাম নেই</string>
+    <string name="group_open_calendar">গ্রুপ রুটিন ক্যালেন্ডার দেখো</string>
+    <string name="group_badge_open">%1$s — উইন্ডো খোলা আছে আরও %2$s</string>
+    <string name="group_badge_open_untitled">গ্রুপ এক্সাম চলছে — উইন্ডো খোলা আছে আরও %1$s</string>
+    <string name="group_badge_done">সম্পন্ন</string>
+    <string name="group_badge_upcoming">আজ %1$s-এ খুলবে</string>
+    <string name="group_badge_none">কোনো চলমান এক্সাম নেই</string>
+    <string name="calendar_title">গ্রুপ রুটিন ক্যালেন্ডার</string>
+    <string name="calendar_prev_week">আগের সপ্তাহ</string>
+    <string name="calendar_next_week">পরের সপ্তাহ</string>
+    <string name="calendar_week">%1$s – %2$s</string>
+    <string name="calendar_no_exam">এই দিনে এক্সাম নেই</string>
+    <string name="calendar_outside_routine">রুটিনের মেয়াদের বাইরে</string>
+    <string name="calendar_empty">এই গ্রুপে এখনও কোনো রুটিন বা এক্সাম নেই</string>
+    <string name="calendar_menu">আরও অপশন</string>
+    <string name="calendar_delete_routine">রুটিন মুছে দাও</string>
+    <string name="calendar_delete_routine_title">রুটিন মুছবে?</string>
+    <string name="calendar_delete_routine_body">আগামী যেসব এক্সাম কেউ দেয়নি সেগুলো মুছে যাবে। দেওয়া এক্সাম ও মিস করা এন্ট্রি হিস্ট্রিতে থাকবে।</string>
+    <string name="calendar_routine_deleted">রুটিন মুছে গেছে — %1$sটি আসন্ন এক্সাম সরানো হয়েছে</string>
+    <string name="calendar_routine_period">রুটিন: %1$s – %2$s</string>
+    <string name="calendar_note">এটি অ্যাডমিনের তৈরি গ্রুপ রুটিন — নির্ধারিত সময়ে গ্রুপ এক্সাম অটো শুরু হবে। সব সদস্য একই ক্যালেন্ডার দেখবে।</string>
+    <string name="calendar_day_exam_cd">এক্সাম আছে</string>
+    <string name="home_group_exam_today_badge">গ্রুপ এক্সাম · আজ</string>
+
+    <!-- Taking a scheduled exam, locked result (GROUP_ROUTINE_PLAN.md P6) -->
+    <string name="exam_group_window_banner">গ্রুপ এক্সাম · উইন্ডো শেষ %1$s</string>
+    <string name="locked_submitted">সাবমিট হয়েছে</string>
+    <string name="locked_countdown">উইন্ডো শেষ হবে আরও %1$s পর — তারপর ফলাফল ও অ্যান্সার শিট আনলক হবে</string>
+    <string name="locked_time_taken">সময় লেগেছে %1$s</string>
+    <string name="locked_answer_sheet">অ্যান্সার শিট (লক করা)</string>
+    <string name="locked_back">ফিরে যাও</string>
+    <string name="slot_action_take">এক্সামে অংশ নিন</string>
+    <string name="slot_action_finish">এক্সাম শেষ করো</string>
+    <string name="slot_action_view_submitted">তুমি সাবমিট করেছো — দেখো</string>
+    <string name="slot_action_view_result">ফলাফল দেখো</string>
+    <string name="slot_action_practice">প্র্যাকটিস হিসেবে দাও</string>
+    <string name="api_err_no_attempt">এই এক্সামে তোমার জমা দেওয়া কোনো অ্যাটেম্পট পাওয়া যায়নি</string>
+
+    <!-- Group ranking and past exams (GROUP_ROUTINE_PLAN.md P7) -->
+    <string name="ranking_title">র‍্যাংকিং</string>
+    <string name="ranking_took_part">অংশ নিয়েছে</string>
+    <string name="ranking_took_part_value">%1$s/%2$s</string>
+    <string name="ranking_average">গড় স্কোর</string>
+    <string name="ranking_my_rank">তোমার র‍্যাংক</string>
+    <string name="ranking_not_ranked">তুমি র‍্যাংকিংয়ে নেই</string>
+    <string name="ranking_spread">স্কোর বিস্তার</string>
+    <string name="ranking_not_ready">র‍্যাংকিং তৈরি হচ্ছে — উইন্ডো শেষ হওয়ার কিছুক্ষণ পরে দেখা যাবে। টেনে রিফ্রেশ করো।</string>
+    <string name="ranking_window_open">উইন্ডো শেষে র‍্যাংকিং আসবে</string>
+    <string name="ranking_me">%1$s (তুমি)</string>
+    <string name="ranking_my_result">আমার ফলাফল দেখো</string>
+    <string name="past_title">আগের এক্সামগুলো</string>
+    <string name="past_empty">এখনও কোনো এক্সাম শেষ হয়নি</string>
+    <string name="past_took">দিয়েছো</string>
+    <string name="past_missed">অংশ নাওনি</string>
+    <string name="past_row_meta">%1$s · %2$s</string>
+    <string name="past_row_stats">%1$s জন সাবমিট · গড় %2$s%%</string>
+    <string name="slot_action_ranking">র‍্যাংকিং ও অ্যান্সার শিট দেখো</string>
+
+    <!-- Routine tab (GROUP_ROUTINE_PLAN.md P8) -->
+    <string name="routine_tab_title">রুটিন</string>
+    <string name="routine_tab_plan">%1$s দিনের প্ল্যান · %2$s দিন বাকি</string>
+    <string name="routine_tab_personal">ব্যক্তিগত</string>
+    <string name="routine_tab_group">গ্রুপ</string>
+    <string name="routine_tab_empty">এখনও কোনো রুটিন নেই — বিষয় আর দিন বেছে দিলে প্রতিদিনের এক্সাম অটো তৈরি হবে</string>
+    <string name="routine_tab_create">রুটিন তৈরি করো</string>
+    <string name="routine_tab_day_title">%1$s — দিনের পরিকল্পনা</string>
+    <string name="routine_tab_concept">কনসেপ্ট পড়ো</string>
+    <string name="routine_tab_delete_new">রুটিন মুছে নতুন বানাও</string>
+    <string name="routine_tab_all_groups">সব গ্রুপ</string>
+    <string name="routine_tab_no_groups">তুমি কোনো গ্রুপে নেই</string>
+    <string name="routine_tab_go_groups">গ্রুপে যাও</string>
+    <string name="routine_tab_group_none_day">এই দিনে কোনো গ্রুপ এক্সাম নেই</string>
+    <string name="routine_tab_week_exams">এই সপ্তাহের এক্সাম</string>
+
+    <!-- Notifications (GROUP_ROUTINE_PLAN.md P9) -->
+    <string name="notif_title">নোটিফিকেশন</string>
+    <string name="notif_all">সব</string>
+    <string name="notif_unread">অপঠিত</string>
+    <string name="notif_empty">কোনো নোটিফিকেশন নেই</string>
+    <string name="notif_empty_unread">কোনো অপঠিত নোটিফিকেশন নেই</string>
+    <string name="notif_bell_unread_cd">নোটিফিকেশন, নতুন আছে</string>
+
+    <!-- Scope gating (GROUP_ROUTINE_PLAN.md P10) -->
+    <string name="routine_feature_off">তোমার অ্যাকাউন্টে রুটিন ফিচার চালু নেই</string>
+
+    <!-- Syllabus and prep card -->
+    <string name="prep_title">পরের এক্সামের প্রস্তুতি</string>
+    <string name="prep_study">এই অধ্যায় ও টপিকগুলো পড়ে নাও:</string>
+    <string name="syllabus_whole">পুরো অধ্যায়</string>
+    <string name="syllabus_partial">আংশিক</string>
+
+    <!-- Group list-detail -->
+    <string name="group_pick_title">একটা গ্রুপ বেছে নাও</string>
+    <string name="group_pick_body">বাঁয়ের তালিকা থেকে গ্রুপ খুললে এখানে তার এক্সাম, প্রস্তুতি আর সদস্যরা দেখাবে।</string>
+    <string name="result_pick_title">কী দেখতে চাও?</string>
+    <string name="result_pick_body">বাঁ দিকের তালিকা থেকে একটা বেছে নাও, সেটা এখানে খুলবে।</string>
+    <string name="result_finished_title">এক্সাম শেষ!</string>
+    <string name="result_title">রেজাল্ট</string>
+    <string name="result_correct">সঠিক</string>
+    <string name="result_wrong">ভুল</string>
+    <string name="result_skipped">স্কিপ</string>
+    <string name="result_score_percent">%1$s%% স্কোর</string>
+    <string name="result_time_taken">সময় লেগেছে</string>
+    <string name="result_final_mark">চূড়ান্ত মার্ক</string>
+    <string name="result_rank">র‍্যাংক</string>
+    <string name="result_view_answer_sheet">অ্যান্সার শিট দেখো</string>
+    <string name="result_view_analysis">টপিক অ্যানালাইসিস দেখো</string>
+    <string name="result_view_leaderboard">লিডারবোর্ড দেখো</string>
+    <string name="result_retake">আবার দাও</string>
+    <string name="result_retake_note">আবার দিলে নতুন অ্যাটেম্পট হবে — এই রেজাল্ট হিস্টোরিতে থেকে যাবে</string>
+    <string name="result_go_home">হোমে ফিরে যাও</string>
+    <string name="result_pane_answer_sheet">অ্যান্সার শিট</string>
+    <string name="result_pane_answer_sheet_sub">প্রতিটা প্রশ্নে তোমার উত্তর আর সঠিক উত্তর</string>
+    <string name="result_pane_analysis">টপিক অ্যানালাইসিস</string>
+    <string name="result_pane_analysis_sub">কোন টপিকে কতটা ঠিক, কোথায় দুর্বল</string>
+    <string name="result_pane_leaderboard">লিডারবোর্ড</string>
+    <string name="result_pane_leaderboard_sub">অন্যদের মধ্যে তোমার অবস্থান</string>
+    <string name="practice_subject_chapters_title">%1$s — চ্যাপ্টার ও টপিক</string>
+    <string name="practice_subject_open_chapters">%1$s এর চ্যাপ্টার দেখো</string>
+
+    <!-- Home screen widget -->
+    <string name="widget_name">প্রস্তুতি</string>
+    <string name="widget_description">আসন্ন লাইভ এক্সাম, আজকের রুটিন আর তোমার স্ট্রিক</string>
+    <string name="widget_tab_exams">এক্সাম</string>
+    <string name="widget_tab_routine">আজকের রুটিন</string>
+    <string name="widget_tab_progress">স্ট্রিক</string>
+    <string name="widget_loading">লোড হচ্ছে…</string>
+    <string name="widget_sign_in_body">এক্সাম, রুটিন আর স্ট্রিক দেখতে সাইন ইন করো</string>
+    <string name="widget_sign_in">সাইন ইন</string>
+    <string name="widget_no_exams">কোনো আসন্ন এক্সাম নেই</string>
+    <string name="widget_exams_failed">এক্সাম লোড করা যায়নি</string>
+    <string name="widget_see_live_exams">লাইভ এক্সাম দেখো</string>
+    <string name="widget_no_routine">তোমার কোনো রুটিন নেই</string>
+    <string name="widget_create_routine">রুটিন বানাও</string>
+    <string name="widget_no_exam_today">আজ কোনো এক্সাম নেই</string>
+    <string name="widget_routine_failed">রুটিন লোড করা যায়নি</string>
+    <string name="widget_open_routine">রুটিন দেখো</string>
+    <string name="widget_routine_off">তোমার অ্যাকাউন্টে রুটিন চালু নেই</string>
+    <string name="widget_source_live">লাইভ এক্সাম</string>
+    <string name="widget_source_personal">ব্যক্তিগত রুটিন</string>
+    <string name="widget_source_group">গ্রুপ এক্সাম</string>
+    <string name="widget_live_now">শেষ হবে %1$s</string>
+    <string name="widget_today_at">আজ %1$s</string>
+    <string name="widget_tomorrow_at">আগামীকাল %1$s</string>
+    <string name="widget_date_at">%1$s, %2$s</string>
+    <string name="widget_done">শেষ করেছো</string>
+    <string name="widget_ended">সময় শেষ</string>
+    <string name="widget_more">আরও %1$sটি</string>
+    <string name="widget_updated_at">আপডেট %1$s</string>
+    <string name="widget_refresh">রিফ্রেশ</string>
+    <string name="widget_demo">ডেমো</string>
+    <string name="widget_streak_days">%1$s দিন</string>
+    <string name="widget_streak_label">স্ট্রিক</string>
+    <string name="widget_xp_label">XP</string>
+    <string name="widget_rank_label">লিডারবোর্ড</string>
+    <string name="widget_see_leaderboard">লিডারবোর্ড দেখো</string>
+    <string name="widget_live_badge">লাইভ</string>
+    <string name="widget_sample_live_title">পদার্থবিজ্ঞান মডেল টেস্ট</string>
+    <string name="widget_sample_group_title">রসায়ন — জৈব যৌগ</string>
+    <string name="widget_sample_group_name">HSC ২৬ স্টাডি সার্কেল</string>
+    <string name="widget_sample_personal_title">উচ্চতর গণিত — ভেক্টর</string>
+    <string name="widget_promo_title">হোম স্ক্রিনে প্রস্তুতি উইজেট</string>
+    <string name="widget_promo_body">আসন্ন এক্সাম, আজকের রুটিন আর স্ট্রিক — অ্যাপ না খুলেই</string>
+    <string name="widget_promo_add">যোগ করো</string>
+    <string name="widget_promo_close">বন্ধ করো</string>
 </resources>

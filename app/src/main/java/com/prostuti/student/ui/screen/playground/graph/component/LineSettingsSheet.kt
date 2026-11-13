@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.R
 import com.prostuti.student.ui.theme.ProstutiTypography
+import com.prostuti.student.domain.graph.Axis3
 import com.prostuti.student.domain.graph.GraphLineKind
 import com.prostuti.student.domain.graph.GraphNumberFormat
 import com.prostuti.student.domain.graph.plot.LineGeometry
@@ -71,6 +72,8 @@ fun LineSettingsSheet(
     onMove: (Int) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
+    onRevolve: (Axis3) -> Unit = {},
+    onVRangeTexts: (min: String, max: String) -> Unit = { _, _ -> },
 ) {
     val options = line.options
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.testTag("line_settings_sheet")) {
@@ -150,6 +153,16 @@ fun LineSettingsSheet(
                         )
                     }
                 }
+                // Solids of revolution open in the 3D view.
+                Text(stringResource(R.string.graph_revolve_title), style = ProstutiTypography.bnLabelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = { onRevolve(Axis3.X) }, modifier = Modifier.weight(1f).testTag("revolve_x")) {
+                        Text(stringResource(R.string.graph_revolve_x))
+                    }
+                    OutlinedButton(onClick = { onRevolve(Axis3.Y) }, modifier = Modifier.weight(1f).testTag("revolve_y")) {
+                        Text(stringResource(R.string.graph_revolve_y))
+                    }
+                }
                 if (options.riemann != RiemannMode.NONE) {
                     Text(stringResource(R.string.graph_riemann_count, options.riemannCount), style = ProstutiTypography.bnBodyMedium)
                     Slider(
@@ -161,10 +174,45 @@ fun LineSettingsSheet(
                 }
             }
 
-            if (status.kind == GraphLineKind.POLAR || status.kind == GraphLineKind.PARAMETRIC) {
+            if (status.kind in SPACE_SURFACES) {
+                SwitchRow(stringResource(R.string.graph_wireframe), options.showWireframe, "toggle_wireframe") {
+                    onOptions(options.copy(showWireframe = it))
+                }
+                if (status.kind == GraphLineKind.SURFACE) {
+                    SwitchRow(stringResource(R.string.graph_contours), options.showContours, "toggle_contours") {
+                        onOptions(options.copy(showContours = it))
+                    }
+                }
+                SwitchRow(stringResource(R.string.graph_color_by_height), options.colorByHeight, "toggle_height_color") {
+                    onOptions(options.copy(colorByHeight = it))
+                }
+                Text(stringResource(R.string.graph_opacity), style = ProstutiTypography.bnLabelLarge)
+                Slider(
+                    value = options.opacity.toFloat(),
+                    onValueChange = { onOptions(options.copy(opacity = it.toDouble())) },
+                    valueRange = 0.15f..1f,
+                    modifier = Modifier.testTag("opacity_slider"),
+                )
+            }
+
+            if (status.kind == GraphLineKind.PARAMETRIC_SURFACE) {
+                var vMin by rememberSaveable(line.id) { mutableStateOf(options.vMin?.let { GraphNumberFormat.format(it) } ?: "0") }
+                var vMax by rememberSaveable(line.id) { mutableStateOf(options.vMax?.let { GraphNumberFormat.format(it) } ?: "π") }
+                RangeFields(stringResource(R.string.graph_range_v), vMin, vMax, { vMin = it }, { vMax = it }, "v_range")
+                Button(onClick = { onVRangeTexts(vMin, vMax) }, modifier = Modifier.testTag("apply_v_range")) {
+                    Text(stringResource(R.string.graph_apply))
+                }
+            }
+
+            if (status.kind in RANGED) {
                 var min by rememberSaveable(line.id) { mutableStateOf(options.rangeMin?.let { GraphNumberFormat.format(it) } ?: "0") }
                 var max by rememberSaveable(line.id) { mutableStateOf(options.rangeMax?.let { GraphNumberFormat.format(it) } ?: "2π") }
-                RangeFields(stringResource(R.string.graph_range), min, max, { min = it }, { max = it }, "param_range")
+                val title = when (status.kind) {
+                    GraphLineKind.PARAMETRIC_SURFACE -> R.string.graph_range_u
+                    GraphLineKind.SPACE_CURVE, GraphLineKind.PARAMETRIC -> R.string.graph_range_t
+                    else -> R.string.graph_range
+                }
+                RangeFields(stringResource(title), min, max, { min = it }, { max = it }, "param_range")
                 Button(onClick = { onRangeTexts(min, max) }, modifier = Modifier.testTag("apply_param_range")) {
                     Text(stringResource(R.string.graph_apply))
                 }
@@ -207,3 +255,12 @@ fun LineSettingsSheet(
         }
     }
 }
+
+private val SPACE_SURFACES = setOf(
+    GraphLineKind.SURFACE, GraphLineKind.IMPLICIT_SURFACE, GraphLineKind.PARAMETRIC_SURFACE,
+    GraphLineKind.VOLUME, GraphLineKind.REVOLUTION,
+)
+
+private val RANGED = setOf(
+    GraphLineKind.POLAR, GraphLineKind.PARAMETRIC, GraphLineKind.SPACE_CURVE, GraphLineKind.PARAMETRIC_SURFACE,
+)

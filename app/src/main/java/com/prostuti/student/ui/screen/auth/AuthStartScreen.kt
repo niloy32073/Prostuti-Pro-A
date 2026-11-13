@@ -10,13 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.R
 import com.prostuti.student.ui.component.AuthHeader
+import com.prostuti.student.ui.component.ExitAppDialog
 import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.OrDivider
 import com.prostuti.student.ui.component.OutlinedPillButton
@@ -63,21 +62,9 @@ fun AuthStartScreen(
     BackHandler { showExitDialog = true }
 
     if (showExitDialog) {
-        AlertDialog(
-            onDismissRequest = { showExitDialog = false },
-            title = {
-                Text(text = stringResource(R.string.auth_exit_title), style = ProstutiTypography.bnTitleLarge)
-            },
-            confirmButton = {
-                TextButton(onClick = { activity?.finish() }) {
-                    Text(text = stringResource(R.string.auth_exit_yes), style = ProstutiTypography.bnLabelLarge)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showExitDialog = false }) {
-                    Text(text = stringResource(R.string.auth_exit_no), style = ProstutiTypography.bnLabelLarge)
-                }
-            }
+        ExitAppDialog(
+            onExit = { showExitDialog = false; activity?.finish() },
+            onDismiss = { showExitDialog = false }
         )
     }
 

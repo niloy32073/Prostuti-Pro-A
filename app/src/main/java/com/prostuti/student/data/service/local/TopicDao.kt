@@ -18,6 +18,9 @@ interface TopicDao {
     @Query("SELECT * FROM topic WHERE chapter_id = :chapterId ORDER BY `order`")
     fun observeByChapterId(chapterId: String): Flow<List<Topic>>
 
+    @Query("SELECT * FROM topic WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<Topic>
+
     @Query("SELECT * FROM topic WHERE id = :id")
     suspend fun getById(id: String): Topic?
 

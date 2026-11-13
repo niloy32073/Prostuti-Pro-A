@@ -14,6 +14,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.core.context.GlobalContext
+import com.prostuti.student.data.model.response.CurriculumName
+import androidx.test.platform.app.InstrumentationRegistry
 
 /** Same deterministic dummy-data windows as LiveExamListScreenTest: live_phy_mt04 is open
  * (not submitted), live_chem_mt03 is upcoming, live_math_mt02 is closed, for a freshly-cleared
@@ -42,6 +44,10 @@ class LiveExamDetailScreenTest {
         }
     }
 
+    // Titles show in the device's language: Bangla in Bangla, English otherwise.
+    private fun shown(bn: String, en: String): String =
+        CurriculumName(bn, en).inLanguage(InstrumentationRegistry.getInstrumentation().targetContext.resources.configuration.locales[0].language)
+
     private fun waitForText(text: String) {
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
@@ -52,7 +58,7 @@ class LiveExamDetailScreenTest {
     fun openExamShowsStartButtonEnabled() {
         setScreen("live_phy_mt04")
 
-        waitForText("পদার্থবিজ্ঞান — মডেল টেস্ট ০৪")
+        waitForText(shown("পদার্থবিজ্ঞান — মডেল টেস্ট ০৪", "Physics — Model Test 04"))
         composeTestRule.onNodeWithText("শুরু করুন").assertExists().assertIsEnabled()
     }
 
@@ -60,7 +66,7 @@ class LiveExamDetailScreenTest {
     fun upcomingExamShowsDisabledStartButtonAndNotice() {
         setScreen("live_chem_mt03")
 
-        waitForText("রসায়ন — মডেল টেস্ট ০৩")
+        waitForText(shown("রসায়ন — মডেল টেস্ট ০৩", "Chemistry — Model Test 03"))
         composeTestRule.onNodeWithText("এখনও উইন্ডো শুরু হয়নি — শুরু হলে \"শুরু করুন\" বাটন সক্রিয় হবে।").assertExists()
         composeTestRule.onNodeWithText("শুরু করুন").assertExists().assertIsNotEnabled()
     }
@@ -69,7 +75,7 @@ class LiveExamDetailScreenTest {
     fun closedExamShowsRankingButtonAndWindowEndedBadge() {
         setScreen("live_math_mt02")
 
-        waitForText("উচ্চতর গণিত — মডেল টেস্ট ০২")
+        waitForText(shown("উচ্চতর গণিত — মডেল টেস্ট ০২", "Higher Mathematics — Model Test 02"))
         // Shown twice on a closed exam: the status badge and the window timeline label.
         composeTestRule.onAllNodesWithText("উইন্ডো শেষ").onFirst().assertExists()
         composeTestRule.onNodeWithText("র‍্যাংকিং ও অ্যান্সার শিট দেখো").assertExists()

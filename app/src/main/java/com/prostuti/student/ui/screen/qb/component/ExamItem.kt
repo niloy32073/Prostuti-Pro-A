@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.data.model.response.MCQExam
 import com.prostuti.student.ui.theme.ProstutiTypography
+import com.prostuti.student.ui.component.localized
 
 @Composable
 fun ExamItem(exam: MCQExam, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -54,7 +55,7 @@ fun ExamItem(exam: MCQExam, onClick: () -> Unit, modifier: Modifier = Modifier) 
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = exam.titleBn,
+                text = localized(exam.titleBn, exam.titleEn),
                 style = ProstutiTypography.bnBodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,

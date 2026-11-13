@@ -16,12 +16,20 @@ import com.prostuti.student.data.model.response.ResetTokenResponse
 import com.prostuti.student.data.model.response.SendOTPResponse
 import com.prostuti.student.data.model.response.VerifyEmailResponse
 import com.prostuti.student.data.model.response.VerifyPhoneResponse
+import com.prostuti.student.data.service.local.CurrentUserDao
 import com.prostuti.student.data.service.remote.AuthApiService
 import com.prostuti.student.dataStore.PrefKeys
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class AuthRepositoryImpl(
     private val authApiService: AuthApiService,
-    private val storageRepository: StorageRepository
+    private val storageRepository: StorageRepository,
+    private val currentUserDao: CurrentUserDao,
+    private val notificationRepository: NotificationRepository,
+    /** App-wide scope: the push-token upload must not hold up sign-in, and must outlive the auth screen. */
+    private val appScope: CoroutineScope
 ) : AuthRepository {
 
     override suspend fun checkUser(body: CheckUserRequest): ApiResponse<CheckUserResponse> =
@@ -62,8 +70,17 @@ class AuthRepositoryImpl(
 
     private suspend fun persistTokensOnSuccess(response: ApiResponse<LogInResponse>) {
         if (response is ApiResponse.Success) {
+            // A new session never starts with someone else's cached profile — an expired refresh
+            // token logs the user out without going through Settings' logout.
+            currentUserDao.deleteAll()
             storageRepository.putString(key = PrefKeys.JWT_TOKEN, value = response.data.accessToken)
             storageRepository.putString(key = PrefKeys.JWT_REFRESH_TOKEN, value = response.data.refreshToken)
+            // Every new session (sign-in, sign-up's sign-in, social, password reset) re-binds this
+            // device's push token to the user now signed in.
+            appScope.launch {
+                val push = notificationRepository.registerPushToken()
+                if (push is ApiResponse.Failure) Timber.w("FCM token upload failed: %s", push.errorCode)
+            }
         }
     }
 }

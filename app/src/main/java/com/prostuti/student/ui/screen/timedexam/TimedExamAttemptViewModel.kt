@@ -12,6 +12,7 @@ import com.prostuti.student.domain.FetchTimedExamQuestionsUseCase
 import com.prostuti.student.domain.FetchTimedExamWindowUseCase
 import com.prostuti.student.domain.SaveTimedExamAnswerUseCase
 import com.prostuti.student.domain.SubmitTimedExamUseCase
+import com.prostuti.student.util.TimeProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,9 @@ data class TimedExamAttemptUiState(
     val timeRemainingSeconds: Int = 0,
     val totalDurationSeconds: Int = 0,
     val showSubmitDialog: Boolean = false,
+    /** The exam time ran out: answering is locked, the attempt submits on its own and the
+     *  screen shows the "time is up" dialog instead of jumping straight to the result. */
+    val isTimeUp: Boolean = false,
     val isSubmitting: Boolean = false,
     val isSubmitted: Boolean = false,
     /** True only when this screen auto-submitted an attempt abandoned on a previous visit —
@@ -51,10 +55,15 @@ class TimedExamAttemptViewModel(
     private val submitTimedExamUseCase: SubmitTimedExamUseCase,
     private val autoSubmitAbandonedAttemptUseCase: AutoSubmitAbandonedAttemptUseCase,
     private val fetchTimedExamDurationUseCase: FetchTimedExamDurationUseCase,
-    private val fetchTimedExamWindowUseCase: FetchTimedExamWindowUseCase
+    private val fetchTimedExamWindowUseCase: FetchTimedExamWindowUseCase,
+    private val timeProvider: TimeProvider
 ) : ViewModel() {
     private val _state = MutableStateFlow(TimedExamAttemptUiState())
     val state: StateFlow<TimedExamAttemptUiState> = _state.asStateFlow()
+
+    /** When the time runs out (epoch millis). The clock runs on real time, so time spent with the
+     *  screen locked or the app in the background still counts. */
+    private var deadlineEpochMillis = 0L
 
     init { load() }
 
@@ -72,8 +81,10 @@ class TimedExamAttemptViewModel(
             val existingAnswers = fetchInProgressAnswersUseCase(examId)
             val durationMinutes = fetchTimedExamDurationUseCase(examId)
             val (_, windowEnd) = fetchTimedExamWindowUseCase(examId)
-            val remainingWindowSeconds = ((windowEnd - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+            val now = timeProvider.nowEpochMillis()
+            val remainingWindowSeconds = ((windowEnd - now) / 1000).toInt().coerceAtLeast(0)
             val totalSeconds = minOf(durationMinutes * 60, remainingWindowSeconds)
+            deadlineEpochMillis = now + totalSeconds * 1000L
 
             _state.update {
                 it.copy(
@@ -81,6 +92,7 @@ class TimedExamAttemptViewModel(
                     totalDurationSeconds = totalSeconds, timeRemainingSeconds = totalSeconds
                 )
             }
+            if (totalSeconds == 0) onTimeUp()
         }
     }
 
@@ -88,22 +100,32 @@ class TimedExamAttemptViewModel(
     fun selectAnswer(mcqId: String, optionId: String) {
         var accepted = false
         _state.update {
-            accepted = mcqId !in it.answers && !it.isSubmitted
+            accepted = mcqId !in it.answers && !it.isSubmitted && !it.isTimeUp
             if (accepted) it.copy(answers = it.answers + (mcqId to optionId)) else it
         }
         if (!accepted) return
         viewModelScope.launch { saveTimedExamAnswerUseCase(examId, kind, mcqId, optionId) }
     }
 
+    /** Re-reads the remaining time from the clock; called every second and when the screen returns. */
     fun tickTimer() {
         _state.update { s ->
-            if (s.timeRemainingSeconds <= 0 || s.isSubmitted) s
-            else s.copy(timeRemainingSeconds = s.timeRemainingSeconds - 1)
+            if (s.isLoading || s.isSubmitted) return@update s
+            val remaining = ((deadlineEpochMillis - timeProvider.nowEpochMillis() + 999) / 1000).toInt()
+            s.copy(timeRemainingSeconds = remaining.coerceIn(0, s.totalDurationSeconds))
         }
-        if (_state.value.timeRemainingSeconds <= 0 && !_state.value.isSubmitted) submitExam()
+        val s = _state.value
+        if (!s.isLoading && s.timeRemainingSeconds == 0) onTimeUp()
     }
 
-    fun showSubmitDialog() { _state.update { it.copy(showSubmitDialog = true) } }
+    /** Time is over: lock answering and submit without asking. */
+    private fun onTimeUp() {
+        if (_state.value.isSubmitted) return
+        _state.update { it.copy(isTimeUp = true, showSubmitDialog = false) }
+        submitExam()
+    }
+
+    fun showSubmitDialog() { _state.update { if (it.isTimeUp) it else it.copy(showSubmitDialog = true) } }
     fun dismissSubmitDialog() { _state.update { it.copy(showSubmitDialog = false) } }
 
     fun submitExam() {

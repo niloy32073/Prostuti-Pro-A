@@ -2,9 +2,9 @@ package com.prostuti.student.domain
 
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.ExamAttemptResultResponse
-import com.prostuti.student.data.repository.MCQExamRepository
+import com.prostuti.student.data.repository.ExamRepository
 
-class ListMyExamAttemptsUseCase(private val repository: MCQExamRepository) {
+class ListMyExamAttemptsUseCase(private val repository: ExamRepository) {
     suspend operator fun invoke(
         examId: String? = null,
         unfinished: Boolean = false,

@@ -18,6 +18,16 @@ fun examRemainingSeconds(startAtIso: String, durationMinutes: Int, nowEpochMilli
 }
 
 /**
+ * LIVE time left, but never past [windowClosesAtIso] — a group exam started late in its window ends
+ * with the window (GROUP_ROUTINE_PLAN.md §6.12). Null or unreadable = no window cap.
+ */
+fun liveRemainingSeconds(startAtIso: String, durationMinutes: Int, nowEpochMillis: Long, windowClosesAtIso: String?): Int {
+    val byDuration = examRemainingSeconds(startAtIso, durationMinutes, nowEpochMillis)
+    val closes = windowClosesAtIso?.let(::parseServerTimeMillis) ?: return byDuration
+    return minOf(byDuration.toLong(), ((closes - nowEpochMillis) / 1000).coerceAtLeast(0)).toInt()
+}
+
+/**
  * Epoch millis of a server timestamp, or null if it can't be read. Accepts ISO-8601 with an
  * offset (`2025-07-01T12:00:00Z`, `…+06:00`) and also without one
  * (`2026-10-29T13:50:22.024000`) — the backend stores times in UTC, so a missing offset means UTC.

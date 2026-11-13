@@ -16,7 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import coil3.compose.SubcomposeAsyncImage
 import androidx.compose.ui.unit.sp
 import com.prostuti.student.data.model.response.FetchPassageData
 import com.prostuti.student.ui.component.MathText
@@ -41,42 +44,70 @@ fun PassageCard(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        if (passage != null && (!passage.passageText.isNullOrBlank() || passage.passageImage != null)) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "অনুচ্ছেদ",
-                    style = ProstutiTypography.enLabelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (passage.passageImage != null) {
-                    // TODO: replace with AsyncImage(coil3) once Coil is added as a dependency
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "ছবি লোড হচ্ছে…",
-                            style = ProstutiTypography.bnLabelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                if (!passage.passageText.isNullOrBlank()) {
-                    MathText(
-                        text = passage.passageText,
-                        style = ProstutiTypography.bnBodyMedium,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
+        if (passage != null && (!passage.passageText.isNullOrBlank() || !passage.passageImage.isNullOrBlank())) {
+            PassageBlock(passage = passage)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
 
         content()
     }
 }
+
+/** A passage's [label], then its image and/or text — whichever it has. Shows nothing for an empty passage. */
+@Composable
+fun PassageBlock(passage: FetchPassageData, modifier: Modifier = Modifier, label: String = "অনুচ্ছেদ") {
+    if (passage.passageText.isNullOrBlank() && passage.passageImage.isNullOrBlank()) return
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = label,
+            style = ProstutiTypography.enLabelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (!passage.passageImage.isNullOrBlank()) {
+            PassageImage(imageUrl = passage.passageImage)
+        }
+        if (!passage.passageText.isNullOrBlank()) {
+            MathText(
+                text = passage.passageText,
+                style = ProstutiTypography.bnBodyMedium,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+/** The passage picture at full card width and its own aspect ratio; a status box while it loads or if it fails. */
+@Composable
+private fun PassageImage(imageUrl: String) {
+    SubcomposeAsyncImage(
+        model = imageUrl,
+        contentDescription = "অনুচ্ছেদের ছবি",
+        contentScale = ContentScale.FillWidth,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .testTag(PASSAGE_IMAGE_TAG),
+        loading = { PassageImageStatus(text = "ছবি লোড হচ্ছে…") },
+        error = { PassageImageStatus(text = "ছবি লোড করা যায়নি") }
+    )
+}
+
+@Composable
+private fun PassageImageStatus(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = ProstutiTypography.bnLabelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+const val PASSAGE_IMAGE_TAG = "passage_image"

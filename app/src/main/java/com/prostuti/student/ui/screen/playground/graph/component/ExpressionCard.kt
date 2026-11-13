@@ -61,9 +61,9 @@ import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.domain.graph.GraphErrorKind
 import com.prostuti.student.domain.graph.GraphLineKind
 import com.prostuti.student.domain.graph.GraphNumberFormat
-import com.prostuti.student.ui.component.MathText
 import com.prostuti.student.ui.screen.playground.graph.GraphLineState
 import com.prostuti.student.ui.screen.playground.graph.LineStatus
+import com.prostuti.student.ui.screen.playground.graph.TableState
 import com.prostuti.student.ui.theme.MonoFontFamily
 import kotlinx.coroutines.awaitCancellation
 
@@ -87,6 +87,7 @@ fun ExpressionCard(
     onTogglePlay: () -> Unit,
     onAddSlider: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onTableChange: (TableState) -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(14.dp)
@@ -107,14 +108,29 @@ fun ExpressionCard(
                 .padding(horizontal = 6.dp)
                 .heightIn(min = 40.dp),
         ) {
-            if (focused) {
+            val table = line.table
+            val isNote = table == null && line.text.trimStart().startsWith("#")
+            if (table != null) {
+                TableEditor(table, status, onTableChange, Modifier.padding(top = 6.dp).testTag("table_editor_$index"))
+            } else if (isNote && !focused) {
+                // A note: plain words, tap to edit.
+                Text(
+                    line.text.trimStart().removePrefix("#").trim(),
+                    style = ProstutiTypography.bnBodyMedium,
+                    color = scheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onFocus)
+                        .padding(vertical = 8.dp)
+                        .testTag("expression_note_$index"),
+                )
+            } else if (focused) {
                 Editor(line, useSystemKeyboard, onTextChange)
                 if (status.latex != null && line.text.isNotBlank()) {
-                    MathText(
-                        text = "$" + status.latex + "$",
+                    LineLatex(
+                        latex = status.latex,
                         color = scheme.onSurfaceVariant,
                         fontSize = 15.sp,
-                        horizontalPadding = 0.dp,
                         modifier = Modifier.padding(top = 4.dp).testTag("expression_preview"),
                     )
                 }
@@ -133,17 +149,12 @@ fun ExpressionCard(
                             color = scheme.onSurfaceVariant.copy(alpha = 0.7f),
                             style = ProstutiTypography.bnBodyMedium,
                         )
-                        status.latex != null -> MathText(
-                            text = "$" + status.latex + "$",
-                            color = scheme.onSurface,
-                            fontSize = 18.sp,
-                            horizontalPadding = 0.dp,
-                        )
+                        status.latex != null -> LineLatex(status.latex, scheme.onSurface, 18.sp)
                         else -> Text(line.text, fontFamily = MonoFontFamily, color = scheme.onSurface)
                     }
                 }
             }
-            StatusArea(line, status, playing, onSliderChange, onTogglePlay, onAddSlider)
+            if (table == null && !isNote) StatusArea(line, status, playing, onSliderChange, onTogglePlay, onAddSlider)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             IconButton(onClick = onDelete, modifier = Modifier.size(40.dp).testTag("expression_delete_$index")) {
@@ -273,6 +284,11 @@ private fun StatusArea(
             ValueText(status)
         }
         GraphLineKind.VALUE -> ValueText(status)
+        GraphLineKind.VOLUME, GraphLineKind.REVOLUTION -> {
+            ValueText(status)
+            val note = if (status.kind == GraphLineKind.VOLUME) R.string.graph_double_integral_note else R.string.graph_volume_note
+            Text(stringResource(note), style = ProstutiTypography.bnBodyMedium, color = scheme.onSurfaceVariant)
+        }
         GraphLineKind.INTEGRAL -> {
             ValueText(status)
             val note = if (status.integralBetweenCurves) R.string.graph_between_note else R.string.graph_area_note
@@ -302,7 +318,10 @@ private fun ValueText(status: LineStatus) {
     val text = if (value.isNaN()) {
         "= " + stringResource(R.string.graph_value_undefined)
     } else {
-        val approx = if (status.kind == GraphLineKind.INTEGRAL) "≈ " else "= "
+        val approx = when (status.kind) {
+            GraphLineKind.INTEGRAL, GraphLineKind.VOLUME, GraphLineKind.REVOLUTION -> "≈ "
+            else -> "= "
+        }
         approx + GraphNumberFormat.format(value) + (status.exact?.let { "  (= $it)" } ?: "")
     }
     Row(verticalAlignment = Alignment.CenterVertically) {

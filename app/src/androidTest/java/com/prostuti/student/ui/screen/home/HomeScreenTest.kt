@@ -1,5 +1,9 @@
 package com.prostuti.student.ui.screen.home
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -142,4 +146,25 @@ class HomeScreenTest {
         composeTestRule.waitForIdle()
         assertEquals(0, composeTestRule.onAllNodesWithTag(CONTINUE_ATTEMPT_CARD_TAG).fetchSemanticsNodes().size)
     }
+
+    @Test
+    fun homeScreen_groupMenuFollowsTheGroupScope() {
+        fun home(vararg scopes: String) = HomeViewModel(
+            GetResumablePracticeAttemptUseCase(FakeExamAttemptRepositoryForEngineTest(), FakeAttemptProgressRepository()),
+            GetMeUseCase(FakeUserRepository(listOf(ApiResponse.Success(FakeUserRepository.me().copy(scopes = scopes.toList())))))
+        )
+        var withScope by mutableStateOf(true)
+        composeTestRule.setContent {
+            ProstutiTheme {
+                key(withScope) { HomeScreen(viewModel = if (withScope) home("group:use", "routine:use") else home("exam:read")) }
+            }
+        }
+        val group = context.getString(R.string.qm_group)
+        composeTestRule.onNodeWithText(group).assertExists()
+        withScope = false
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(group).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.qm_routine)).assertExists()
+    }
 }
+

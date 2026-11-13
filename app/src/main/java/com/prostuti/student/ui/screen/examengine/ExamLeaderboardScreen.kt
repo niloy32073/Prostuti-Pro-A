@@ -18,7 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material3.CircularProgressIndicator
+import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -42,6 +42,8 @@ fun ExamLeaderboardScreen(
     examId: String,
     titleBn: String,
     onBack: () -> Unit,
+    /** False when shown beside the exam result (list-detail): the result stays on screen, so no back arrow. */
+    showBack: Boolean = true,
     viewModel: ExamLeaderboardViewModel = koinViewModel(parameters = { parametersOf(examId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -61,8 +63,10 @@ fun ExamLeaderboardScreen(
                         .padding(horizontal = 16.dp, vertical = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    BackButton(onClick = onBack)
-                    Spacer(modifier = Modifier.width(12.dp))
+                    if (showBack) {
+                        BackButton(onClick = onBack)
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
                     Column {
                         Text(
                             text = "লিডারবোর্ড",
@@ -80,7 +84,7 @@ fun ExamLeaderboardScreen(
 
                 when {
                     state.isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        ProstutiSpinner()
                     }
 
                     state.notReadyYet -> Box(

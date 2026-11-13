@@ -16,6 +16,14 @@ import com.prostuti.student.data.repository.fake.FakeAttemptProgressRepository
 import com.prostuti.student.domain.SubmitExamAttemptUseCase
 import com.prostuti.student.domain.SubmitExamResponsesUseCase
 import com.prostuti.student.domain.SubmitMcqReportUseCase
+import com.prostuti.student.domain.ObserveReportedIdsUseCase
+import com.prostuti.student.data.repository.fake.FakeReportRepository
+import com.prostuti.student.data.model.enums.BookmarkResourceType
+import com.prostuti.student.data.model.enums.ReportResourceType
+import com.prostuti.student.domain.AddBookmarkUseCase
+import com.prostuti.student.domain.ObserveBookmarkedIdsUseCase
+import com.prostuti.student.domain.RemoveBookmarkUseCase
+import com.prostuti.student.data.repository.fake.FakeBookmarkRepository
 import com.prostuti.student.data.model.response.ExamResponseAckResponse
 import com.prostuti.student.data.repository.fake.FakeExamAttemptRepositoryForEngineTest.Companion.DEFAULT_START_AT_MILLIS
 import com.prostuti.student.util.FakeTimeProvider
@@ -42,6 +50,8 @@ class ExamAttemptViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var fakeRepo: FakeExamAttemptRepositoryForEngineTest
     private lateinit var progressRepo: FakeAttemptProgressRepository
+    private lateinit var bookmarkRepo: FakeBookmarkRepository
+    private lateinit var reportRepo: FakeReportRepository
     // Pinned to the fake attempt's start_at, so the 10-minute exam has its full time left.
     private val clock = FakeTimeProvider(now = DEFAULT_START_AT_MILLIS)
 
@@ -51,6 +61,8 @@ class ExamAttemptViewModelTest {
         ExamAttemptStore.consume() // defensively drain any leftover stash from a previous test
         fakeRepo = FakeExamAttemptRepositoryForEngineTest()
         progressRepo = FakeAttemptProgressRepository()
+        bookmarkRepo = FakeBookmarkRepository()
+        reportRepo = FakeReportRepository()
     }
 
     @After
@@ -68,7 +80,11 @@ class ExamAttemptViewModelTest {
         clearLocalAttemptElapsedUseCase = ClearLocalAttemptElapsedUseCase(progressRepo),
         submitExamResponsesUseCase = SubmitExamResponsesUseCase(fakeRepo),
         submitExamAttemptUseCase = SubmitExamAttemptUseCase(fakeRepo),
-        submitMcqReportUseCase = SubmitMcqReportUseCase(fakeRepo),
+        submitMcqReportUseCase = SubmitMcqReportUseCase(reportRepo),
+        observeBookmarkedIdsUseCase = ObserveBookmarkedIdsUseCase(bookmarkRepo),
+        addBookmarkUseCase = AddBookmarkUseCase(bookmarkRepo),
+        removeBookmarkUseCase = RemoveBookmarkUseCase(bookmarkRepo),
+        observeReportedIdsUseCase = ObserveReportedIdsUseCase(reportRepo),
         timeProvider = clock
     )
 
@@ -138,7 +154,7 @@ class ExamAttemptViewModelTest {
     }
 
     @Test
-    fun `tickTimer decrements remaining time and opens the submit dialog at zero`() = runTest {
+    fun `reaching zero submits on its own and shows the time-up state instead of asking`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
         val viewModel = buildViewModel()
         advanceUntilIdle()
@@ -148,7 +164,62 @@ class ExamAttemptViewModelTest {
 
         val finalState = viewModel.state.value
         assertEquals(0, finalState.timeRemainingSeconds)
-        assertTrue(finalState.showSubmitDialog)
+        assertTrue(finalState.isTimeUp)
+        assertTrue(finalState.isSubmitted)
+        assertFalse(finalState.showSubmitDialog)
+    }
+
+    @Test
+    fun `time up closes an open submit dialog and keeps it closed`() = runTest {
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+        repeat(599) { viewModel.tickTimer() }
+        viewModel.showSubmitDialog()
+
+        viewModel.tickTimer()
+        viewModel.showSubmitDialog()
+
+        assertTrue(viewModel.state.value.isTimeUp)
+        assertFalse(viewModel.state.value.showSubmitDialog)
+    }
+
+    @Test
+    fun `answers are locked once the time is up even if the submit failed`() = runTest {
+        fakeRepo.submitAttemptResult = ApiResponse.Failure(message = "Network error", errorCode = "NETWORK_ERROR")
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+        repeat(600) { viewModel.tickTimer() }
+        assertFalse(viewModel.state.value.isSubmitted)
+
+        viewModel.selectAnswer("mcq1", "o1")
+
+        assertTrue(viewModel.state.value.selectedAnswers.isEmpty())
+        assertTrue(viewModel.state.value.isTimeUp)
+    }
+
+    @Test
+    fun `a failed time-up submit can be retried`() = runTest {
+        fakeRepo.submitAttemptResult = ApiResponse.Failure(message = "Network error", errorCode = "NETWORK_ERROR")
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+        repeat(600) { viewModel.tickTimer() }
+        assertEquals("Network error", viewModel.state.value.errors["SUBMIT"])
+
+        fakeRepo.submitAttemptResult = ApiResponse.Success(FakeExamAttemptRepositoryForEngineTest.defaultResult())
+        viewModel.submitExam()
+
+        assertTrue(viewModel.state.value.isSubmitted)
+        assertTrue(viewModel.state.value.isTimeUp)
+    }
+
+    @Test
+    fun `practice time-up saves the full time used before submitting`() = runTest {
+        fakeRepo.submitAttemptResult = ApiResponse.Failure(message = "Network error", errorCode = "NETWORK_ERROR")
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+        repeat(600) { viewModel.tickTimer() }
+
+        assertEquals(600_000L, progressRepo.saved["attempt1"])
     }
 
     @Test
@@ -221,9 +292,33 @@ class ExamAttemptViewModelTest {
 
         viewModel.toggleFavorite("mcq1")
         assertTrue("mcq1" in viewModel.state.value.favoriteMcqIds)
+        assertEquals(listOf(BookmarkResourceType.MCQ to "mcq1"), bookmarkRepo.added)
 
         viewModel.toggleFavorite("mcq1")
         assertFalse("mcq1" in viewModel.state.value.favoriteMcqIds)
+        assertEquals(listOf(BookmarkResourceType.MCQ to "mcq1"), bookmarkRepo.removed)
+    }
+
+    @Test
+    fun `hearts start filled for mcqs already bookmarked`() = runTest {
+        bookmarkRepo.bookmarks.value = listOf(FakeBookmarkRepository.bookmark("mcq1"))
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        assertEquals(setOf("mcq1"), viewModel.state.value.favoriteMcqIds)
+    }
+
+    @Test
+    fun `a failed bookmark call flips the heart back and shows the error`() = runTest {
+        bookmarkRepo.addResult = ApiResponse.Failure(message = "No internet connection", errorCode = "NETWORK_ERROR")
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        viewModel.toggleFavorite("mcq1")
+        advanceUntilIdle()
+
+        assertFalse("mcq1" in viewModel.state.value.favoriteMcqIds)
+        assertEquals("No internet connection", viewModel.state.value.errors["BOOKMARK"])
     }
 
     @Test
@@ -244,7 +339,7 @@ class ExamAttemptViewModelTest {
     @Test
     fun `submitReport failure populates REPORT error`() = runTest {
         fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
-        fakeRepo.reportMcqResult = ApiResponse.Failure(message = "Report failed", errorCode = "ERR")
+        reportRepo.reportResult = ApiResponse.Failure(message = "Report failed", errorCode = "ERR")
         val viewModel = buildViewModel()
         advanceUntilIdle()
 
@@ -252,6 +347,31 @@ class ExamAttemptViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals("Report failed", viewModel.state.value.errors["REPORT"])
+        assertFalse("mcq1" in viewModel.state.value.reportedMcqIds)
+    }
+
+    @Test
+    fun `a sent report marks the mcq reported and a second report is not sent`() = runTest {
+        fakeRepo.attemptQuestionsResult = ApiResponse.Success(defaultAttemptData())
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        viewModel.submitReport("mcq1", reason = "wrong_answer", description = "")
+        advanceUntilIdle()
+        viewModel.submitReport("mcq1", reason = "other", description = "")
+        advanceUntilIdle()
+
+        assertEquals(setOf("mcq1"), viewModel.state.value.reportedMcqIds)
+        assertEquals(1, reportRepo.reportCalls.size)
+    }
+
+    @Test
+    fun `mcqs reported earlier start reported`() = runTest {
+        reportRepo.reported.value = setOf(ReportResourceType.MCQ to "mcq1")
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        assertEquals(setOf("mcq1"), viewModel.state.value.reportedMcqIds)
     }
 
     @Test
@@ -355,6 +475,7 @@ class ExamAttemptViewModelTest {
 
         assertEquals(0, viewModel.state.value.timeRemainingSeconds)
         assertTrue(viewModel.state.value.isSubmitted)
+        assertTrue(viewModel.state.value.isTimeUp)
     }
 
     @Test
@@ -379,6 +500,21 @@ class ExamAttemptViewModelTest {
 
         assertEquals(180, viewModel.state.value.timeRemainingSeconds)
         assertFalse(viewModel.state.value.showSubmitDialog)
+        assertFalse(viewModel.state.value.isTimeUp)
+    }
+
+    @Test
+    fun `resyncTimer submits a live attempt whose time ran out while the screen was locked`() = runTest {
+        ExamAttemptStore.put(defaultAttemptData(mode = AttemptMode.LIVE))
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        clock.now = DEFAULT_START_AT_MILLIS + 90 * 60_000 // an hour and a half later
+        viewModel.resyncTimer()
+
+        assertEquals(0, viewModel.state.value.timeRemainingSeconds)
+        assertTrue(viewModel.state.value.isTimeUp)
+        assertTrue(viewModel.state.value.isSubmitted)
     }
 
     // ── Submit ─────────────────────────────────────────────────────────────────────────────
@@ -525,6 +661,18 @@ class ExamAttemptViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.state.value.isSubmitted)
+        assertTrue(viewModel.state.value.isTimeUp)
+    }
+
+    @Test
+    fun `practice reopened with time left resumes without submitting`() = runTest {
+        progressRepo.saved["attempt1"] = 420_000 // 7 of 10 minutes used before the app was closed
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        assertEquals(180, viewModel.state.value.timeRemainingSeconds)
+        assertFalse(viewModel.state.value.isSubmitted)
+        assertFalse(viewModel.state.value.isTimeUp)
     }
 
     @Test
@@ -583,6 +731,7 @@ class ExamAttemptViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.state.value.isSubmitted)
+        assertFalse(viewModel.state.value.isTimeUp) // time was left — it ended because the student left
     }
 
     @Test
