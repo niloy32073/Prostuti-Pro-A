@@ -35,18 +35,21 @@ class AuthRepositoryImpl(
     override suspend fun checkUser(body: CheckUserRequest): ApiResponse<CheckUserResponse> =
         authApiService.checkUser(body)
 
-    override suspend fun passwordBasedSignUp(body: PasswordBasedSignUpRequest): ApiResponse<PasswordBasedSignUpResponse> =
-        authApiService.passwordBasedSignUp(body)
+    override suspend fun passwordBasedSignUp(body: PasswordBasedSignUpRequest): ApiResponse<PasswordBasedSignUpResponse> {
+        val response =  authApiService.passwordBasedSignUp(body)
+        persistTokensOnSignUpSuccess(response)
+        return response
+    }
 
     override suspend fun passwordBasedSignIn(body: PasswordBasedSignInRequest): ApiResponse<LogInResponse> {
         val response = authApiService.passwordBasedSignIn(body)
-        persistTokensOnSuccess(response)
+        persistTokensOnLogInSuccess(response)
         return response
     }
 
     override suspend fun socialSignIn(provider: SocialProvider, token: String): ApiResponse<LogInResponse> {
         val response = authApiService.socialSignIn(SocialSignInRequest(provider = provider.name, token = token))
-        persistTokensOnSuccess(response)
+        persistTokensOnLogInSuccess(response)
         return response
     }
 
@@ -64,11 +67,27 @@ class AuthRepositoryImpl(
 
     override suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<LogInResponse> {
         val response = authApiService.resetPassword(body)
-        persistTokensOnSuccess(response)
+        persistTokensOnLogInSuccess(response)
         return response
     }
 
-    private suspend fun persistTokensOnSuccess(response: ApiResponse<LogInResponse>) {
+    private suspend fun persistTokensOnLogInSuccess(response: ApiResponse<LogInResponse>) {
+        if (response is ApiResponse.Success) {
+            // A new session never starts with someone else's cached profile — an expired refresh
+            // token logs the user out without going through Settings' logout.
+            currentUserDao.deleteAll()
+            storageRepository.putString(key = PrefKeys.JWT_TOKEN, value = response.data.accessToken)
+            storageRepository.putString(key = PrefKeys.JWT_REFRESH_TOKEN, value = response.data.refreshToken)
+            // Every new session (sign-in, sign-up's sign-in, social, password reset) re-binds this
+            // device's push token to the user now signed in.
+            appScope.launch {
+                val push = notificationRepository.registerPushToken()
+                if (push is ApiResponse.Failure) Timber.w("FCM token upload failed: %s", push.errorCode)
+            }
+        }
+    }
+
+    private suspend fun persistTokensOnSignUpSuccess(response: ApiResponse<PasswordBasedSignUpResponse>) {
         if (response is ApiResponse.Success) {
             // A new session never starts with someone else's cached profile — an expired refresh
             // token logs the user out without going through Settings' logout.

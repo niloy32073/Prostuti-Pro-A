@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LogInResponse(
     @SerialName("access_token") val accessToken: String,
-    val email: String,
+    val email: String? = null,
     @SerialName("expires_in") val expiresIn: Int,
     @SerialName("first_name") val firstName: String,
     @SerialName("is_email_verified") val isEmailVerified: Boolean,

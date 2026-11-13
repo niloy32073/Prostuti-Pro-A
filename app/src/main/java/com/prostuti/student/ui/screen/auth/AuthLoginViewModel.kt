@@ -1,4 +1,4 @@
-package com.prostuti.student.ui.screen.auth
+ package com.prostuti.student.ui.screen.auth
 
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel

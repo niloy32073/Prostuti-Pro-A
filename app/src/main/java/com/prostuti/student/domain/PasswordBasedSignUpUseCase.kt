@@ -2,6 +2,7 @@ package com.prostuti.student.domain
 
 import com.prostuti.student.data.model.request.PasswordBasedSignUpRequest
 import com.prostuti.student.data.model.response.ApiResponse
+import com.prostuti.student.data.model.response.LogInResponse
 import com.prostuti.student.data.model.response.PasswordBasedSignUpResponse
 import com.prostuti.student.data.repository.AuthRepository
 
