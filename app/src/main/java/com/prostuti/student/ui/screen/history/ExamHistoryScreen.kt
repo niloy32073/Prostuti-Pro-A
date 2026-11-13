@@ -219,7 +219,7 @@ private fun HistoryHeader(totalText: String, showCount: Boolean, onBack: () -> U
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BackButton(onClick = dropUnlessResumed { onBack() })
+        BackButton(onClick = onBack)
         Spacer(Modifier.width(12.dp))
         Column {
             Text(

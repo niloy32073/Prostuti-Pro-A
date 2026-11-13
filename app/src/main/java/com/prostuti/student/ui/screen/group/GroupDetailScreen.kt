@@ -95,6 +95,8 @@ fun GroupDetailScreen(
     onSeeAllPastExams: () -> Unit,
     /** The group is gone, or I just left it: close every screen of it. */
     onGroupClosed: () -> Unit,
+    /** False beside the group list (medium and wider), which is already on screen. */
+    showBack: Boolean = true,
     viewModel: GroupDetailViewModel = koinViewModel(parameters = { parametersOf(groupId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -133,6 +135,7 @@ fun GroupDetailScreen(
         state = state,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
+        showBack = showBack,
         onSeeAllMembers = onNavigateToMembers,
         onOpenSettings = onNavigateToSettings,
         onOpenJoinRequests = onNavigateToJoinRequests,
@@ -166,6 +169,7 @@ fun GroupDetailContent(
     state: GroupDetailUiState,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
+    showBack: Boolean = true,
     onSeeAllMembers: () -> Unit,
     onOpenSettings: () -> Unit = {},
     onOpenJoinRequests: () -> Unit = {},
@@ -236,8 +240,10 @@ fun GroupDetailContent(
                     modifier = Modifier.fillMaxWidth().padding(top = 18.dp, start = 16.dp, end = 16.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    BackButton(onClick = onBack)
-                    Spacer(modifier = Modifier.width(12.dp))
+                    if (showBack) {
+                        BackButton(onClick = onBack)
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = group.name, style = ProstutiTypography.bnTitleLarge, color = MaterialTheme.colorScheme.onSurface,
@@ -339,7 +345,7 @@ private fun PastExamsPreview(state: GroupDetailUiState, onOpen: (String) -> Unit
         }
         state.pastSlots.forEach { slot ->
             val title = slot.title ?: topicLabelText(state.labels[slot.id] ?: TopicLabel.Count(slot.topicIds.size))
-            PastExamRow(slot, title, state.pastStats[slot.id], onClick = { onOpen(slot.id) })
+            PastExamRow(slot, title, state.pastStats[slot.id], onClick = dropUnlessResumed { onOpen(slot.id) })
         }
     }
 }

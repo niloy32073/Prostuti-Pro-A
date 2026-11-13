@@ -260,14 +260,14 @@ private fun ResultContent(
                 )
             } else {
                 OutlinedButton(
-                    onClick = onViewAnswerSheet,
+                    onClick = dropUnlessResumed { onViewAnswerSheet() },
                     shape = RoundedCornerShape(50.dp),
                     modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
                     Text(text = stringResource(R.string.result_view_answer_sheet), style = ProstutiTypography.bnBodyLarge)
                 }
                 OutlinedButton(
-                    onClick = onViewAnalysis,
+                    onClick = dropUnlessResumed { onViewAnalysis() },
                     shape = RoundedCornerShape(50.dp),
                     modifier = Modifier.fillMaxWidth().height(48.dp).testTag(RESULT_ANALYSIS_BUTTON_TAG)
                 ) {
@@ -275,7 +275,7 @@ private fun ResultContent(
                 }
                 if (result.mode == AttemptMode.LIVE) {
                     OutlinedButton(
-                        onClick = onViewLeaderboard,
+                        onClick = dropUnlessResumed { onViewLeaderboard() },
                         shape = RoundedCornerShape(50.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
@@ -340,7 +340,7 @@ private fun ResultPaneList(
             subtitle = stringResource(R.string.result_pane_answer_sheet_sub),
             icon = Icons.Outlined.Quiz,
             selected = selected == ResultPane.ANSWER_SHEET,
-            onClick = onViewAnswerSheet,
+            onClick = dropUnlessResumed { onViewAnswerSheet() },
             modifier = Modifier.testTag(RESULT_ANSWER_SHEET_ROW_TAG)
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -349,7 +349,7 @@ private fun ResultPaneList(
             subtitle = stringResource(R.string.result_pane_analysis_sub),
             icon = Icons.Outlined.Insights,
             selected = selected == ResultPane.ANALYSIS,
-            onClick = onViewAnalysis,
+            onClick = dropUnlessResumed { onViewAnalysis() },
             modifier = Modifier.testTag(RESULT_ANALYSIS_BUTTON_TAG)
         )
         if (isLive) {
@@ -359,7 +359,7 @@ private fun ResultPaneList(
                 subtitle = stringResource(R.string.result_pane_leaderboard_sub),
                 icon = Icons.Outlined.Leaderboard,
                 selected = selected == ResultPane.LEADERBOARD,
-                onClick = onViewLeaderboard,
+                onClick = dropUnlessResumed { onViewLeaderboard() },
                 modifier = Modifier.testTag(RESULT_LEADERBOARD_ROW_TAG)
             )
         }

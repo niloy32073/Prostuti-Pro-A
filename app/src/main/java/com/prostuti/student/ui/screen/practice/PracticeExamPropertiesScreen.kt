@@ -42,7 +42,6 @@ import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 private const val PRACTICE_EXAM_TITLE = "প্র্যাকটিস এক্সাম"
 
@@ -55,12 +54,12 @@ private val sourceLabels = mapOf(
 
 @Composable
 fun PracticeExamPropertiesScreen(
-    subjectIds: List<String>,
-    chapterIds: List<String>,
-    topicIds: List<String>,
+    scope: PracticeScope,
     onBack: () -> Unit,
     onExamGenerated: (attemptId: String, titleBn: String) -> Unit,
-    viewModel: PracticeExamPropertiesViewModel = koinViewModel(parameters = { parametersOf(subjectIds, chapterIds, topicIds) })
+    /** False beside the picks (supporting pane, medium and wider), which are already on screen. */
+    showBack: Boolean = true,
+    viewModel: PracticeExamPropertiesViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -83,8 +82,10 @@ fun PracticeExamPropertiesScreen(
                         .padding(horizontal = 16.dp, vertical = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    BackButton(onClick = onBack)
-                    Spacer(modifier = Modifier.width(12.dp))
+                    if (showBack) {
+                        BackButton(onClick = onBack)
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
                     Column {
                         Text(
                             text = "এক্সাম প্রপার্টি",
@@ -92,7 +93,7 @@ fun PracticeExamPropertiesScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "${topicIds.size}টি টপিক নির্বাচিত · ধাপ ৩/৩",
+                            text = "${scope.topicIds.size}টি টপিক নির্বাচিত · ধাপ ৩/৩",
                             style = ProstutiTypography.enLabelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
@@ -216,7 +217,7 @@ fun PracticeExamPropertiesScreen(
                             .padding(horizontal = 16.dp, vertical = 16.dp)
                     ) {
                         Button(
-                            onClick = viewModel::generateExam,
+                            onClick = { viewModel.generateExam(scope) },
                             enabled = !state.isGenerating,
                             shape = RoundedCornerShape(50.dp),
                             modifier = Modifier.fillMaxWidth().height(48.dp)

@@ -31,6 +31,7 @@ import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun AuthLoginScreen(
@@ -39,6 +40,8 @@ fun AuthLoginScreen(
     onBack: () -> Unit,
     onForgotPassword: (identifier: String) -> Unit,
     onSignedIn: () -> Unit,
+    /** False beside the Auth start pane (medium and wider), which is already on screen. */
+    showBack: Boolean = true,
     viewModel: AuthLoginViewModel = koinViewModel { parametersOf(identifier, firstName) }
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -56,8 +59,10 @@ fun AuthLoginScreen(
             overlayPadding = padding
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-                Column(modifier = Modifier.padding(top = 20.dp, start = 16.dp, end = 16.dp)) {
-                    BackButton(onClick = onBack)
+                if (showBack) {
+                    Column(modifier = Modifier.padding(top = 20.dp, start = 16.dp, end = 16.dp)) {
+                        BackButton(onClick = onBack)
+                    }
                 }
 
                 Column(
@@ -96,7 +101,7 @@ fun AuthLoginScreen(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onForgotPassword(identifier) },
+                                .clickable(onClick = dropUnlessResumed { onForgotPassword(identifier) }),
                             textAlign = TextAlign.End
                         )
                     }

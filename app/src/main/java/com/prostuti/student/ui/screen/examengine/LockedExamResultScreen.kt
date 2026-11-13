@@ -49,6 +49,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import java.time.Duration
 import java.time.Instant
+import androidx.lifecycle.compose.dropUnlessResumed
 
 const val TAG_LOCKED_RESULT = "locked_result"
 
@@ -132,7 +133,7 @@ fun LockedExamResultContent(titleBn: String, remaining: Duration, timeTakenSecon
                     Text(stringResource(R.string.locked_answer_sheet), style = ProstutiTypography.bnLabelLarge)
                 }
             }
-            PrimaryButton(text = stringResource(R.string.locked_back), onClick = onBack, modifier = Modifier.padding(16.dp))
+            PrimaryButton(text = stringResource(R.string.locked_back), onClick = dropUnlessResumed { onBack() }, modifier = Modifier.padding(16.dp))
         }
     }
 }

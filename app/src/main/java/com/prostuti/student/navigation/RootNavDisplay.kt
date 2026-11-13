@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Groups
 import com.prostuti.student.ui.screen.notification.NotificationsScreen
 import com.prostuti.student.domain.notification.NotificationTarget
 import org.koin.compose.koinInject
+import timber.log.Timber
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,9 +18,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
+import androidx.compose.material3.adaptive.navigation3.rememberSupportingPaneSceneStrategy
+import androidx.compose.material3.adaptive.navigation3.SupportingPaneSceneStrategy
+import androidx.compose.material3.adaptive.navigation.BackNavigationBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -76,6 +81,8 @@ import com.prostuti.student.ui.screen.live.LiveExamDetailScreen
 import com.prostuti.student.ui.screen.live.LiveExamListScreen
 import com.prostuti.student.ui.screen.practice.PracticeChapterSelectScreen
 import com.prostuti.student.ui.screen.practice.PracticeExamPropertiesScreen
+import com.prostuti.student.ui.screen.practice.PracticeFlowViewModel
+import com.prostuti.student.ui.screen.practice.PracticeScope
 import com.prostuti.student.ui.screen.practice.PracticeSubjectChapterScreen
 import com.prostuti.student.ui.screen.practice.PracticeSubjectSelectScreen
 import com.prostuti.student.ui.screen.playground.PlaygroundHubScreen
@@ -111,10 +118,39 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
         calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(windowAdaptiveInfo)
     }
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>(directive = directive)
-    // A result screen shown right beside its exam result (medium and wider) needs no back arrow.
+    // The practice builder's exam properties sit beside its picks only when there is room for both:
+    // expanded width and at least medium height. Medium windows (a tablet upright) and a phone on its
+    // side get them as a screen of their own, after the combined subjects + chapters screen.
+    val practicePaneDirective = remember(windowAdaptiveInfo) {
+        val wsc = windowAdaptiveInfo.windowSizeClass
+        val roomForPane = wsc.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) &&
+            wsc.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)
+        // Side by side only: the default directive would stack the two panes on a tall medium window.
+        calculatePaneScaffoldDirective(windowAdaptiveInfo).copy(
+            maxHorizontalPartitions = if (roomForPane) 2 else 1,
+            maxVerticalPartitions = 1,
+        )
+    }
+    // Back closes the supporting pane first.
+    val supportingPaneStrategy = rememberSupportingPaneSceneStrategy<NavKey>(
+        backNavigationBehavior = BackNavigationBehavior.PopUntilCurrentDestinationChange,
+        directive = practicePaneDirective,
+    )
+    val sceneStrategies = remember(listDetailStrategy, supportingPaneStrategy) { listOf(listDetailStrategy, supportingPaneStrategy) }
+    // Pushes unless the same key is already on top: a double tap that lands before the screen's
+    // lifecycle drops (dropUnlessResumed can't see it yet) never opens a screen twice.
+    fun push(key: NavKey) {
+        if (backStack.lastOrNull() != key) backStack.add(key)
+    }
+    // A result screen shown right beside its exam result needs no back arrow.
+    @Composable
     fun isBesideResult(route: RootRoute): Boolean =
-        windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) &&
-            backStack.getOrNull(backStack.lastIndexOf(route) - 1) is ExamResult
+        isShownBesideList() && backStack.getOrNull(backStack.lastIndexOf(route) - 1) is ExamResult
+    // A detail pane whose Back lands on the list beside it hides its arrow (the list is already on screen).
+    // Deeper screens (members, calendar, OTP…) keep theirs: Back takes them to the previous detail.
+    @Composable
+    fun isRightBesideList(route: RootRoute, list: RootRoute): Boolean =
+        isShownBesideList() && backStack.getOrNull(backStack.lastIndexOf(route) - 1) == list
 
     OpenAppLinks(backStack)
 
@@ -123,9 +159,10 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
         backStack = backStack,
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
-            rememberViewModelStoreNavEntryDecorator()
+            rememberViewModelStoreNavEntryDecorator(),
+            rememberFlowViewModelStoreNavEntryDecorator()
         ),
-        sceneStrategies = listOf(listDetailStrategy),
+        sceneStrategies = sceneStrategies,
         // Never pop the last entry — it would hand NavDisplay an empty backstack and crash.
         // Intro and Main are each, at times, the sole entry; Auth guards itself with its own
         // BackHandler (exit-confirmation dialog) before a hardware back press gets here.
@@ -134,7 +171,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
             entry<Intro> {
                 OnboardingScreen(onFinished = {
                     backStack.clear()
-                    backStack.add(Auth)
+                    push(Auth)
                 })
             }
             entry<Auth>(
@@ -144,9 +181,9 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
             ) {
                 AuthStartScreen(
                     onNavigateToLogin = { identifier, firstName ->
-                        backStack.add(SignIn(identifier, firstName))
+                        push(SignIn(identifier, firstName))
                     },
-                    onNavigateToSignup = { identifier -> backStack.add(SignUp(identifier)) }
+                    onNavigateToSignup = { identifier -> push(SignUp(identifier)) }
                 )
             }
             entry<SignIn>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
@@ -154,18 +191,20 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     identifier = route.identifier,
                     firstName = route.firstName,
                     onBack = { backStack.removeLastOrNull() },
-                    onForgotPassword = { id -> backStack.add(ResetRequest(id)) },
+                    onForgotPassword = { id -> push(ResetRequest(id)) },
                     onSignedIn = {
                         backStack.clear()
-                        backStack.add(Main)
-                    }
+                        push(Main)
+                    },
+                    showBack = !isRightBesideList(route, Auth)
                 )
             }
             entry<SignUp>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
                 AuthSignupScreen(
                     identifier = route.identifier,
                     onBack = { backStack.removeLastOrNull() },
-                    onSignedUp = { identifier -> backStack.add(VerifyOtp(identifier)) }
+                    onSignedUp = { identifier -> push(VerifyOtp(identifier)) },
+                    showBack = !isRightBesideList(route, Auth)
                 )
             }
             entry<VerifyOtp>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
@@ -174,7 +213,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     onBack = { backStack.removeLastOrNull() },
                     onVerified = {
                         backStack.clear()
-                        backStack.add(Main)
+                        push(Main)
                     }
                 )
             }
@@ -182,7 +221,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                 AuthResetRequestScreen(
                     identifier = route.identifier,
                     onBack = { backStack.removeLastOrNull() },
-                    onCodeEntered = { code -> backStack.add(ResetNewPassword(route.identifier, code)) }
+                    onCodeEntered = { code -> push(ResetNewPassword(route.identifier, code)) }
                 )
             }
             entry<ResetNewPassword>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
@@ -198,24 +237,24 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                 MainNavDisplay(
                     onLoggedOut = {
                         backStack.clear()
-                        backStack.add(Auth)
+                        push(Auth)
                     },
-                    onNavigateToExamEngine = { backStack.add(it) },
-                    onNavigateToPractice = { backStack.add(PracticeSubjectSelect) },
-                    onNavigateToGroupList = { backStack.add(GroupList) },
-                    onNavigateToLiveExamList = { backStack.add(LiveExamList) },
-                    onNavigateToGroupDetail = { groupId -> backStack.add(GroupDetail(groupId)) },
-                    onNavigateToProfile = { backStack.add(Profile) },
-                    onNavigateToPlayground = { backStack.add(PlaygroundHub) },
-                    onNavigateToBookmarks = { backStack.add(BookmarkHistory) },
-                    onNavigateToExamHistory = { backStack.add(ExamHistory) },
-                    onOpenRoute = { backStack.add(it) }
+                    onNavigateToExamEngine = { push(it) },
+                    onNavigateToPractice = { push(PracticeSubjectSelect) },
+                    onNavigateToGroupList = { push(GroupList) },
+                    onNavigateToLiveExamList = { push(LiveExamList) },
+                    onNavigateToGroupDetail = { groupId -> push(GroupDetail(groupId)) },
+                    onNavigateToProfile = { push(Profile) },
+                    onNavigateToPlayground = { push(PlaygroundHub) },
+                    onNavigateToBookmarks = { push(BookmarkHistory) },
+                    onNavigateToExamHistory = { push(ExamHistory) },
+                    onOpenRoute = { push(it) }
                 )
             }
             entry<PlaygroundHub> {
                 PlaygroundHubScreen(
                     onBack = { backStack.removeLastOrNull() },
-                    onOpenGraphBuilder = { id -> backStack.add(GraphBuilder(id)) }
+                    onOpenGraphBuilder = { id -> push(GraphBuilder(id)) }
                 )
             }
             entry<GraphBuilder> { route ->
@@ -240,7 +279,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                 ExamHistoryScreen(
                     onBack = { backStack.removeLastOrNull() },
                     onOpenAttempt = { item ->
-                        backStack.add(
+                        push(
                             ExamResult(
                                 attemptId = item.attemptId,
                                 titleBn = item.examTitleBn.ifBlank { item.examTitleEn },
@@ -261,7 +300,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     onBack = { backStack.removeLastOrNull() },
                     showBack = !isBesideResult(route),
                     onOpenTopic = { topicId, topicName ->
-                        backStack.add(
+                        push(
                             ExamAnswerSheet(
                                 attemptId = route.attemptId,
                                 titleBn = route.titleBn,
@@ -285,7 +324,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     onBack = { backStack.removeLastOrNull() },
                     onSubmitted = {
                         backStack.removeLastOrNull()
-                        backStack.add(ExamResult(attemptId = route.attemptId, titleBn = route.titleBn, lockResultUntil = route.lockResultUntil))
+                        push(ExamResult(attemptId = route.attemptId, titleBn = route.titleBn, lockResultUntil = route.lockResultUntil))
                     },
                     lockResultUntil = route.lockResultUntil
                 )
@@ -307,7 +346,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                 }
                 fun openBeside(detail: RootRoute) {
                     popToResult()
-                    backStack.add(detail)
+                    push(detail)
                 }
                 val selectedPane = when (backStack.getOrNull(backStack.lastIndexOf(route) + 1)) {
                     is ExamAnswerSheet -> ResultPane.ANSWER_SHEET
@@ -336,7 +375,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     onRetakeStarted = { attempt ->
                         ExamAttemptStore.put(attempt)
                         popToResult()
-                        backStack.add(ExamAttempt(attemptId = attempt.attemptId, titleBn = route.titleBn))
+                        push(ExamAttempt(attemptId = attempt.attemptId, titleBn = route.titleBn))
                     },
                     onFinish = {
                         if (route.fromHistory) {
@@ -344,7 +383,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                             backStack.removeLastOrNull()
                         } else {
                             backStack.clear()
-                            backStack.add(Main)
+                            push(Main)
                         }
                     }
                 )
@@ -380,42 +419,77 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
             // ── Practice Builder (subject -> chapter/topic -> properties -> Exam Engine) ──
             // Medium/Expanded combines the first two steps into one side-by-side screen
             // (SubjectChapterMedium/Expanded in the design) and skips straight to ExamProperties.
-            entry<PracticeSubjectSelect> {
+            // ── Practice builder ── its screens share the picks through PracticeFlowViewModel (FlowViewModelStore).
+            // Compact: subjects → chapters → properties, three screens. Medium and wider: subjects and
+            // chapters on one screen (the main pane). The properties open beside it as a supporting pane
+            // when practicePaneDirective has room (Next again then just refreshes them), else as their own screen.
+            entry<PracticeSubjectSelect>(
+                metadata = FlowViewModelStore.root(PRACTICE_FLOW) + SupportingPaneSceneStrategy.mainPane(PRACTICE_SCENE)
+            ) {
                 if (windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) {
+                    val flow = koinViewModel<PracticeFlowViewModel>(viewModelStoreOwner = LocalFlowViewModelStoreOwner.current)
                     PracticeSubjectChapterScreen(
                         onBack = { backStack.removeLastOrNull() },
                         onNext = { subjectIds, chapterIds, topicIds ->
-                            backStack.add(PracticeExamProperties(subjectIds, chapterIds, topicIds))
+                            flow.setScope(PracticeScope(subjectIds, chapterIds, topicIds))
+                            push(PracticeExamProperties(besideSubjects = true))
                         }
                     )
                 } else {
                     PracticeSubjectSelectScreen(
                         onBack = { backStack.removeLastOrNull() },
-                        onNext = { subjectIds -> backStack.add(PracticeChapterSelect(subjectIds)) }
+                        onNext = { subjectIds -> push(PracticeChapterSelect(subjectIds)) }
                     )
                 }
             }
-            entry<PracticeChapterSelect> { route ->
+            entry<PracticeChapterSelect>(metadata = FlowViewModelStore.member(PRACTICE_FLOW)) { route ->
+                val flow = koinViewModel<PracticeFlowViewModel>(viewModelStoreOwner = LocalFlowViewModelStoreOwner.current)
                 PracticeChapterSelectScreen(
                     subjectIds = route.subjectIds,
                     onBack = { backStack.removeLastOrNull() },
                     onNext = { chapterIds, topicIds ->
-                        backStack.add(PracticeExamProperties(route.subjectIds, chapterIds, topicIds))
+                        flow.setScope(PracticeScope(route.subjectIds, chapterIds, topicIds))
+                        push(PracticeExamProperties())
                     }
                 )
             }
-            entry<PracticeExamProperties> { route ->
-                PracticeExamPropertiesScreen(
-                    subjectIds = route.subjectIds,
-                    chapterIds = route.chapterIds,
-                    topicIds = route.topicIds,
-                    onBack = { backStack.removeLastOrNull() },
-                    onExamGenerated = { attemptId, titleBn ->
-                        backStack.clear()
-                        backStack.add(Main)
-                        backStack.add(ExamAttempt(attemptId = attemptId, titleBn = titleBn))
+            entry<PracticeExamProperties>(
+                metadata = { route ->
+                    FlowViewModelStore.member(PRACTICE_FLOW) + if (route.besideSubjects) {
+                        SupportingPaneSceneStrategy.supportingPane(PRACTICE_SCENE) +
+                            SupportingPaneSceneStrategy.preferredPaneSize(width = 420.dp)
+                    } else {
+                        emptyMap()
                     }
-                )
+                }
+            ) { route ->
+                val flow = koinViewModel<PracticeFlowViewModel>(viewModelStoreOwner = LocalFlowViewModelStoreOwner.current)
+                val scope by flow.scope.collectAsStateWithLifecycle()
+                val current = scope
+                if (current == null) {
+                    // The process was killed here: the picks are gone, so go back to the step that makes them.
+                    // Logged because this once left a blank screen in testing that could not be reproduced.
+                    LaunchedEffect(Unit) {
+                        val top = backStack.lastOrNull()
+                        if (top == route) {
+                            Timber.w("Practice picks lost: leaving exam properties (stack size %d)", backStack.size)
+                            backStack.removeLastOrNull()
+                        } else {
+                            Timber.w("Practice picks lost, but exam properties is not on top (top: %s)", top?.let { it::class.simpleName })
+                        }
+                    }
+                } else {
+                    PracticeExamPropertiesScreen(
+                        scope = current,
+                        showBack = !isShownBesideMainPane(),
+                        onBack = { backStack.removeLastOrNull() },
+                        onExamGenerated = { attemptId, titleBn ->
+                            backStack.clear()
+                            push(Main)
+                            push(ExamAttempt(attemptId = attemptId, titleBn = titleBn))
+                        }
+                    )
+                }
             }
 
             // ── Group exam ── every screen lays itself out for the pane it gets (PaneSized): one column
@@ -449,7 +523,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                         // Opening another group replaces whatever group screens were open beside the list.
                         onNavigateToGroup = { groupId ->
                             while (backStack.size > 1 && backStack.last() != GroupList) backStack.removeLastOrNull()
-                            backStack.add(GroupDetail(groupId))
+                            push(GroupDetail(groupId))
                         },
                         selectedGroupId = openGroupId,
                     )
@@ -462,17 +536,18 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     GroupDetailScreen(
                         groupId = route.groupId,
                         onBack = { backStack.removeLastOrNull() },
-                        onNavigateToMembers = { backStack.add(GroupMembers(route.groupId)) },
-                        onNavigateToSettings = { backStack.add(GroupSettings(route.groupId)) },
-                        onNavigateToJoinRequests = { backStack.add(GroupJoinRequests(route.groupId)) },
-                        onCreateRoutine = { backStack.add(RoutineBuilder(RoutineOwner.Group(route.groupId))) },
-                        onScheduleAdhoc = { backStack.add(RoutineBuilder(RoutineOwner.Group(route.groupId), RoutineBuilderMode.ADHOC)) },
-                        onOpenCalendar = { backStack.add(GroupRoutineCalendar(route.groupId)) },
-                        onOpenExamAttempt = { id, title, lock -> backStack.add(ExamAttempt(id, title, lock)) },
-                        onOpenExamResult = { id, title, lock -> backStack.add(ExamResult(id, title, fromHistory = true, lockResultUntil = lock)) },
-                        onOpenRanking = { examId, title, closes -> backStack.add(GroupRanking(route.groupId, examId, title, closes)) },
-                        onSeeAllPastExams = { backStack.add(GroupPastExams(route.groupId)) },
-                        onGroupClosed = { closeGroup(route.groupId) }
+                        onNavigateToMembers = { push(GroupMembers(route.groupId)) },
+                        onNavigateToSettings = { push(GroupSettings(route.groupId)) },
+                        onNavigateToJoinRequests = { push(GroupJoinRequests(route.groupId)) },
+                        onCreateRoutine = { push(RoutineBuilder(RoutineOwner.Group(route.groupId))) },
+                        onScheduleAdhoc = { push(RoutineBuilder(RoutineOwner.Group(route.groupId), RoutineBuilderMode.ADHOC)) },
+                        onOpenCalendar = { push(GroupRoutineCalendar(route.groupId)) },
+                        onOpenExamAttempt = { id, title, lock -> push(ExamAttempt(id, title, lock)) },
+                        onOpenExamResult = { id, title, lock -> push(ExamResult(id, title, fromHistory = true, lockResultUntil = lock)) },
+                        onOpenRanking = { examId, title, closes -> push(GroupRanking(route.groupId, examId, title, closes)) },
+                        onSeeAllPastExams = { push(GroupPastExams(route.groupId)) },
+                        onGroupClosed = { closeGroup(route.groupId) },
+                        showBack = !isRightBesideList(route, GroupList)
                     )
                 }
             }
@@ -481,8 +556,8 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     GroupSettingsScreen(
                         groupId = route.groupId,
                         onBack = { backStack.removeLastOrNull() },
-                        onOpenJoinRequests = { backStack.add(GroupJoinRequests(route.groupId)) },
-                        onOpenMembers = { backStack.add(GroupMembers(route.groupId)) },
+                        onOpenJoinRequests = { push(GroupJoinRequests(route.groupId)) },
+                        onOpenMembers = { push(GroupMembers(route.groupId)) },
                         onGroupClosed = { closeGroup(route.groupId) }
                     )
                 }
@@ -497,8 +572,8 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     onBack = { backStack.removeLastOrNull() },
                     onOpenTarget = { target ->
                         when (target) {
-                            is NotificationTarget.Group -> backStack.add(GroupDetail(target.groupId))
-                            is NotificationTarget.JoinRequests -> backStack.add(GroupJoinRequests(target.groupId))
+                            is NotificationTarget.Group -> push(GroupDetail(target.groupId))
+                            is NotificationTarget.JoinRequests -> push(GroupJoinRequests(target.groupId))
                             NotificationTarget.Routine -> {
                                 backStack.removeLastOrNull()
                                 mainTabRequests.request(Routine)
@@ -515,11 +590,11 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     GroupRoutineCalendarScreen(
                         groupId = route.groupId,
                         onBack = { backStack.removeLastOrNull() },
-                        onScheduleAdhoc = { backStack.add(RoutineBuilder(RoutineOwner.Group(route.groupId), RoutineBuilderMode.ADHOC)) },
+                        onScheduleAdhoc = { push(RoutineBuilder(RoutineOwner.Group(route.groupId), RoutineBuilderMode.ADHOC)) },
                         onGroupClosed = { closeGroup(route.groupId) },
-                        onOpenExamAttempt = { id, title, lock -> backStack.add(ExamAttempt(id, title, lock)) },
-                        onOpenExamResult = { id, title, lock -> backStack.add(ExamResult(id, title, fromHistory = true, lockResultUntil = lock)) },
-                        onOpenRanking = { examId, title, closes -> backStack.add(GroupRanking(route.groupId, examId, title, closes)) },
+                        onOpenExamAttempt = { id, title, lock -> push(ExamAttempt(id, title, lock)) },
+                        onOpenExamResult = { id, title, lock -> push(ExamResult(id, title, fromHistory = true, lockResultUntil = lock)) },
+                        onOpenRanking = { examId, title, closes -> push(GroupRanking(route.groupId, examId, title, closes)) },
                     )
                 }
             }
@@ -528,7 +603,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     GroupPastExamsScreen(
                         groupId = route.groupId,
                         onBack = { backStack.removeLastOrNull() },
-                        onOpenRanking = { slot, title -> slot.examId?.let { backStack.add(GroupRanking(route.groupId, it, title, slot.closesAt)) } }
+                        onOpenRanking = { slot, title -> slot.examId?.let { push(GroupRanking(route.groupId, it, title, slot.closesAt)) } }
                     )
                 }
             }
@@ -537,8 +612,8 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     GroupRankingScreen(
                         groupId = route.groupId, examId = route.examId, titleBn = route.titleBn, closesAt = route.closesAt,
                         onBack = { backStack.removeLastOrNull() },
-                        onOpenMyAnswerSheet = { id -> backStack.add(ExamAnswerSheet(id, route.titleBn, lockResultUntil = route.closesAt)) },
-                        onOpenMyResult = { id -> backStack.add(ExamResult(id, route.titleBn, fromHistory = true, lockResultUntil = route.closesAt)) },
+                        onOpenMyAnswerSheet = { id -> push(ExamAnswerSheet(id, route.titleBn, lockResultUntil = route.closesAt)) },
+                        onOpenMyResult = { id -> push(ExamResult(id, route.titleBn, fromHistory = true, lockResultUntil = route.closesAt)) },
                     )
                 }
             }
@@ -550,7 +625,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
             entry<LiveExamList> {
                 LiveExamListScreen(
                     onBack = { backStack.removeLastOrNull() },
-                    onNavigateToDetail = { examId -> backStack.add(LiveExamDetail(examId)) }
+                    onNavigateToDetail = { examId -> push(LiveExamDetail(examId)) }
                 )
             }
             entry<LiveExamDetail> { route ->
@@ -558,9 +633,9 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     LiveExamDetailScreen(
                         liveExamId = route.liveExamId,
                         onBack = { backStack.removeLastOrNull() },
-                        onNavigateToAttempt = { examId -> backStack.add(TimedExamAttempt(examId, TimedExamKind.LIVE)) },
-                        onNavigateToLockedResult = { examId -> backStack.add(LockedResult(examId, TimedExamKind.LIVE)) },
-                        onNavigateToRanking = { examId -> backStack.add(WindowRanking(examId, TimedExamKind.LIVE)) }
+                        onNavigateToAttempt = { examId -> push(TimedExamAttempt(examId, TimedExamKind.LIVE)) },
+                        onNavigateToLockedResult = { examId -> push(LockedResult(examId, TimedExamKind.LIVE)) },
+                        onNavigateToRanking = { examId -> push(WindowRanking(examId, TimedExamKind.LIVE)) }
                     )
                 }
             }
@@ -572,7 +647,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                         examId = route.examId, kind = route.kind,
                         onSubmitted = {
                             backStack.removeLastOrNull()
-                            backStack.add(LockedResult(route.examId, route.kind))
+                            push(LockedResult(route.examId, route.kind))
                         }
                     )
                 }
@@ -584,7 +659,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                         onBack = { backStack.removeLastOrNull() },
                         onNavigateToRanking = { examId ->
                             backStack.removeLastOrNull()
-                            backStack.add(WindowRanking(examId, route.kind))
+                            push(WindowRanking(examId, route.kind))
                         }
                     )
                 }
@@ -594,7 +669,7 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                     WindowRankingScreen(
                         examId = route.examId, kind = route.kind,
                         onBack = { backStack.removeLastOrNull() },
-                        onNavigateToMyAnswerSheet = { backStack.add(TimedAnswerSheet(route.examId, route.kind)) }
+                        onNavigateToMyAnswerSheet = { push(TimedAnswerSheet(route.examId, route.kind)) }
                     )
                 }
             }
@@ -686,6 +761,12 @@ private fun ResultDetailPlaceholder() {
         )
     }
 }
+
+/** Flow id of the practice builder's shared store. */
+private const val PRACTICE_FLOW = "practice"
+
+/** The practice builder's picks (main pane) with its exam properties beside them (supporting pane). */
+private const val PRACTICE_SCENE = "practice"
 
 /** Groups and their screens share one list-detail scene, apart from Auth's. */
 private const val GROUP_SCENE = "groups"

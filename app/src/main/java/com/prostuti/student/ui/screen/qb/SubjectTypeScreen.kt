@@ -33,6 +33,7 @@ import com.prostuti.student.ui.screen.qb.component.SubjectTypeCard
 import com.prostuti.student.ui.theme.ProstutiTypography
 import kotlinx.coroutines.launch
 import com.prostuti.student.ui.component.localized
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun SubjectTypeScreen(
@@ -93,7 +94,7 @@ fun SubjectTypeScreen(
                     title = "MCQ — বহুনির্বাচনী",
                     subtitle = "বোর্ড ও কলেজের মডেল টেস্ট",
                     modifier = Modifier.padding(bottom = 12.dp),
-                    onClick = { onNavigateToMCQ(MCQExamList(subjectId, nameBn, nameEn)) }
+                    onClick = dropUnlessResumed { onNavigateToMCQ(MCQExamList(subjectId, nameBn, nameEn)) }
                 )
                 SubjectTypeCard(
                     icon = Icons.Outlined.Description,

@@ -38,6 +38,7 @@ import com.prostuti.student.util.toBengaliDigits
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import com.prostuti.student.ui.component.localized
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun LiveExamDetailScreen(
@@ -118,13 +119,13 @@ fun LiveExamDetailScreen(
                             )
                             PrimaryButton(text = "শুরু করুন", enabled = false, onClick = {})
                         }
-                        TimedExamState.OPEN_NOT_SUBMITTED -> PrimaryButton(text = "শুরু করুন", onClick = { onNavigateToAttempt(exam.examId) })
-                        TimedExamState.OPEN_SUBMITTED -> PrimaryButton(text = "তুমি সাবমিট করেছো — দেখো", onClick = { onNavigateToLockedResult(exam.examId) })
+                        TimedExamState.OPEN_NOT_SUBMITTED -> PrimaryButton(text = "শুরু করুন", onClick = dropUnlessResumed { onNavigateToAttempt(exam.examId) })
+                        TimedExamState.OPEN_SUBMITTED -> PrimaryButton(text = "তুমি সাবমিট করেছো — দেখো", onClick = dropUnlessResumed { onNavigateToLockedResult(exam.examId) })
                         TimedExamState.CLOSED -> {
                             Box(modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 8.dp, vertical = 3.dp)) {
                                 Text(text = "উইন্ডো শেষ", style = ProstutiTypography.bnLabelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
                             }
-                            PrimaryButton(text = "র‍্যাংকিং ও অ্যান্সার শিট দেখো", onClick = { onNavigateToRanking(exam.examId) })
+                            PrimaryButton(text = "র‍্যাংকিং ও অ্যান্সার শিট দেখো", onClick = dropUnlessResumed { onNavigateToRanking(exam.examId) })
                         }
                         null -> {}
                     }

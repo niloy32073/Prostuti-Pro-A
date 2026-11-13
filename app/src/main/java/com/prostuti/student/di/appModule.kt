@@ -218,6 +218,7 @@ import com.prostuti.student.ui.screen.examengine.calculator.CalculatorViewModel
 import com.prostuti.student.ui.screen.examengine.scratchpad.ScratchpadViewModel
 import com.prostuti.student.ui.screen.practice.PracticeChapterSelectViewModel
 import com.prostuti.student.ui.screen.practice.PracticeExamPropertiesViewModel
+import com.prostuti.student.ui.screen.practice.PracticeFlowViewModel
 import com.prostuti.student.ui.screen.practice.PracticeSubjectChapterViewModel
 import com.prostuti.student.ui.screen.practice.PracticeSubjectSelectViewModel
 import com.prostuti.student.ui.screen.qb.ChapterBrowseViewModel
@@ -590,7 +591,8 @@ val appModule = module {
     viewModel { PracticeSubjectSelectViewModel(get()) }
     viewModel { PracticeSubjectChapterViewModel(get(), get(), get()) }
     viewModel { params -> PracticeChapterSelectViewModel(params.get(), get(), get(), get()) }
-    viewModel { params -> PracticeExamPropertiesViewModel(params.get(), params.get(), params.get(), get()) }
+    viewModel { PracticeExamPropertiesViewModel(get()) }
+    viewModel { PracticeFlowViewModel() }
     viewModel { params -> QuestionReaderViewModel(params.get(), get(), get(), get(), get(), get(), get()) }
     viewModel { params -> ChapterBrowseViewModel(params.get(), get(), get(), get()) }
 

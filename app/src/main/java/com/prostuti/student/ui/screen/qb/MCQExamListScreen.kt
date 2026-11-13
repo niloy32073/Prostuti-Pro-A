@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import com.prostuti.student.ui.component.localized
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun MCQExamListScreen(
@@ -123,7 +124,7 @@ fun MCQExamListScreen(
             exam = exam,
             isAttempting = state.isAttempting,
             onDismiss = { viewModel.selectExam(null) },
-            onRead = {
+            onRead = dropUnlessResumed {
                 viewModel.selectExam(null)
                 onNavigateToReader(QuestionReader(examId = exam.id, titleBn = exam.titleBn))
             },
@@ -172,7 +173,7 @@ fun MCQExamListScreen(
                     }
 
                     OutlinedButton(
-                        onClick = { onNavigateToChapterBrowse(ChapterBrowse(subjectId, nameBn, nameEn)) },
+                        onClick = dropUnlessResumed { onNavigateToChapterBrowse(ChapterBrowse(subjectId, nameBn, nameEn)) },
                         shape = RoundedCornerShape(50.dp),
                         modifier = Modifier
                             .fillMaxWidth()

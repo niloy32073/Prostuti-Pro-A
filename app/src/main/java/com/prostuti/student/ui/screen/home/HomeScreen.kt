@@ -273,7 +273,7 @@ private fun LiveAndUpcomingContent(
         ContinueAttemptCard(
             attempt = attempt,
             remainingSeconds = state.continueRemainingSeconds,
-            onClick = { onContinueClick(attempt) },
+            onClick = dropUnlessResumed { onContinueClick(attempt) },
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
         )
     }

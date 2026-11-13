@@ -33,9 +33,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object Routine : MainRoute
 @Serializable data object Settings : MainRoute
 
-// Level 2: QB nested destinations.
+// Question Bank screens, pushed onto the QB tab's own back stack (its root, QB, is the subject list).
 @Serializable sealed interface QBRoute : NavKey
-@Serializable data object SubjectList : QBRoute
 @Serializable data class SubjectType(val subjectId: String, val nameBn: String, val nameEn: String) : QBRoute
 @Serializable data class MCQExamList(val subjectId: String, val nameBn: String, val nameEn: String) : QBRoute
 @Serializable data class QuestionReader(val examId: String, val titleBn: String) : QBRoute
@@ -80,13 +79,9 @@ import kotlinx.serialization.Serializable
 // hands off into the Exam Engine above. Also root-level (entered from Home's quick action).
 @Serializable data object PracticeSubjectSelect : RootRoute
 @Serializable data class PracticeChapterSelect(val subjectIds: List<String>) : RootRoute
-// chapterIds here is always derived from topicIds (every chapter owning a selected topic) — the
-// backend requires chapter_ids whenever topic_ids is sent and ANDs the two together.
-@Serializable data class PracticeExamProperties(
-    val subjectIds: List<String>,
-    val chapterIds: List<String>,
-    val topicIds: List<String>
-) : RootRoute
+// The picks (possibly hundreds of topic ids) live in the flow's shared PracticeFlowViewModel, not here.
+// besideSubjects: opened from the wide picks screen, so it is shown beside it as a supporting pane.
+@Serializable data class PracticeExamProperties(val besideSubjects: Boolean = false) : RootRoute
 
 // ── Group exam ── root-level, full-screen (no bottom nav), entered from Home's quick menu and
 // from its own "লাইভ এক্সাম"/"গ্রুপ এক্সাম" upcoming cards.

@@ -32,6 +32,8 @@ fun AuthSignupScreen(
     identifier: String,
     onBack: () -> Unit,
     onSignedUp: (identifier: String) -> Unit,
+    /** False beside the Auth start pane (medium and wider), which is already on screen. */
+    showBack: Boolean = true,
     viewModel: AuthSignupViewModel = koinViewModel { parametersOf(identifier) }
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -49,8 +51,10 @@ fun AuthSignupScreen(
             overlayPadding = padding
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-                Column(modifier = Modifier.padding(top = 20.dp, start = 16.dp, end = 16.dp)) {
-                    BackButton(onClick = onBack)
+                if (showBack) {
+                    Column(modifier = Modifier.padding(top = 20.dp, start = 16.dp, end = 16.dp)) {
+                        BackButton(onClick = onBack)
+                    }
                 }
 
                 Column(

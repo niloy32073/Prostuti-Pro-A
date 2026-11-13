@@ -46,9 +46,6 @@ data class PracticeExamPropertiesUiState(
 }
 
 class PracticeExamPropertiesViewModel(
-    private val subjectIds: List<String>,
-    private val chapterIds: List<String>,
-    private val topicIds: List<String>,
     private val generateExamUseCase: GenerateExamUseCase
 ) : ViewModel() {
     private val _state = MutableStateFlow(PracticeExamPropertiesUiState())
@@ -85,15 +82,16 @@ class PracticeExamPropertiesViewModel(
         if (text.isEmpty() || text.matches(Regex("^\\d*\\.?\\d*$"))) apply()
     }
 
-    fun generateExam() {
+    /** [scope] is the picks at the moment of the tap (they can change while this screen is beside them). */
+    fun generateExam(scope: PracticeScope) {
         if (_state.value.isGenerating) return
         viewModelScope.launch {
             _state.update { it.copy(isGenerating = true) }
             val s = _state.value
             val request = ExamGenerateRequest(
-                subjectIds = subjectIds.ifEmpty { null },
-                chapterIds = chapterIds.ifEmpty { null },
-                topicIds = topicIds.ifEmpty { null },
+                subjectIds = scope.subjectIds.ifEmpty { null },
+                chapterIds = scope.chapterIds.ifEmpty { null },
+                topicIds = scope.topicIds.ifEmpty { null },
                 questionCount = s.questionCount,
                 durationMinutes = s.durationMinutes,
                 level = s.level,

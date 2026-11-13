@@ -27,6 +27,7 @@ import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.util.formatRemainingBn
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun LockedResultScreen(
@@ -62,7 +63,7 @@ fun LockedResultScreen(
                     text = "উইন্ডো শেষ হয়েছে — ফলাফল আনলক হয়েছে", style = ProstutiTypography.bnBodyLarge,
                     color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 24.dp)
                 )
-                PrimaryButton(text = "র‍্যাংকিং ও ফলাফল দেখো", onClick = { onNavigateToRanking(examId) }, modifier = Modifier.padding(top = 20.dp))
+                PrimaryButton(text = "র‍্যাংকিং ও ফলাফল দেখো", onClick = dropUnlessResumed { onNavigateToRanking(examId) }, modifier = Modifier.padding(top = 20.dp))
             } else {
                 Text(
                     text = "উইন্ডো শেষ হবে আরও ${formatRemainingBn(state.remainingMillis)} পর — তারপর ফলাফল আনলক হবে",
@@ -86,7 +87,7 @@ fun LockedResultScreen(
             Text(
                 text = "এক্সাম ডিটেইলে ফিরে যাও",
                 style = ProstutiTypography.bnLabelLarge, color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 16.dp).clickable(onClick = onBack)
+                modifier = Modifier.padding(top = 16.dp).clickable(onClick = dropUnlessResumed { onBack() })
             )
         }
     }

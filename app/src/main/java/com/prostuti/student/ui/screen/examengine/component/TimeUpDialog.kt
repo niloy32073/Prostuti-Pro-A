@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.prostuti.student.R
 import com.prostuti.student.ui.theme.ProstutiTypography
+import androidx.lifecycle.compose.dropUnlessResumed
 
 /**
  * Shown when the exam time runs out. The attempt submits on its own, so this dialog can't be
@@ -51,7 +52,7 @@ fun TimeUpDialog(
         },
         confirmButton = {
             if (isSubmitted) {
-                Button(onClick = onViewResult, shape = RoundedCornerShape(50.dp)) {
+                Button(onClick = dropUnlessResumed { onViewResult() }, shape = RoundedCornerShape(50.dp)) {
                     Text(text = stringResource(R.string.exam_time_up_view_result), style = ProstutiTypography.bnBodyMedium)
                 }
             } else if (isFailed) {

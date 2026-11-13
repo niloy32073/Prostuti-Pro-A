@@ -45,6 +45,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import com.prostuti.student.R
 import androidx.compose.ui.res.stringResource
 import com.prostuti.student.ui.component.localized
+import androidx.lifecycle.compose.dropUnlessResumed
 
 /** The Medium/Expanded combined step — subject list + the focused subject's chapter/topic tree
  *  side by side (SubjectChapterMedium/Expanded in the design), replacing the compact flow's two
@@ -190,7 +191,7 @@ fun PracticeSubjectChapterScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Button(
-                        onClick = {
+                        onClick = dropUnlessResumed {
                             onNext(
                                 state.selectedSubjectIds.toList(),
                                 state.selectedChapterIds.toList(),

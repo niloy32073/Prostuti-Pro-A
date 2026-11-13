@@ -108,7 +108,7 @@ fun AttemptAnalysisContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (showBack) {
-                    BackButton(onClick = dropUnlessResumed { onBack() })
+                    BackButton(onClick = onBack)
                     Spacer(Modifier.width(12.dp))
                 }
                 Column {

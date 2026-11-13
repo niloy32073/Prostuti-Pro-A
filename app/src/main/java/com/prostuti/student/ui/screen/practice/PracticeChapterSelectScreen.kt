@@ -41,6 +41,7 @@ import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import com.prostuti.student.ui.component.localized
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun PracticeChapterSelectScreen(
@@ -131,7 +132,7 @@ fun PracticeChapterSelectScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Button(
-                        onClick = { onNext(state.selectedChapterIds.toList(), state.selectedTopicIds.toList()) },
+                        onClick = dropUnlessResumed { onNext(state.selectedChapterIds.toList(), state.selectedTopicIds.toList()) },
                         enabled = !state.isLoading && state.canProceed,
                         shape = RoundedCornerShape(50.dp),
                         modifier = Modifier.height(46.dp)

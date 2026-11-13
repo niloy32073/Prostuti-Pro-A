@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.prostuti.student.R
 import com.prostuti.student.ui.theme.ProstutiTypography
+import androidx.lifecycle.compose.dropUnlessResumed
 
 /** What a slot's exam button asks for: start (or finish, or practise) the exam, see my result, or the ranking. */
 enum class SlotAction { TAKE, VIEW_RESULT, RANKING }
@@ -45,7 +46,7 @@ fun SlotExamButtons(phase: SlotPhase, isBusy: Boolean, slotId: String, hasExam: 
             SlotPhase.IN_PROGRESS -> Button(onClick = { onAction(SlotAction.TAKE) }, modifier = tag) { Label(R.string.slot_action_finish) }
             SlotPhase.SUBMITTED -> OutlinedButton(onClick = { onAction(SlotAction.VIEW_RESULT) }, modifier = tag) { Label(R.string.slot_action_view_submitted) }
             SlotPhase.ENDED, SlotPhase.MISSED -> {
-                if (hasExam) OutlinedButton(onClick = { onAction(SlotAction.RANKING) }, modifier = tag) { Label(R.string.slot_action_ranking) }
+                if (hasExam) OutlinedButton(onClick = dropUnlessResumed { onAction(SlotAction.RANKING) }, modifier = tag) { Label(R.string.slot_action_ranking) }
                 TextButton(onClick = { onAction(SlotAction.TAKE) }, modifier = if (hasExam) Modifier else tag) { Label(R.string.slot_action_practice) }
             }
             SlotPhase.UPCOMING -> Unit

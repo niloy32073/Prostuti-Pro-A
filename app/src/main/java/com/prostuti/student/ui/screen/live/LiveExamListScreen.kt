@@ -39,6 +39,7 @@ import com.prostuti.student.ui.theme.ProstutiTypography
 import com.prostuti.student.util.toBengaliDigits
 import org.koin.compose.viewmodel.koinViewModel
 import com.prostuti.student.ui.component.localized
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun LiveExamListScreen(
@@ -85,7 +86,7 @@ fun LiveExamListScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                             horizontalArrangement = Arrangement.spacedBy(if (columns > 1) 10.dp else 0.dp)
                         ) {
-                            items(state.rows, key = { it.exam.examId }) { row -> LiveExamRowCard(row = row, onClick = { onNavigateToDetail(row.exam.examId) }) }
+                            items(state.rows, key = { it.exam.examId }) { row -> LiveExamRowCard(row = row, onClick = dropUnlessResumed { onNavigateToDetail(row.exam.examId) }) }
                         }
                     }
                 }

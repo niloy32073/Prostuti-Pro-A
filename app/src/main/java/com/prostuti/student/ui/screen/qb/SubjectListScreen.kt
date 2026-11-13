@@ -29,6 +29,7 @@ import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.screen.qb.component.SubjectListItem
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun SubjectListScreen(
@@ -84,7 +85,7 @@ fun SubjectListScreen(
                         items(state.subjects, key = { it.id }) { subject ->
                             SubjectListItem(
                                 subject = subject,
-                                onClick = { onNavigate(SubjectType(subject.id, subject.nameBn, subject.nameEn)) }
+                                onClick = dropUnlessResumed { onNavigate(SubjectType(subject.id, subject.nameBn, subject.nameEn)) }
                             )
                         }
                     }

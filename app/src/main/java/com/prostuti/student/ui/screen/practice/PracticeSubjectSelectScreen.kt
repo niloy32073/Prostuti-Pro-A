@@ -38,6 +38,7 @@ import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 import com.prostuti.student.ui.component.localized
+import androidx.lifecycle.compose.dropUnlessResumed
 
 @Composable
 fun PracticeSubjectSelectScreen(
@@ -123,7 +124,7 @@ fun PracticeSubjectSelectScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Button(
-                        onClick = { onNext(state.selectedIds.toList()) },
+                        onClick = dropUnlessResumed { onNext(state.selectedIds.toList()) },
                         enabled = state.selectedIds.isNotEmpty(),
                         shape = RoundedCornerShape(50.dp),
                         modifier = Modifier.height(46.dp)

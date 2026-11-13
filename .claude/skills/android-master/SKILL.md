@@ -828,7 +828,18 @@ fun MailNav() {
 Behaviour: 1 pane on compact, list+detail side by side on wider, list+detail+extra on very wide.
 Rules:
 - When selecting a new detail, **replace** the old detail instead of stacking: `backStack.removeIf { it is ConversationDetail }; backStack.add(newDetail)` (unless multiple details should stay).
-- Detail screen must hide its back arrow when shown beside the list. With the custom scene use `LocalBackButtonVisibility`; with Material, decide via window size (e.g. `currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_MEDIUM_LOWER_BOUND)` → hide).
+- Detail screen must hide its back arrow when shown beside the list. With the custom scene use `LocalBackButtonVisibility`; with Material,
+  read the scene itself, never guess from the window size (the directive decides the pane count, and it can differ per flow):
+  ```kotlin
+  @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+  @Composable
+  fun isShownBesideList(): Boolean {
+      val scope = LocalListDetailSceneScope.current ?: return false          // null = single pane
+      return scope.scaffoldTransitionScope.scaffoldStateTransition.targetState[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+  }
+  ```
+  Supporting pane: same with `LocalSupportingPaneSceneScope` and `SupportingPaneScaffoldRole.Main`. Hide the arrow only when Back
+  would land on the pane beside it; a deeper detail (Back goes to the previous detail) keeps its arrow.
 - Full-screen detail mode MUST be disabled inside list-detail.
 
 ### 6.4 Material supporting pane
