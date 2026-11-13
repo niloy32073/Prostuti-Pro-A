@@ -40,14 +40,17 @@ import org.koin.core.parameter.parametersOf
 fun AuthResetRequestScreen(
     identifier: String,
     onBack: () -> Unit,
-    onVerified: (resetToken: String) -> Unit,
+    onCodeEntered: (code: String) -> Unit,
     viewModel: AuthResetRequestViewModel = koinViewModel { parametersOf(identifier) }
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(state.resetToken) {
-        val token = state.resetToken
-        if (token != null) onVerified(token)
+    LaunchedEffect(state.enteredCode) {
+        val code = state.enteredCode
+        if (code != null) {
+            viewModel.onCodeConsumed() // so coming back from the next screen doesn't move on again
+            onCodeEntered(code)
+        }
     }
 
     Scaffold(
@@ -95,8 +98,7 @@ fun AuthResetRequestScreen(
 
                         if (state.isCodeSent) {
                             OtpCodeField(
-                                value = state.code,
-                                onValueChange = viewModel::updateCode,
+                                state = state.codeTextFieldState,
                                 label = stringResource(R.string.otp_label),
                                 isError = state.codeError != null,
                                 errorText = state.codeError?.let { stringResource(it) }

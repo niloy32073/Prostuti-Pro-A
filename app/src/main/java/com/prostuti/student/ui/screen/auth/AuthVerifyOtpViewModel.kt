@@ -1,6 +1,8 @@
 package com.prostuti.student.ui.screen.auth
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prostuti.student.R
@@ -24,7 +26,7 @@ private const val ERR_SEND_OTP = "SEND_OTP"
 private const val ERR_VERIFY_OTP = "VERIFY_OTP"
 
 data class AuthVerifyOtpUiState(
-    val code: String = "",
+    val codeTextFieldState: TextFieldState = TextFieldState(""),
     @StringRes val codeError: Int? = null,
     val isLoading: Boolean = false,
     val errors: Map<String, String> = emptyMap(),
@@ -44,12 +46,13 @@ class AuthVerifyOtpViewModel(
     private var countdownJob: Job? = null
 
     init {
+        val code = _state.value.codeTextFieldState
+        viewModelScope.launch {
+            snapshotFlow { code.text.toString() }.collect { _state.update { it.copy(codeError = null) } }
+        }
         sendOtp()
     }
 
-    fun updateCode(value: String) {
-        _state.update { it.copy(code = value, codeError = null) }
-    }
 
     fun resend() {
         if (_state.value.secondsLeft > 0) return
@@ -79,7 +82,7 @@ class AuthVerifyOtpViewModel(
     }
 
     fun verify() {
-        val code = _state.value.code.trim()
+        val code = _state.value.codeTextFieldState.text.toString().trim()
         if (code.length != 6) {
             _state.update { it.copy(codeError = R.string.error_otp_required) }
             return

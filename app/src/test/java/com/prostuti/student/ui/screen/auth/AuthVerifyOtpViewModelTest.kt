@@ -1,5 +1,6 @@
 package com.prostuti.student.ui.screen.auth
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import com.prostuti.student.data.model.enums.OTPVerificationPurpose
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.VerifyEmailResponse
@@ -71,7 +72,7 @@ class AuthVerifyOtpViewModelTest {
     fun verifyWithShortCodeSetsErrorAndDoesNotCallUseCase() = runTest {
         val viewModel = viewModel("test@example.com")
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.updateCode("123")
+        viewModel.state.value.codeTextFieldState.setTextAndPlaceCursorAtEnd("123")
         viewModel.verify()
         assertNotNull(viewModel.state.value.codeError)
         assertNull(fakeRepository.lastVerifyEmailRequest)
@@ -82,7 +83,7 @@ class AuthVerifyOtpViewModelTest {
         fakeRepository.verifyEmailResult = ApiResponse.Success(VerifyEmailResponse(UserStatus.ACTIVE, isEmailVerified = true))
         val viewModel = viewModel("test@example.com")
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.updateCode("123456")
+        viewModel.state.value.codeTextFieldState.setTextAndPlaceCursorAtEnd("123456")
         viewModel.verify()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -96,7 +97,7 @@ class AuthVerifyOtpViewModelTest {
         fakeRepository.verifyPhoneResult = ApiResponse.Success(VerifyPhoneResponse(UserStatus.ACTIVE, isPhoneVerified = true))
         val viewModel = viewModel("01712345678")
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.updateCode("123456")
+        viewModel.state.value.codeTextFieldState.setTextAndPlaceCursorAtEnd("123456")
         viewModel.verify()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -110,7 +111,7 @@ class AuthVerifyOtpViewModelTest {
         fakeRepository.verifyEmailResult = ApiResponse.Failure(message = "Invalid code", errorCode = "BAD_OTP")
         val viewModel = viewModel("test@example.com")
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.updateCode("000000")
+        viewModel.state.value.codeTextFieldState.setTextAndPlaceCursorAtEnd("000000")
         viewModel.verify()
         testDispatcher.scheduler.advanceUntilIdle()
 

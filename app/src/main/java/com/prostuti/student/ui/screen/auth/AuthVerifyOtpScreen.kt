@@ -76,8 +76,7 @@ fun AuthVerifyOtpScreen(
 
                     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                         OtpCodeField(
-                            value = state.code,
-                            onValueChange = viewModel::updateCode,
+                            state = state.codeTextFieldState,
                             label = stringResource(R.string.otp_label),
                             isError = state.codeError != null,
                             errorText = state.codeError?.let { stringResource(it) }

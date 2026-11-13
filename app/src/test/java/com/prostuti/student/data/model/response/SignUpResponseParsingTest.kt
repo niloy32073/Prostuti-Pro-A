@@ -16,6 +16,8 @@ class SignUpResponseParsingTest {
         {
           "success": true, "message": "Registered", "error": null, "meta_data": null,
           "data": {
+            "access_token": "token", "refresh_token": "refresh", "token_type": "Bearer", "expires_in": 3600,
+            "first_name": "Rahim", "last_name": "Islam",
             "user_id": "018f3c7e-007b-7000-8000-000000000001",
             "username": "rahimislam",
             "status": "PENDING"
@@ -26,7 +28,7 @@ class SignUpResponseParsingTest {
     @Test fun `register response with a UUID user id parses`() {
         val base = json.decodeFromString<BaseResponse<PasswordBasedSignUpResponse>>(registerBody)
         assertEquals("018f3c7e-007b-7000-8000-000000000001", base.data?.userId)
-        assertEquals("rahimislam", base.data?.userName)
+        assertEquals("rahimislam", base.data?.username)
         assertEquals(UserStatus.PENDING, base.data?.status)
     }
 }

@@ -11,7 +11,6 @@ import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.CheckUserResponse
 import com.prostuti.student.data.model.response.LogInResponse
 import com.prostuti.student.data.model.response.PasswordBasedSignUpResponse
-import com.prostuti.student.data.model.response.ResetTokenResponse
 import com.prostuti.student.data.model.response.SendOTPResponse
 import com.prostuti.student.data.model.response.VerifyEmailResponse
 import com.prostuti.student.data.model.response.VerifyPhoneResponse
@@ -24,6 +23,5 @@ interface AuthRepository {
     suspend fun sendOTP(body: SendOTPRequest): ApiResponse<SendOTPResponse>
     suspend fun verifyEmail(body: VerifyIdentifierRequest): ApiResponse<VerifyEmailResponse>
     suspend fun verifyPhone(body: VerifyIdentifierRequest): ApiResponse<VerifyPhoneResponse>
-    suspend fun verifyResetOtp(body: VerifyIdentifierRequest): ApiResponse<ResetTokenResponse>
-    suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<LogInResponse>
+    suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<Unit>
 }

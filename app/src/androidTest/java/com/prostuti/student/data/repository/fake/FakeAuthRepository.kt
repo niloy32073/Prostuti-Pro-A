@@ -16,7 +16,6 @@ import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.CheckUserResponse
 import com.prostuti.student.data.model.response.LogInResponse
 import com.prostuti.student.data.model.response.PasswordBasedSignUpResponse
-import com.prostuti.student.data.model.response.ResetTokenResponse
 import com.prostuti.student.data.model.response.SendOTPResponse
 import com.prostuti.student.data.model.response.VerifyEmailResponse
 import com.prostuti.student.data.model.response.VerifyPhoneResponse
@@ -38,19 +37,32 @@ fun fakeLogInResponse() = LogInResponse(
     username = "testuser"
 )
 
+/** A successful sign-up response; [username] is the only field the tests check. */
+fun fakeSignUpResponse(username: String = "testuser") = PasswordBasedSignUpResponse(
+    accessToken = "fake_access_token",
+    email = "test@example.com",
+    expiresIn = 3600,
+    firstName = "Test",
+    lastName = "User",
+    refreshToken = "fake_refresh_token",
+    status = UserStatus.PENDING,
+    tokenType = "Bearer",
+    userId = "018f3c7e-007b-7000-8000-000000000001",
+    username = username
+)
+
 /** Configurable fake of [AuthRepository]; every method's result is a settable var defaulting to Success. */
 class FakeAuthRepository(
     var checkUserResult: ApiResponse<CheckUserResponse> = ApiResponse.Success(CheckUserResponse(exists = false, firstName = null)),
     var signUpResult: ApiResponse<PasswordBasedSignUpResponse> = ApiResponse.Success(
-        PasswordBasedSignUpResponse(userId = "018f3c7e-007b-7000-8000-000000000001", userName = "testuser", status = UserStatus.PENDING)
+        fakeSignUpResponse()
     ),
     var signInResult: ApiResponse<LogInResponse> = ApiResponse.Success(fakeLogInResponse()),
     var socialSignInResult: ApiResponse<LogInResponse> = ApiResponse.Success(fakeLogInResponse()),
     var sendOtpResult: ApiResponse<SendOTPResponse> = ApiResponse.Success(SendOTPResponse(otp = "123456")),
     var verifyEmailResult: ApiResponse<VerifyEmailResponse> = ApiResponse.Success(VerifyEmailResponse(UserStatus.ACTIVE, isEmailVerified = true)),
     var verifyPhoneResult: ApiResponse<VerifyPhoneResponse> = ApiResponse.Success(VerifyPhoneResponse(UserStatus.ACTIVE, isPhoneVerified = true)),
-    var verifyResetOtpResult: ApiResponse<ResetTokenResponse> = ApiResponse.Success(ResetTokenResponse(resetToken = "reset-token")),
-    var resetPasswordResult: ApiResponse<LogInResponse> = ApiResponse.Success(fakeLogInResponse())
+    var resetPasswordResult: ApiResponse<Unit> = ApiResponse.Success(Unit)
 ) : AuthRepository {
 
     var lastCheckUserRequest: CheckUserRequest? = null
@@ -59,7 +71,6 @@ class FakeAuthRepository(
     var lastSendOtpRequest: SendOTPRequest? = null
     var lastVerifyEmailRequest: VerifyIdentifierRequest? = null
     var lastVerifyPhoneRequest: VerifyIdentifierRequest? = null
-    var lastVerifyResetOtpRequest: VerifyIdentifierRequest? = null
     var lastResetPasswordRequest: ResetPasswordRequest? = null
     var sendOtpCallCount = 0
 
@@ -96,12 +107,7 @@ class FakeAuthRepository(
         return verifyPhoneResult
     }
 
-    override suspend fun verifyResetOtp(body: VerifyIdentifierRequest): ApiResponse<ResetTokenResponse> {
-        lastVerifyResetOtpRequest = body
-        return verifyResetOtpResult
-    }
-
-    override suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<LogInResponse> {
+    override suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<Unit> {
         lastResetPasswordRequest = body
         return resetPasswordResult
     }

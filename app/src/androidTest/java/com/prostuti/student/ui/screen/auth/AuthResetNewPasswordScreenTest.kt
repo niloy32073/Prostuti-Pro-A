@@ -9,7 +9,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.prostuti.student.R
 import com.prostuti.student.data.model.response.ApiResponse
-import com.prostuti.student.data.repository.fake.fakeLogInResponse
 import com.prostuti.student.ui.theme.ProstutiTheme
 import org.junit.After
 import org.junit.Before
@@ -46,7 +45,7 @@ class AuthResetNewPasswordScreenTest {
     fun displaysTitleAndAction() {
         composeTestRule.setContent {
             ProstutiTheme {
-                AuthResetNewPasswordScreen(resetToken = "token-xyz", onBack = {}, onPasswordReset = {})
+                AuthResetNewPasswordScreen(identifier = "test@example.com", code = "123456", onBack = {}, onPasswordReset = {})
             }
         }
         waitForText(context.getString(R.string.auth_reset_new_password_title))
@@ -58,11 +57,11 @@ class AuthResetNewPasswordScreenTest {
         var resetDone = false
         composeTestRule.setContent {
             ProstutiTheme {
-                AuthResetNewPasswordScreen(resetToken = "token-xyz", onBack = {}, onPasswordReset = { resetDone = true })
+                AuthResetNewPasswordScreen(identifier = "test@example.com", code = "123456", onBack = {}, onPasswordReset = { resetDone = true })
             }
         }
-        composeTestRule.onNodeWithText(context.getString(R.string.new_password_placeholder)).performTextInput("password1")
-        composeTestRule.onNodeWithText(context.getString(R.string.confirm_password_placeholder)).performTextInput("password2")
+        composeTestRule.onNodeWithText(context.getString(R.string.new_password_placeholder)).performTextInput("Password1")
+        composeTestRule.onNodeWithText(context.getString(R.string.confirm_password_placeholder)).performTextInput("Password2")
         composeTestRule.onNodeWithText(context.getString(R.string.auth_reset_password_action)).performClick()
 
         waitForText(context.getString(R.string.error_passwords_dont_match))
@@ -71,15 +70,15 @@ class AuthResetNewPasswordScreenTest {
 
     @Test
     fun resettingWithMatchingValidPasswordsInvokesOnPasswordReset() {
-        override.fakeRepository.resetPasswordResult = ApiResponse.Success(fakeLogInResponse())
+        override.fakeRepository.resetPasswordResult = ApiResponse.Success(Unit)
         var resetDone = false
         composeTestRule.setContent {
             ProstutiTheme {
-                AuthResetNewPasswordScreen(resetToken = "token-xyz", onBack = {}, onPasswordReset = { resetDone = true })
+                AuthResetNewPasswordScreen(identifier = "test@example.com", code = "123456", onBack = {}, onPasswordReset = { resetDone = true })
             }
         }
-        composeTestRule.onNodeWithText(context.getString(R.string.new_password_placeholder)).performTextInput("password1")
-        composeTestRule.onNodeWithText(context.getString(R.string.confirm_password_placeholder)).performTextInput("password1")
+        composeTestRule.onNodeWithText(context.getString(R.string.new_password_placeholder)).performTextInput("Password1")
+        composeTestRule.onNodeWithText(context.getString(R.string.confirm_password_placeholder)).performTextInput("Password1")
         composeTestRule.onNodeWithText(context.getString(R.string.auth_reset_password_action)).performClick()
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) { resetDone }

@@ -19,7 +19,8 @@ import kotlinx.serialization.Serializable
 // Carries the identifier straight from AuthLogin's "forgot password?" link — no re-typing it
 // here. Also handles the reset OTP inline (send -> verify) rather than a separate screen.
 @Serializable data class ResetRequest(val identifier: String) : RootRoute
-@Serializable data class ResetNewPassword(val resetToken: String) : RootRoute
+// Carries the reset OTP: the server checks it together with the new password in one call.
+@Serializable data class ResetNewPassword(val identifier: String, val code: String) : RootRoute
 
 // Post-auth home — hosts MainNavDisplay's own bottom-nav/rail switching between MainRoute tabs.
 @Serializable data object Main : RootRoute

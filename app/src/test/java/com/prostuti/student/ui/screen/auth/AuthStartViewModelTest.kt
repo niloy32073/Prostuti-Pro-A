@@ -1,5 +1,6 @@
 package com.prostuti.student.ui.screen.auth
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import app.cash.turbine.test
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.CheckUserResponse
@@ -40,7 +41,7 @@ class AuthStartViewModelTest {
     @Test
     fun initialStateIsEmpty() {
         val state = viewModel().state.value
-        assertEquals("", state.identifier)
+        assertEquals("", state.identifierTextFieldState.text.toString())
         assertNull(state.identifierError)
         assertFalse(state.isLoading)
         assertNull(state.accountExists)
@@ -57,7 +58,7 @@ class AuthStartViewModelTest {
     @Test
     fun continueClickedWithInvalidEmailSetsError() = runTest {
         val viewModel = viewModel()
-        viewModel.updateIdentifier("not-an-email")
+        viewModel.state.value.identifierTextFieldState.setTextAndPlaceCursorAtEnd("not-an-email")
         viewModel.continueClicked()
         assertNotNull(viewModel.state.value.identifierError)
         assertNull(fakeRepository.lastCheckUserRequest)
@@ -67,7 +68,7 @@ class AuthStartViewModelTest {
     fun continueClickedWithValidEmailAndExistingAccountUpdatesState() = runTest {
         fakeRepository.checkUserResult = ApiResponse.Success(CheckUserResponse(exists = true, firstName = "Rahim"))
         val viewModel = viewModel()
-        viewModel.updateIdentifier("test@example.com")
+        viewModel.state.value.identifierTextFieldState.setTextAndPlaceCursorAtEnd("test@example.com")
 
         viewModel.state.test {
             assertFalse(awaitItem().isLoading) // initial
@@ -85,7 +86,7 @@ class AuthStartViewModelTest {
     fun continueClickedWithValidPhoneAndFailurePopulatesErrorsMap() = runTest {
         fakeRepository.checkUserResult = ApiResponse.Failure(message = "Server unavailable", errorCode = "SERVER_ERROR")
         val viewModel = viewModel()
-        viewModel.updateIdentifier("01712345678")
+        viewModel.state.value.identifierTextFieldState.setTextAndPlaceCursorAtEnd("01712345678")
 
         viewModel.state.test {
             assertFalse(awaitItem().isLoading)
@@ -101,7 +102,7 @@ class AuthStartViewModelTest {
     fun clearErrorRemovesTheTag() = runTest {
         fakeRepository.checkUserResult = ApiResponse.Failure(message = "err", errorCode = "SERVER_ERROR")
         val viewModel = viewModel()
-        viewModel.updateIdentifier("test@example.com")
+        viewModel.state.value.identifierTextFieldState.setTextAndPlaceCursorAtEnd("test@example.com")
         viewModel.continueClicked()
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(viewModel.state.value.errors.containsKey("CHECK_USER"))
@@ -114,7 +115,7 @@ class AuthStartViewModelTest {
     fun consumeNavigationClearsAccountExists() = runTest {
         fakeRepository.checkUserResult = ApiResponse.Success(CheckUserResponse(exists = true, firstName = null))
         val viewModel = viewModel()
-        viewModel.updateIdentifier("test@example.com")
+        viewModel.state.value.identifierTextFieldState.setTextAndPlaceCursorAtEnd("test@example.com")
         viewModel.continueClicked()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(true, viewModel.state.value.accountExists)

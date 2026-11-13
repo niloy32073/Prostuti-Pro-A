@@ -1,6 +1,8 @@
  package com.prostuti.student.ui.screen.auth
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prostuti.student.R
@@ -15,7 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class AuthLoginUiState(
-    val password: String = "",
+    val passwordTextFieldState: TextFieldState = TextFieldState(""),
     @StringRes val passwordError: Int? = null,
     val isLoading: Boolean = false,
     val errors: Map<String, String> = emptyMap(),
@@ -32,12 +34,15 @@ class AuthLoginViewModel(
     private val _state = MutableStateFlow(AuthLoginUiState())
     val state: StateFlow<AuthLoginUiState> = _state.asStateFlow()
 
-    fun updatePassword(value: String) {
-        _state.update { it.copy(password = value, passwordError = null) }
+    init {
+        val password = _state.value.passwordTextFieldState
+        viewModelScope.launch {
+            snapshotFlow { password.text.toString() }.collect { _state.update { it.copy(passwordError = null) } }
+        }
     }
 
     private fun validate(): Boolean {
-        val error = if (_state.value.password.length < 6) R.string.error_password_min_6 else null
+        val error = if (_state.value.passwordTextFieldState.text.length < 6) R.string.error_password_min_6 else null
         _state.update { it.copy(passwordError = error) }
         return error == null
     }
@@ -49,7 +54,7 @@ class AuthLoginViewModel(
             val response = passwordBasedSignInUseCase(
                 PasswordBasedSignInRequest(
                     identifier = identifier,
-                    password = _state.value.password,
+                    password = _state.value.passwordTextFieldState.text.toString(),
                     deviceCategory = DeviceCategory.MOBILE,
                     deviceName = "Android App"
                 )

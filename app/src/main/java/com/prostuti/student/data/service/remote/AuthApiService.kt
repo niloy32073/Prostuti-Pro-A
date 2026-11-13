@@ -12,11 +12,11 @@ import com.prostuti.student.data.model.response.CheckUserResponse
 import com.prostuti.student.data.model.response.LogInResponse
 import com.prostuti.student.data.model.response.MeData
 import com.prostuti.student.data.model.response.PasswordBasedSignUpResponse
-import com.prostuti.student.data.model.response.ResetTokenResponse
 import com.prostuti.student.data.model.response.SendOTPResponse
 import com.prostuti.student.data.model.response.VerifyEmailResponse
 import com.prostuti.student.data.model.response.VerifyPhoneResponse
 import com.prostuti.student.util.safeApiCall
+import com.prostuti.student.util.safeApiCallNoData
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -75,16 +75,12 @@ class AuthApiService(private val client: HttpClient) {
         }
     }
 
-    /** Verifies a PASSWORD_RESET-purpose OTP and exchanges it for a short-lived reset token. */
-    suspend fun verifyResetOtp(body: VerifyIdentifierRequest): ApiResponse<ResetTokenResponse> = safeApiCall {
-        client.post("auth/otp/verify-reset") {
-            contentType(ContentType.Application.Json)
-            setBody(body)
-        }
-    }
-
-    suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<LogInResponse> = safeApiCall {
-        client.post("auth/reset-password") {
+    /**
+     * Sets a new password with the PASSWORD_RESET OTP. Success has `"data": null` and revokes every
+     * session, so no tokens come back — the user signs in again with the new password.
+     */
+    suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<Unit> = safeApiCallNoData {
+        client.post("auth/password/reset") {
             contentType(ContentType.Application.Json)
             setBody(body)
         }

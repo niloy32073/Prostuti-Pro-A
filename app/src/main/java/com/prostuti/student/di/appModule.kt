@@ -181,7 +181,6 @@ import com.prostuti.student.domain.SubmitIntegrityEventsUseCase
 import com.prostuti.student.domain.SubmitTimedExamUseCase
 import com.prostuti.student.domain.VerifyEmailUseCase
 import com.prostuti.student.domain.VerifyPhoneUseCase
-import com.prostuti.student.domain.VerifyResetOtpUseCase
 import com.prostuti.student.ui.screen.SharedViewModel
 import com.prostuti.student.ui.screen.group.GroupDetailViewModel
 import com.prostuti.student.ui.screen.group.GroupNoticeBus
@@ -428,7 +427,6 @@ val appModule = module {
     factory { SocialSignInUseCase(get()) }
     factory { VerifyEmailUseCase(get()) }
     factory { VerifyPhoneUseCase(get()) }
-    factory { VerifyResetOtpUseCase(get()) }
     factory { ResetPasswordUseCase(get()) }
 
     single<UserRepository> { UserRepositoryImpl(get(), get()) }
@@ -537,8 +535,8 @@ val appModule = module {
     viewModel { params -> AuthLoginViewModel(get(), params.get(), params.getOrNull()) }
     viewModel { params -> AuthSignupViewModel(get(), params.get()) }
     viewModel { params -> AuthVerifyOtpViewModel(get(), get(), get(), params.get()) }
-    viewModel { params -> AuthResetRequestViewModel(get(), get(), params.get()) }
-    viewModel { params -> AuthResetNewPasswordViewModel(get(), params.get()) }
+    viewModel { params -> AuthResetRequestViewModel(get(), params.get()) }
+    viewModel { params -> AuthResetNewPasswordViewModel(get(), identifier = params[0], code = params[1]) }
     viewModel { HomeViewModel(get(), get()) }
     viewModel { HomeGroupExamViewModel(get(), get()) }
     viewModel { HomeNotificationsViewModel(get()) }

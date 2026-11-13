@@ -1,15 +1,15 @@
 package com.prostuti.student.ui.screen.auth
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prostuti.student.R
 import com.prostuti.student.data.model.enums.OTPVerificationPurpose
 import com.prostuti.student.data.model.request.SendOTPRequest
-import com.prostuti.student.data.model.request.VerifyIdentifierRequest
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.domain.SendOTPUseCase
-import com.prostuti.student.domain.VerifyResetOtpUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,17 +20,17 @@ import kotlinx.coroutines.launch
 
 private const val RESEND_COOLDOWN_SECONDS = 28
 private const val ERR_SEND_OTP = "SEND_RESET_OTP"
-private const val ERR_VERIFY_OTP = "VERIFY_RESET_OTP"
 
 data class AuthResetRequestUiState(
     val isLoading: Boolean = false,
     val errors: Map<String, String> = emptyMap(),
     /** False = "send code" step; true = code sent, the inline OTP step is shown. */
     val isCodeSent: Boolean = false,
-    val code: String = "",
+    val codeTextFieldState: TextFieldState = TextFieldState(""),
     @StringRes val codeError: Int? = null,
     val secondsLeft: Int = RESEND_COOLDOWN_SECONDS,
-    val resetToken: String? = null
+    /** The 6-digit code, set once entered; the screen moves on with it, then [AuthResetRequestViewModel.onCodeConsumed]. */
+    val enteredCode: String? = null
 )
 
 /**
@@ -40,16 +40,19 @@ data class AuthResetRequestUiState(
  */
 class AuthResetRequestViewModel(
     private val sendOTPUseCase: SendOTPUseCase,
-    private val verifyResetOtpUseCase: VerifyResetOtpUseCase,
     val identifier: String
 ) : ViewModel() {
     private val _state = MutableStateFlow(AuthResetRequestUiState())
     val state: StateFlow<AuthResetRequestUiState> = _state.asStateFlow()
     private var countdownJob: Job? = null
 
-    fun updateCode(value: String) {
-        _state.update { it.copy(code = value, codeError = null) }
+    init {
+        val code = _state.value.codeTextFieldState
+        viewModelScope.launch {
+            snapshotFlow { code.text.toString() }.collect { _state.update { it.copy(codeError = null) } }
+        }
     }
+
 
     fun sendCode() {
         viewModelScope.launch {
@@ -89,21 +92,21 @@ class AuthResetRequestViewModel(
         }
     }
 
+    /**
+     * Checks only the code's shape: the server has no separate verify step for a reset OTP and
+     * checks it together with the new password on the next screen.
+     */
     fun verify() {
-        val code = _state.value.code.trim()
+        val code = _state.value.codeTextFieldState.text.toString().trim()
         if (code.length != 6) {
             _state.update { it.copy(codeError = R.string.error_otp_required) }
             return
         }
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, errors = it.errors - ERR_VERIFY_OTP) }
-            when (val response = verifyResetOtpUseCase(VerifyIdentifierRequest(identifier, code))) {
-                is ApiResponse.Success -> _state.update { it.copy(isLoading = false, resetToken = response.data.resetToken) }
-                is ApiResponse.Failure -> _state.update {
-                    it.copy(isLoading = false, errors = it.errors + (ERR_VERIFY_OTP to response.message))
-                }
-            }
-        }
+        _state.update { it.copy(enteredCode = code) }
+    }
+
+    fun onCodeConsumed() {
+        _state.update { it.copy(enteredCode = null) }
     }
 
     fun clearError(tag: String) {

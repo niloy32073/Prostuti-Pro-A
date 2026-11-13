@@ -1,11 +1,10 @@
 package com.prostuti.student.ui.screen.auth
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import com.prostuti.student.data.model.enums.OTPVerificationPurpose
 import com.prostuti.student.data.model.response.ApiResponse
-import com.prostuti.student.data.model.response.ResetTokenResponse
 import com.prostuti.student.data.repository.fake.FakeAuthRepository
 import com.prostuti.student.domain.SendOTPUseCase
-import com.prostuti.student.domain.VerifyResetOtpUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -27,7 +26,7 @@ class AuthResetRequestViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private val fakeRepository = FakeAuthRepository()
     private fun viewModel(identifier: String = "test@example.com") =
-        AuthResetRequestViewModel(SendOTPUseCase(fakeRepository), VerifyResetOtpUseCase(fakeRepository), identifier)
+        AuthResetRequestViewModel(SendOTPUseCase(fakeRepository), identifier)
 
     @Before
     fun setup() {
@@ -43,7 +42,7 @@ class AuthResetRequestViewModelTest {
     fun initialStateHasNoCodeSent() {
         val state = viewModel().state.value
         assertFalse(state.isCodeSent)
-        assertNull(state.resetToken)
+        assertNull(state.enteredCode)
     }
 
     @Test
@@ -69,35 +68,31 @@ class AuthResetRequestViewModelTest {
     }
 
     @Test
-    fun verifyWithShortCodeSetsErrorAndDoesNotCallUseCase() = runTest {
+    fun verifyWithShortCodeSetsErrorAndDoesNotMoveOn() = runTest {
         val viewModel = viewModel()
-        viewModel.updateCode("12")
+        viewModel.state.value.codeTextFieldState.setTextAndPlaceCursorAtEnd("12")
         viewModel.verify()
         assertNotNull(viewModel.state.value.codeError)
-        assertNull(fakeRepository.lastVerifyResetOtpRequest)
+        assertNull(viewModel.state.value.enteredCode)
     }
 
     @Test
-    fun verifySuccessStoresResetToken() = runTest {
-        fakeRepository.verifyResetOtpResult = ApiResponse.Success(ResetTokenResponse(resetToken = "token-xyz"))
+    fun verifyWithSixDigitsHandsTheCodeOnWithoutCallingTheServer() = runTest {
         val viewModel = viewModel()
-        viewModel.updateCode("123456")
+        viewModel.state.value.codeTextFieldState.setTextAndPlaceCursorAtEnd("123456")
         viewModel.verify()
-        testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals("token-xyz", viewModel.state.value.resetToken)
+        assertEquals("123456", viewModel.state.value.enteredCode)
+        assertNull(fakeRepository.lastResetPasswordRequest) // checked with the new password, not here
     }
 
     @Test
-    fun verifyFailurePopulatesErrorsMap() = runTest {
-        fakeRepository.verifyResetOtpResult = ApiResponse.Failure(message = "Invalid code", errorCode = "BAD_OTP")
+    fun onCodeConsumedClearsTheEnteredCode() = runTest {
         val viewModel = viewModel()
-        viewModel.updateCode("123456")
+        viewModel.state.value.codeTextFieldState.setTextAndPlaceCursorAtEnd("123456")
         viewModel.verify()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertNull(viewModel.state.value.resetToken)
-        assertEquals("Invalid code", viewModel.state.value.errors["VERIFY_RESET_OTP"])
+        viewModel.onCodeConsumed()
+        assertNull(viewModel.state.value.enteredCode)
     }
 
     @Test

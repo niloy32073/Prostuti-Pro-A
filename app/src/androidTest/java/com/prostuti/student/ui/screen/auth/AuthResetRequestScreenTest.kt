@@ -8,8 +8,6 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.prostuti.student.R
-import com.prostuti.student.data.model.response.ApiResponse
-import com.prostuti.student.data.model.response.ResetTokenResponse
 import com.prostuti.student.ui.theme.ProstutiTheme
 import org.junit.After
 import org.junit.Before
@@ -46,7 +44,7 @@ class AuthResetRequestScreenTest {
     fun initiallyShowsSendCodeStep() {
         composeTestRule.setContent {
             ProstutiTheme {
-                AuthResetRequestScreen(identifier = "test@example.com", onBack = {}, onVerified = {})
+                AuthResetRequestScreen(identifier = "test@example.com", onBack = {}, onCodeEntered = {})
             }
         }
         waitForText(context.getString(R.string.auth_forgot_password))
@@ -54,12 +52,11 @@ class AuthResetRequestScreenTest {
     }
 
     @Test
-    fun afterSendingCodeShowsOtpStepThenVerifyingInvokesOnVerifiedWithToken() {
-        override.fakeRepository.verifyResetOtpResult = ApiResponse.Success(ResetTokenResponse(resetToken = "token-xyz"))
-        var receivedToken: String? = null
+    fun afterSendingCodeShowsOtpStepThenEnteringCodeHandsItOn() {
+        var receivedCode: String? = null
         composeTestRule.setContent {
             ProstutiTheme {
-                AuthResetRequestScreen(identifier = "test@example.com", onBack = {}, onVerified = { receivedToken = it })
+                AuthResetRequestScreen(identifier = "test@example.com", onBack = {}, onCodeEntered = { receivedCode = it })
             }
         }
         composeTestRule.onNodeWithText(context.getString(R.string.auth_send_code)).performClick()
@@ -68,6 +65,6 @@ class AuthResetRequestScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.otp_placeholder)).performTextInput("123456")
         composeTestRule.onNodeWithText(context.getString(R.string.otp_verify_action)).performClick()
 
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { receivedToken == "token-xyz" }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { receivedCode == "123456" }
     }
 }

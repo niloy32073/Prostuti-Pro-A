@@ -71,11 +71,11 @@ fun AuthStartScreen(
     LaunchedEffect(state.accountExists) {
         when (state.accountExists) {
             true -> {
-                onNavigateToLogin(state.identifier.trim(), state.firstName)
+                onNavigateToLogin(state.identifierTextFieldState.text.toString().trim(), state.firstName)
                 viewModel.consumeNavigation()
             }
             false -> {
-                onNavigateToSignup(state.identifier.trim())
+                onNavigateToSignup(state.identifierTextFieldState.text.toString().trim())
                 viewModel.consumeNavigation()
             }
             null -> Unit
@@ -107,8 +107,7 @@ fun AuthStartScreen(
 
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         ProstutiTextField(
-                            value = state.identifier,
-                            onValueChange = viewModel::updateIdentifier,
+                            state = state.identifierTextFieldState,
                             label = stringResource(R.string.email_or_phone_label),
                             placeholder = stringResource(R.string.email_or_phone_placeholder),
                             isError = state.identifierError != null,

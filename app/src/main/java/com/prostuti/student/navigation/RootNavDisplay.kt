@@ -182,17 +182,16 @@ fun RootNavDisplay(startDestination: RootRoute, innerPaddingValues: PaddingValue
                 AuthResetRequestScreen(
                     identifier = route.identifier,
                     onBack = { backStack.removeLastOrNull() },
-                    onVerified = { resetToken -> backStack.add(ResetNewPassword(resetToken)) }
+                    onCodeEntered = { code -> backStack.add(ResetNewPassword(route.identifier, code)) }
                 )
             }
             entry<ResetNewPassword>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
                 AuthResetNewPasswordScreen(
-                    resetToken = route.resetToken,
+                    identifier = route.identifier,
+                    code = route.code,
                     onBack = { backStack.removeLastOrNull() },
-                    onPasswordReset = {
-                        backStack.clear()
-                        backStack.add(Main)
-                    }
+                    // The reset revokes every session and returns no tokens: back to Sign in.
+                    onPasswordReset = { backStack.removeAll { it is ResetRequest || it is ResetNewPassword } }
                 )
             }
             entry<Main> {

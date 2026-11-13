@@ -1,6 +1,8 @@
 package com.prostuti.student.ui.screen.auth
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prostuti.student.R
@@ -16,7 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class AuthStartUiState(
-    val identifier: String = "",
+    val identifierTextFieldState: TextFieldState = TextFieldState(""),
     @StringRes val identifierError: Int? = null,
     val isLoading: Boolean = false,
     val errors: Map<String, String> = emptyMap(),
@@ -30,12 +32,17 @@ class AuthStartViewModel(private val checkUserUseCase: CheckUserUseCase) : ViewM
     private val _state = MutableStateFlow(AuthStartUiState())
     val state: StateFlow<AuthStartUiState> = _state.asStateFlow()
 
-    fun updateIdentifier(value: String) {
-        _state.update { it.copy(identifier = value, identifierError = null, accountExists = null) }
+    init {
+        val identifier = _state.value.identifierTextFieldState
+        viewModelScope.launch {
+            snapshotFlow { identifier.text.toString() }.collect {
+                _state.update { it.copy(identifierError = null, accountExists = null) }
+            }
+        }
     }
 
     private fun validate(): Boolean {
-        val identifier = _state.value.identifier.trim()
+        val identifier = _state.value.identifierTextFieldState.text.toString().trim()
         val error = when {
             identifier.isEmpty() -> R.string.error_identifier_required
             identifier.any { it.isLetter() } -> if (validateEmail(identifier)) null else R.string.error_invalid_email
@@ -49,7 +56,7 @@ class AuthStartViewModel(private val checkUserUseCase: CheckUserUseCase) : ViewM
         if (!validate()) return
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errors = it.errors - ERR_CHECK_USER) }
-            val response = checkUserUseCase(CheckUserRequest(identifier = _state.value.identifier.trim()))
+            val response = checkUserUseCase(CheckUserRequest(identifier = _state.value.identifierTextFieldState.text.toString().trim()))
             when (response) {
                 is ApiResponse.Success -> _state.update {
                     it.copy(isLoading = false, accountExists = response.data.exists, firstName = response.data.firstName)

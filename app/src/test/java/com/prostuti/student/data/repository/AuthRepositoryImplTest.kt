@@ -2,6 +2,7 @@ package com.prostuti.student.data.repository
 
 import com.prostuti.student.data.model.enums.DeviceCategory
 import com.prostuti.student.data.model.request.PasswordBasedSignInRequest
+import com.prostuti.student.data.model.request.ResetPasswordRequest
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.repository.fake.FakeCurrentUserDao
 import com.prostuti.student.data.repository.fake.FakeDataStoreStorageRepository
@@ -12,12 +13,15 @@ import com.prostuti.student.data.service.remote.AuthApiService
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
+import io.ktor.client.request.HttpRequestData
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -106,5 +110,49 @@ class AuthRepositoryImplTest {
         advanceUntilIdle()
 
         assertTrue(notifications.registeredTokens.isEmpty())
+    }
+
+    private val resetRequest = ResetPasswordRequest(identifier = "next@test.com", code = "612461", newPassword = "Newpass12")
+
+    private fun CoroutineScope.resetRepo(body: String, status: HttpStatusCode, onRequest: suspend (HttpRequestData) -> Unit = {}) =
+        AuthRepositoryImpl(
+            AuthApiService(HttpClient(MockEngine { req ->
+                onRequest(req)
+                respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
+            }) {
+                defaultRequest { url("https://api.test/api/v1/") }
+                install(ContentNegotiation) { json(Json { isLenient = true; ignoreUnknownKeys = true }) }
+            }),
+            FakeDataStoreStorageRepository(), FakeCurrentUserDao(null), FakeNotificationRepository(), this
+        )
+
+    @Test fun `password reset posts identifier, code and new password in one call`() = runTest {
+        var path: String? = null
+        var sentBody: String? = null
+        val repo = resetRepo("""{ "success": true, "message": "Password reset.", "data": null }""", HttpStatusCode.OK) { req ->
+            path = req.url.encodedPath
+            sentBody = req.body.toByteArray().decodeToString()
+        }
+
+        val result = repo.resetPassword(resetRequest)
+
+        assertTrue(result is ApiResponse.Success) // "data": null is still a success here
+        assertEquals("/api/v1/auth/password/reset", path)
+        val json = Json.parseToJsonElement(sentBody!!).toString()
+        assertTrue(json.contains("\"identifier\":\"next@test.com\""))
+        assertTrue(json.contains("\"code\":\"612461\""))
+        assertTrue(json.contains("\"new_password\":\"Newpass12\""))
+    }
+
+    @Test fun `password reset with a wrong code is a failure with the server message`() = runTest {
+        val repo = resetRepo(
+            """{ "success": false, "message": "Invalid or expired OTP.", "data": null, "error": { "code": "OTP_INVALID" } }""",
+            HttpStatusCode.BadRequest
+        )
+
+        val result = repo.resetPassword(resetRequest)
+
+        assertTrue(result is ApiResponse.Failure)
+        assertEquals("Invalid or expired OTP.", (result as ApiResponse.Failure).message)
     }
 }

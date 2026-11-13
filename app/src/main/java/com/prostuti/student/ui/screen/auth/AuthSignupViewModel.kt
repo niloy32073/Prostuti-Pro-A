@@ -1,6 +1,8 @@
 package com.prostuti.student.ui.screen.auth
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prostuti.student.R
@@ -14,9 +16,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class AuthSignupUiState(
-    val firstName: String = "",
-    val lastName: String = "",
-    val password: String = "",
+    val firstNameTextFieldState: TextFieldState = TextFieldState(""),
+    val lastNameTextFieldState: TextFieldState = TextFieldState(""),
+    val passwordTextFieldState: TextFieldState = TextFieldState(""),
     @StringRes val firstNameError: Int? = null,
     @StringRes val lastNameError: Int? = null,
     @StringRes val passwordError: Int? = null,
@@ -27,6 +29,8 @@ data class AuthSignupUiState(
 
 private const val ERR_SIGN_UP = "PASSWORD_BASED_SIGN_UP"
 private val PASSWORD_HAS_DIGIT = Regex(".*\\d.*")
+// The server rejects a password without an uppercase letter (RegisterRequest / ResetPasswordRequest).
+private val PASSWORD_HAS_UPPERCASE = Regex(".*[A-Z].*")
 
 class AuthSignupViewModel(
     private val passwordBasedSignUpUseCase: PasswordBasedSignUpUseCase,
@@ -35,17 +39,31 @@ class AuthSignupViewModel(
     private val _state = MutableStateFlow(AuthSignupUiState())
     val state: StateFlow<AuthSignupUiState> = _state.asStateFlow()
 
-    fun updateFirstName(value: String) = _state.update { it.copy(firstName = value, firstNameError = null) }
-    fun updateLastName(value: String) = _state.update { it.copy(lastName = value, lastNameError = null) }
-    fun updatePassword(value: String) = _state.update { it.copy(password = value, passwordError = null) }
+    init {
+        val password = _state.value.passwordTextFieldState
+        val firstName = _state.value.firstNameTextFieldState
+        val lastName = _state.value.lastNameTextFieldState
+        viewModelScope.launch {
+            snapshotFlow { password.text.toString() }.collect { _state.update { it.copy(passwordError = null) } }
+        }
+        viewModelScope.launch {
+            snapshotFlow { firstName.text.toString() }.collect { _state.update { it.copy(firstNameError = null) } }
+        }
+        viewModelScope.launch {
+            snapshotFlow { lastName.text.toString() }.collect { _state.update { it.copy(lastNameError = null) } }
+        }
+    }
 
     private fun validate(): Boolean {
         val s = _state.value
-        val firstNameError = if (s.firstName.trim().length < 2) R.string.error_name_min_2 else null
-        val lastNameError = if (s.lastName.trim().length < 2) R.string.error_name_min_2 else null
+        val firstName = s.firstNameTextFieldState.text.toString().trim()
+        val lastName = s.lastNameTextFieldState.text.toString().trim()
+        val firstNameError = if (firstName.length < 2) R.string.error_name_min_2 else null
+        val lastNameError = if (lastName.length < 2) R.string.error_name_min_2 else null
         val passwordError = when {
-            s.password.length < 8 -> R.string.error_password_min_8
-            !s.password.matches(PASSWORD_HAS_DIGIT) -> R.string.error_password_needs_digit
+            s.passwordTextFieldState.text.length < 8 -> R.string.error_password_min_8
+            !s.passwordTextFieldState.text.toString().matches(PASSWORD_HAS_DIGIT) -> R.string.error_password_needs_digit
+            !s.passwordTextFieldState.text.toString().matches(PASSWORD_HAS_UPPERCASE) -> R.string.error_password_needs_uppercase
             else -> null
         }
         _state.update { it.copy(firstNameError = firstNameError, lastNameError = lastNameError, passwordError = passwordError) }
@@ -56,14 +74,16 @@ class AuthSignupViewModel(
         if (!validate()) return
         viewModelScope.launch {
             val s = _state.value
-            val userName = (s.firstName + s.lastName).lowercase().filter { it.isLetterOrDigit() }
+            val firstName = s.firstNameTextFieldState.text.toString().trim()
+            val lastName = s.lastNameTextFieldState.text.toString().trim()
+            val userName = (firstName + lastName).lowercase().filter { it.isLetterOrDigit() }
             _state.update { it.copy(isLoading = true, errors = it.errors - ERR_SIGN_UP) }
             val response = passwordBasedSignUpUseCase(
                 PasswordBasedSignUpRequest(
                     identifier = identifier,
-                    password = s.password,
-                    firstName = s.firstName.trim(),
-                    lastName = s.lastName.trim(),
+                    password = s.passwordTextFieldState.text.toString(),
+                    firstName = firstName,
+                    lastName = lastName,
                     userName = userName
                 )
             )

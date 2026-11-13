@@ -8,9 +8,8 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.prostuti.student.R
-import com.prostuti.student.data.model.enums.UserStatus
 import com.prostuti.student.data.model.response.ApiResponse
-import com.prostuti.student.data.model.response.PasswordBasedSignUpResponse
+import com.prostuti.student.data.repository.fake.fakeSignUpResponse
 import com.prostuti.student.ui.theme.ProstutiTheme
 import org.junit.After
 import org.junit.Before
@@ -61,14 +60,14 @@ class AuthSignupScreenTest {
     @Test
     fun signingUpSuccessfullyInvokesOnSignedUpWithIdentifier() {
         override.fakeRepository.signUpResult = ApiResponse.Success(
-            PasswordBasedSignUpResponse(userId = "018f3c7e-007b-7000-8000-000000000001", userName = "rahimislam", status = UserStatus.PENDING)
+            fakeSignUpResponse(username = "rahimislam")
         )
         var signedUpIdentifier: String? = null
         setScreen(onSignedUp = { signedUpIdentifier = it })
 
         composeTestRule.onNodeWithText(context.getString(R.string.first_name_placeholder)).performTextInput("Rahim")
         composeTestRule.onNodeWithText(context.getString(R.string.last_name_placeholder)).performTextInput("Islam")
-        composeTestRule.onNodeWithText(context.getString(R.string.new_password_placeholder)).performTextInput("password1")
+        composeTestRule.onNodeWithText(context.getString(R.string.new_password_placeholder)).performTextInput("Password1")
         composeTestRule.onNodeWithText(context.getString(R.string.auth_signup_action)).performClick()
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) { signedUpIdentifier == "test@example.com" }

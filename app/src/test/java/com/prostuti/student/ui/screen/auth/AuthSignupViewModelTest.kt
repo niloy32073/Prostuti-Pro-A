@@ -1,10 +1,11 @@
 package com.prostuti.student.ui.screen.auth
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import app.cash.turbine.test
-import com.prostuti.student.data.model.enums.UserStatus
+import com.prostuti.student.R
 import com.prostuti.student.data.model.response.ApiResponse
-import com.prostuti.student.data.model.response.PasswordBasedSignUpResponse
 import com.prostuti.student.data.repository.fake.FakeAuthRepository
+import com.prostuti.student.data.repository.fake.fakeSignUpResponse
 import com.prostuti.student.domain.PasswordBasedSignUpUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,18 +43,18 @@ class AuthSignupViewModelTest {
     @Test
     fun initialStateIsEmpty() {
         val state = viewModel().state.value
-        assertEquals("", state.firstName)
-        assertEquals("", state.lastName)
-        assertEquals("", state.password)
+        assertEquals("", state.firstNameTextFieldState.text.toString())
+        assertEquals("", state.lastNameTextFieldState.text.toString())
+        assertEquals("", state.passwordTextFieldState.text.toString())
         assertFalse(state.isSignedUp)
     }
 
     @Test
     fun signUpWithShortNamesSetsErrorsAndDoesNotCallUseCase() = runTest {
         val viewModel = viewModel()
-        viewModel.updateFirstName("A")
-        viewModel.updateLastName("B")
-        viewModel.updatePassword("password1")
+        viewModel.state.value.firstNameTextFieldState.setTextAndPlaceCursorAtEnd("A")
+        viewModel.state.value.lastNameTextFieldState.setTextAndPlaceCursorAtEnd("B")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("Password1")
         viewModel.signUp()
         assertNotNull(viewModel.state.value.firstNameError)
         assertNotNull(viewModel.state.value.lastNameError)
@@ -61,11 +62,22 @@ class AuthSignupViewModelTest {
     }
 
     @Test
+    fun signUpWithPasswordMissingUppercaseSetsPasswordError() = runTest {
+        val viewModel = viewModel()
+        viewModel.state.value.firstNameTextFieldState.setTextAndPlaceCursorAtEnd("Rahim")
+        viewModel.state.value.lastNameTextFieldState.setTextAndPlaceCursorAtEnd("Islam")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("password1")
+        viewModel.signUp()
+        assertEquals(R.string.error_password_needs_uppercase, viewModel.state.value.passwordError)
+        assertNull(fakeRepository.lastSignUpRequest)
+    }
+
+    @Test
     fun signUpWithPasswordMissingDigitSetsPasswordError() = runTest {
         val viewModel = viewModel()
-        viewModel.updateFirstName("Rahim")
-        viewModel.updateLastName("Islam")
-        viewModel.updatePassword("passwordonly")
+        viewModel.state.value.firstNameTextFieldState.setTextAndPlaceCursorAtEnd("Rahim")
+        viewModel.state.value.lastNameTextFieldState.setTextAndPlaceCursorAtEnd("Islam")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("Passwordonly")
         viewModel.signUp()
         assertNotNull(viewModel.state.value.passwordError)
         assertNull(fakeRepository.lastSignUpRequest)
@@ -74,9 +86,9 @@ class AuthSignupViewModelTest {
     @Test
     fun signUpWithShortPasswordSetsPasswordError() = runTest {
         val viewModel = viewModel()
-        viewModel.updateFirstName("Rahim")
-        viewModel.updateLastName("Islam")
-        viewModel.updatePassword("pass1")
+        viewModel.state.value.firstNameTextFieldState.setTextAndPlaceCursorAtEnd("Rahim")
+        viewModel.state.value.lastNameTextFieldState.setTextAndPlaceCursorAtEnd("Islam")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("pass1")
         viewModel.signUp()
         assertNotNull(viewModel.state.value.passwordError)
         assertNull(fakeRepository.lastSignUpRequest)
@@ -85,12 +97,12 @@ class AuthSignupViewModelTest {
     @Test
     fun signUpSuccessUpdatesIsSignedUpAndDerivesUserName() = runTest {
         fakeRepository.signUpResult = ApiResponse.Success(
-            PasswordBasedSignUpResponse(userId = "018f3c7e-007b-7000-8000-000000000001", userName = "rahimislam", status = UserStatus.PENDING)
+            fakeSignUpResponse(username = "rahimislam")
         )
         val viewModel = viewModel(identifier = "test@example.com")
-        viewModel.updateFirstName("Rahim")
-        viewModel.updateLastName("Islam")
-        viewModel.updatePassword("password1")
+        viewModel.state.value.firstNameTextFieldState.setTextAndPlaceCursorAtEnd("Rahim")
+        viewModel.state.value.lastNameTextFieldState.setTextAndPlaceCursorAtEnd("Islam")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("Password1")
 
         viewModel.state.test {
             assertFalse(awaitItem().isSignedUp)
@@ -109,9 +121,9 @@ class AuthSignupViewModelTest {
     fun signUpFailurePopulatesErrorsMap() = runTest {
         fakeRepository.signUpResult = ApiResponse.Failure(message = "Username taken", errorCode = "DUPLICATE")
         val viewModel = viewModel()
-        viewModel.updateFirstName("Rahim")
-        viewModel.updateLastName("Islam")
-        viewModel.updatePassword("password1")
+        viewModel.state.value.firstNameTextFieldState.setTextAndPlaceCursorAtEnd("Rahim")
+        viewModel.state.value.lastNameTextFieldState.setTextAndPlaceCursorAtEnd("Islam")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("Password1")
 
         viewModel.state.test {
             assertFalse(awaitItem().isSignedUp)

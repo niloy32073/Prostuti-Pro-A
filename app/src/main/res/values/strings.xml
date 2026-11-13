@@ -14,7 +14,7 @@
     <string name="confirm_password_placeholder">পাসওয়ার্ড আবার লিখো</string>
     <string name="password_show">পাসওয়ার্ড দেখাও</string>
     <string name="password_hide">পাসওয়ার্ড লুকাও</string>
-    <string name="password_rules_hint">কমপক্ষে ৮ ক্যারেক্টার, অন্তত ১টা সংখ্যা থাকতে হবে</string>
+    <string name="password_rules_hint">কমপক্ষে ৮ ক্যারেক্টার, অন্তত ১টা সংখ্যা আর ১টা বড় হাতের অক্ষর (A–Z) থাকতে হবে</string>
     <string name="otp_label">ভেরিফিকেশন কোড</string>
     <string name="otp_placeholder">৬ ডিজিটের কোড</string>
     <string name="otp_resend_question">কোড পাওনি?</string>
@@ -29,6 +29,7 @@
     <string name="error_password_min_6">পাসওয়ার্ড কমপক্ষে ৬ ক্যারেক্টার হতে হবে</string>
     <string name="error_password_min_8">কমপক্ষে ৮ ক্যারেক্টার হতে হবে</string>
     <string name="error_password_needs_digit">অন্তত ১টা সংখ্যা থাকতে হবে</string>
+    <string name="error_password_needs_uppercase">অন্তত ১টা বড় হাতের অক্ষর (A–Z) থাকতে হবে</string>
     <string name="error_name_min_2">নাম কমপক্ষে ২ ক্যারেক্টার হতে হবে</string>
     <string name="error_confirm_password_required">পাসওয়ার্ড আবার লিখো</string>
     <string name="error_passwords_dont_match">পাসওয়ার্ড মিলছে না</string>
@@ -91,7 +92,7 @@
 
     <!-- AuthResetNewPassword -->
     <string name="auth_reset_new_password_title">নতুন পাসওয়ার্ড দাও</string>
-    <string name="auth_reset_new_password_subtitle">কোড ভেরিফাই হয়েছে — এখন তোমার নতুন পাসওয়ার্ড সেট করো</string>
+    <string name="auth_reset_new_password_subtitle">এবার তোমার নতুন পাসওয়ার্ড সেট করো — কোডটা এর সাথেই যাচাই হবে</string>
     <string name="new_password_label">নতুন পাসওয়ার্ড</string>
     <string name="confirm_password_label">পাসওয়ার্ড আবার লিখো</string>
     <string name="auth_reset_password_action">পাসওয়ার্ড পরিবর্তন করো</string>
@@ -574,6 +575,11 @@
     <string name="mcq_report">রিপোর্ট করুন</string>
     <string name="mcq_reported">রিপোর্ট করা হয়েছে</string>
     <string name="mcq_report_sent">প্রশ্নটি রিপোর্ট করা হয়েছে।</string>
+    <string name="mcq_report_dialog_title">সমস্যা রিপোর্ট করুন</string>
+    <string name="mcq_report_reason_label">সমস্যার ধরন বেছে নিন</string>
+    <string name="mcq_report_description_label">বিস্তারিত লিখুন (ঐচ্ছিক)</string>
+    <string name="mcq_report_submit">সাবমিট</string>
+    <string name="mcq_report_cancel">বাতিল</string>
     <string name="qb_reader_question_count">%1$dটি প্রশ্ন</string>
     <string name="qb_reader_no_questions">এই পরীক্ষায় কোনো প্রশ্ন পাওয়া যায়নি।</string>
     <string name="qb_reader_all_answers">সব উত্তর</string>

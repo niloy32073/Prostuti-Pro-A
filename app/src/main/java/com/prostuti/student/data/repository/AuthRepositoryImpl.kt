@@ -12,7 +12,6 @@ import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.model.response.CheckUserResponse
 import com.prostuti.student.data.model.response.LogInResponse
 import com.prostuti.student.data.model.response.PasswordBasedSignUpResponse
-import com.prostuti.student.data.model.response.ResetTokenResponse
 import com.prostuti.student.data.model.response.SendOTPResponse
 import com.prostuti.student.data.model.response.VerifyEmailResponse
 import com.prostuti.student.data.model.response.VerifyPhoneResponse
@@ -62,14 +61,8 @@ class AuthRepositoryImpl(
     override suspend fun verifyPhone(body: VerifyIdentifierRequest): ApiResponse<VerifyPhoneResponse> =
         authApiService.verifyPhone(body)
 
-    override suspend fun verifyResetOtp(body: VerifyIdentifierRequest): ApiResponse<ResetTokenResponse> =
-        authApiService.verifyResetOtp(body)
-
-    override suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<LogInResponse> {
-        val response = authApiService.resetPassword(body)
-        persistTokensOnLogInSuccess(response)
-        return response
-    }
+    override suspend fun resetPassword(body: ResetPasswordRequest): ApiResponse<Unit> =
+        authApiService.resetPassword(body)
 
     private suspend fun persistTokensOnLogInSuccess(response: ApiResponse<LogInResponse>) {
         if (response is ApiResponse.Success) {

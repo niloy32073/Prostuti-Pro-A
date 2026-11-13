@@ -1,5 +1,6 @@
 package com.prostuti.student.ui.screen.auth
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import app.cash.turbine.test
 import com.prostuti.student.data.model.response.ApiResponse
 import com.prostuti.student.data.repository.fake.FakeAuthRepository
@@ -41,7 +42,7 @@ class AuthLoginViewModelTest {
     @Test
     fun initialStateIsEmpty() {
         val state = viewModel().state.value
-        assertEquals("", state.password)
+        assertEquals("", state.passwordTextFieldState.text.toString())
         assertNull(state.passwordError)
         assertFalse(state.isSignedIn)
     }
@@ -49,7 +50,7 @@ class AuthLoginViewModelTest {
     @Test
     fun signInWithShortPasswordSetsErrorAndDoesNotCallUseCase() = runTest {
         val viewModel = viewModel()
-        viewModel.updatePassword("123")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("123")
         viewModel.signIn()
         assertNotNull(viewModel.state.value.passwordError)
         assertNull(fakeRepository.lastSignInRequest)
@@ -59,7 +60,7 @@ class AuthLoginViewModelTest {
     fun signInSuccessUpdatesIsSignedIn() = runTest {
         fakeRepository.signInResult = ApiResponse.Success(fakeLogInResponse())
         val viewModel = viewModel(identifier = "test@example.com")
-        viewModel.updatePassword("password123")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("password123")
 
         viewModel.state.test {
             assertFalse(awaitItem().isSignedIn)
@@ -77,7 +78,7 @@ class AuthLoginViewModelTest {
     fun signInFailurePopulatesErrorsMap() = runTest {
         fakeRepository.signInResult = ApiResponse.Failure(message = "Wrong password", errorCode = "AUTH_FAILED")
         val viewModel = viewModel()
-        viewModel.updatePassword("password123")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("password123")
 
         viewModel.state.test {
             assertFalse(awaitItem().isSignedIn)
@@ -94,7 +95,7 @@ class AuthLoginViewModelTest {
     fun clearErrorRemovesTheTag() = runTest {
         fakeRepository.signInResult = ApiResponse.Failure(message = "err", errorCode = "AUTH_FAILED")
         val viewModel = viewModel()
-        viewModel.updatePassword("password123")
+        viewModel.state.value.passwordTextFieldState.setTextAndPlaceCursorAtEnd("password123")
         viewModel.signIn()
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(viewModel.state.value.errors.containsKey("PASSWORD_BASED_SIGN_IN"))

@@ -6,26 +6,28 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.prostuti.student.R
 import com.prostuti.student.ui.component.AuthHeader
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.LockedIdentifierField
-import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.PasswordField
 import com.prostuti.student.ui.component.PrimaryButton
+import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -82,8 +84,7 @@ fun AuthLoginScreen(
                             onChangeClick = onBack
                         )
                         PasswordField(
-                            value = state.password,
-                            onValueChange = viewModel::updatePassword,
+                            state = state.passwordTextFieldState,
                             label = stringResource(R.string.password_label),
                             placeholder = stringResource(R.string.password_placeholder),
                             isError = state.passwordError != null,
@@ -105,7 +106,6 @@ fun AuthLoginScreen(
                     PrimaryButton(text = stringResource(R.string.continue_action), onClick = viewModel::signIn, loading = state.isLoading)
                 }
             }
-    
         }
     }
 }
