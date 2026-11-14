@@ -3,7 +3,6 @@ package com.prostuti.student.di
 import com.prostuti.student.ui.screen.FeatureAccessViewModel
 import com.prostuti.student.ui.screen.home.HomeNotificationsViewModel
 import com.prostuti.student.ui.screen.notification.NotificationsViewModel
-import com.prostuti.student.navigation.MainTabRequests
 import com.prostuti.student.navigation.AppLinkRequests
 import com.prostuti.student.data.repository.WidgetSnapshotRepository
 import com.prostuti.student.data.repository.WidgetSnapshotRepositoryImpl
@@ -402,7 +401,6 @@ val appModule = module {
     single<NotificationRepository> { NotificationRepositoryImpl(get(), get()) }
     single<ApiErrorMessages> { ResourceApiErrorMessages(androidContext()) }
     single { GroupNoticeBus() }
-    single { MainTabRequests() }
     single { AppLinkRequests() }
 
     // Home screen widget (ui/widget).

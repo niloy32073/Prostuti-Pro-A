@@ -20,20 +20,18 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import com.prostuti.student.ui.component.ProstutiSpinner
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,7 +63,6 @@ import com.prostuti.student.ui.component.PrimaryButton
 import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.adaptiveColumnCount
 import com.prostuti.student.ui.component.localizedNumber
-import com.prostuti.student.ui.screen.group.component.GroupCreateJoinSheet
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -76,13 +73,14 @@ fun GroupListScreen(
     onNavigateToGroup: (String) -> Unit,
     /** The group open beside the list (two panes), highlighted. */
     selectedGroupId: String? = null,
+    /** The + button: the GroupCreateJoin sheet (it shares this screen's ViewModel). */
+    onOpenCreateJoin: () -> Unit = {},
     viewModel: GroupListViewModel = koinViewModel(),
     exploreViewModel: GroupExploreViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val exploreState by exploreViewModel.state.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(TAB_MINE) }
-    val sheetState = rememberModalBottomSheetState()
 
     // The retained ViewModel doesn't reload by itself after returning from a GroupDetail visit
     // (where I may have left the group, or it was deleted).
@@ -96,21 +94,10 @@ fun GroupListScreen(
         }
     }
 
-    if (state.showCreateJoinSheet) {
-        GroupCreateJoinSheet(
-            sheetState = sheetState,
-            isSubmitting = state.isSubmittingCreateJoin,
-            error = state.createJoinError,
-            onCreate = viewModel::createGroup,
-            onJoin = viewModel::joinGroup,
-            onDismiss = viewModel::dismissCreateJoinSheet
-        )
-    }
-
     GroupListContent(
         state = state,
         onBack = onBack,
-        onAdd = viewModel::openCreateJoinSheet,
+        onAdd = onOpenCreateJoin,
         onOpenGroup = onNavigateToGroup,
         selectedGroupId = selectedGroupId,
         onRefresh = if (selectedTab == TAB_MINE) viewModel::refresh else exploreViewModel::refresh,
@@ -159,7 +146,17 @@ fun GroupListContent(
     val onMine = selectedTab == TAB_MINE
     // One overlay for both tabs; explore's tags are prefixed so each clear goes to its own ViewModel.
     val errors = if (onMine) state.errors else exploreErrors.mapKeys { EXPLORE_ERROR_PREFIX + it.key }
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        // Create or join a group: the same floating button as GroupMembers' "add a member".
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onAdd,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.group_create_tab), style = ProstutiTypography.bnLabelLarge) },
+            )
+        }
+    ) { padding ->
         PullToRefreshErrorOverlayWrapper(
             errors = errors,
             errorCleaner = { tag -> if (tag.startsWith(EXPLORE_ERROR_PREFIX)) onClearExploreError(tag.removePrefix(EXPLORE_ERROR_PREFIX)) else onClearError(tag) },
@@ -183,18 +180,6 @@ fun GroupListContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
                         )
-                    }
-                    Box(
-                        modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(onClick = onAdd) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = stringResource(R.string.group_list_add_cd),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
                     }
                 }
 

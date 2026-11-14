@@ -3,8 +3,11 @@ package com.prostuti.student.navigation
 import android.net.Uri
 
 /**
- * A place in the app that something outside it (the home screen widget) can open. Carried as the
- * launch intent's data, `prostuti://open/<path>`; [RootNavDisplay] builds the back stack for it.
+ * A place in the app that something outside it can open (DEEP_LINKS.md). Two forms, same paths:
+ * - `prostuti://open/<path>` — the app's own scheme (home screen widget, notifications);
+ * - `https://prostuti.com.bd/app/<path>` — a verified App Link from the website (or a shared link):
+ *   only the `/app/` part of the site belongs to the app, so the rest of the website stays in the browser.
+ * [OpenAppLinks] opens it in its tab with a real back stack. Links only navigate; they never act.
  */
 sealed interface AppLink {
     /** Just bring the app up (signed out: it opens on sign-in by itself). */
@@ -30,6 +33,9 @@ sealed interface AppLink {
     companion object {
         const val SCHEME = "prostuti"
         const val HOST = "open"
+        /** The website's App Link paths: https://prostuti.com.bd/app/<path> (and www.). */
+        const val WEB_HOST = "prostuti.com.bd"
+        const val WEB_PATH_PREFIX = "app"
         private const val PATH_HOME = "home"
         private const val PATH_LIVE = "live"
         private const val PATH_GROUP = "group"
@@ -38,9 +44,16 @@ sealed interface AppLink {
         private const val PATH_LEADERBOARD = "leaderboard"
 
         /** Null for anything that isn't one of ours. */
-        fun parse(uri: Uri?): AppLink? {
-            if (uri == null || uri.scheme != SCHEME || uri.host != HOST) return null
-            val path = uri.pathSegments
+        fun parse(uri: Uri?): AppLink? = uri?.let { parse(it.scheme, it.host, it.pathSegments) }
+
+        /** [parse] without android.net.Uri, so plain unit tests can run it. */
+        fun parse(scheme: String?, host: String?, segments: List<String>): AppLink? {
+            val path = when {
+                scheme == SCHEME && host == HOST -> segments
+                scheme == "https" && (host.equals(WEB_HOST, ignoreCase = true) || host.equals("www.$WEB_HOST", ignoreCase = true)) &&
+                    segments.firstOrNull() == WEB_PATH_PREFIX -> segments.drop(1)
+                else -> return null
+            }
             return when (path.getOrNull(0)) {
                 PATH_HOME -> Home
                 PATH_LIVE -> path.getOrNull(1)?.let { LiveExam(it) } ?: LiveExams

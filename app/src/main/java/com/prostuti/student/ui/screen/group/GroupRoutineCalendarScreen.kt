@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import com.prostuti.student.R
-import com.prostuti.student.data.model.enums.SlotKind
 import com.prostuti.student.domain.routine.TopicLabel
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.InfoNote
@@ -66,7 +65,6 @@ import com.prostuti.student.ui.screen.routine.slot.RefreshAtWindowEdges
 import com.prostuti.student.ui.screen.routine.slot.HandleExamLaunch
 import com.prostuti.student.ui.screen.routine.slot.SlotAction
 import com.prostuti.student.ui.screen.routine.slot.SlotCard
-import com.prostuti.student.ui.screen.routine.slot.SlotDetailSheet
 import com.prostuti.student.ui.screen.routine.slot.date
 import com.prostuti.student.ui.screen.routine.slot.rememberNow
 import com.prostuti.student.ui.screen.routine.topicLabelText
@@ -91,9 +89,13 @@ fun GroupRoutineCalendarScreen(
     onOpenExamAttempt: (attemptId: String, title: String, lockResultUntil: String?) -> Unit,
     onOpenExamResult: (attemptId: String, title: String, lockResultUntil: String?) -> Unit,
     onOpenRanking: (examId: String, title: String, closesAt: String) -> Unit,
+    /** A slot was opened: show its sheet (SlotDetail, which shares this ViewModel). */
+    onShowSlot: () -> Unit = {},
     viewModel: GroupRoutineCalendarViewModel = koinViewModel(parameters = { parametersOf(groupId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // A slot was opened: its sheet is a destination (SlotDetail) that reads this same ViewModel.
+    LaunchedEffect(state.openSlotId) { if (state.openSlotId != null) onShowSlot() }
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -134,9 +136,6 @@ fun GroupRoutineCalendarScreen(
             if (action == SlotAction.RANKING) { if (examId != null) onOpenRanking(examId, titles[slotId].orEmpty(), slot.closesAt) }
             else viewModel.openExam(slotId, action)
         },
-        onDismissSlot = viewModel::dismissSlot,
-        onRescheduleSlot = viewModel::reschedule,
-        onDeleteSlot = viewModel::deleteSlot,
         onScheduleAdhoc = onScheduleAdhoc,
         onDeleteRoutine = viewModel::deleteRoutine,
         onRefresh = viewModel::pullToRefresh,
@@ -153,9 +152,6 @@ fun GroupRoutineCalendarContent(
     onSelectDate: (LocalDate) -> Unit = {},
     onOpenSlot: (String) -> Unit = {},
     onSlotAction: (String, SlotAction) -> Unit = { _, _ -> },
-    onDismissSlot: () -> Unit = {},
-    onRescheduleSlot: (LocalDate) -> Unit = {},
-    onDeleteSlot: () -> Unit = {},
     onScheduleAdhoc: () -> Unit = {},
     onDeleteRoutine: () -> Unit = {},
     onRefresh: () -> Unit = {},
@@ -169,13 +165,6 @@ fun GroupRoutineCalendarContent(
     val comingSoon = stringResource(R.string.feature_coming_soon)
     var confirmDeleteRoutine by rememberSaveable { mutableStateOf(false) }
 
-    state.openSlot?.let { slot ->
-        SlotDetailSheet(
-            slot = slot, label = state.labels[slot.id], now = now, canManage = state.isAdmin,
-            lastDate = if (slot.kind == SlotKind.ROUTINE) state.routineEnd else null, isBusy = state.isSlotBusy,
-            onReschedule = onRescheduleSlot, onDelete = onDeleteSlot, onDismiss = onDismissSlot,
-        )
-    }
     if (confirmDeleteRoutine) {
         GroupConfirmDialog(
             title = stringResource(R.string.calendar_delete_routine_title),

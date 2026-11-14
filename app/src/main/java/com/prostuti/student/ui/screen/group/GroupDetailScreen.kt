@@ -57,16 +57,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import com.prostuti.student.R
-import com.prostuti.student.data.model.enums.SlotKind
 import com.prostuti.student.ui.screen.routine.slot.RefreshAtWindowEdges
 import com.prostuti.student.ui.screen.routine.slot.HandleExamLaunch
 import com.prostuti.student.ui.screen.routine.slot.SlotAction
 import com.prostuti.student.ui.screen.routine.topicLabelText
 import com.prostuti.student.domain.routine.TopicLabel
-import com.prostuti.student.ui.screen.routine.slot.SlotDetailSheet
 import com.prostuti.student.ui.screen.routine.slot.rememberNow
 import java.time.Instant
-import java.time.LocalDate
 import com.prostuti.student.data.model.enums.GroupRole
 import com.prostuti.student.data.model.response.StudyGroup
 import com.prostuti.student.data.model.response.StudyGroupMember
@@ -97,9 +94,13 @@ fun GroupDetailScreen(
     onGroupClosed: () -> Unit,
     /** False beside the group list (medium and wider), which is already on screen. */
     showBack: Boolean = true,
+    /** A slot was opened: show its sheet (SlotDetail, which shares this ViewModel). */
+    onShowSlot: () -> Unit = {},
     viewModel: GroupDetailViewModel = koinViewModel(parameters = { parametersOf(groupId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // A slot was opened: its sheet is a destination (SlotDetail) that reads this same ViewModel.
+    LaunchedEffect(state.openSlotId) { if (state.openSlotId != null) onShowSlot() }
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -150,9 +151,6 @@ fun GroupDetailScreen(
             else viewModel.openExam(slotId, action)
         },
         onSeeAllPastExams = onSeeAllPastExams,
-        onDismissSlot = viewModel::dismissSlot,
-        onRescheduleSlot = viewModel::reschedule,
-        onDeleteSlot = viewModel::deleteSlot,
         onLeave = viewModel::leave,
         onCopyCode = { code ->
             context.copyToClipboard(code)
@@ -179,9 +177,6 @@ fun GroupDetailContent(
     onOpenSlot: (String) -> Unit = {},
     onSlotAction: (String, SlotAction) -> Unit = { _, _ -> },
     onSeeAllPastExams: () -> Unit = {},
-    onDismissSlot: () -> Unit = {},
-    onRescheduleSlot: (LocalDate) -> Unit = {},
-    onDeleteSlot: () -> Unit = {},
     onLeave: () -> Unit = {},
     onCopyCode: (String) -> Unit,
     onShareCode: (StudyGroup, String) -> Unit,
@@ -194,14 +189,6 @@ fun GroupDetailContent(
     val now = clock ?: ticking
     val scope = rememberCoroutineScope()
     val comingSoon = stringResource(R.string.feature_coming_soon)
-
-    state.openSlot?.let { slot ->
-        SlotDetailSheet(
-            slot = slot, label = state.labels[slot.id], now = now, canManage = state.isAdmin,
-            lastDate = if (slot.kind == SlotKind.ROUTINE) state.routineLastDate else null, isBusy = state.isSlotBusy,
-            onReschedule = onRescheduleSlot, onDelete = onDeleteSlot, onDismiss = onDismissSlot,
-        )
-    }
 
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
     if (confirmLeave) {

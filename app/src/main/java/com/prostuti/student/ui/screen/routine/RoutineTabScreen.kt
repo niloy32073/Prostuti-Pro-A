@@ -65,7 +65,6 @@ import com.prostuti.student.ui.screen.routine.slot.HandleExamLaunch
 import com.prostuti.student.ui.screen.routine.slot.RefreshAtWindowEdges
 import com.prostuti.student.ui.screen.routine.slot.SlotAction
 import com.prostuti.student.ui.screen.routine.slot.SlotCard
-import com.prostuti.student.ui.screen.routine.slot.SlotDetailSheet
 import com.prostuti.student.ui.screen.routine.slot.date
 import com.prostuti.student.ui.screen.routine.slot.rememberNow
 import com.prostuti.student.ui.theme.ProstutiTypography
@@ -91,6 +90,8 @@ fun RoutineTabScreen(
     onOpenExamAttempt: (attemptId: String, title: String, lockResultUntil: String?) -> Unit,
     onOpenExamResult: (attemptId: String, title: String, lockResultUntil: String?) -> Unit,
     onOpenRanking: (groupId: String, examId: String, title: String, closesAt: String) -> Unit,
+    /** A slot was opened: show its sheet (SlotDetail, which shares this ViewModel). */
+    onShowSlot: () -> Unit = {},
     viewModel: RoutineTabViewModel = koinViewModel(),
     accessViewModel: FeatureAccessViewModel = koinViewModel(),
 ) {
@@ -100,6 +101,8 @@ fun RoutineTabScreen(
         return
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // A slot was opened: its sheet is a destination (SlotDetail) that reads this same ViewModel.
+    LaunchedEffect(state.openSlotId) { if (state.openSlotId != null) onShowSlot() }
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -128,9 +131,6 @@ fun RoutineTabScreen(
             onShowWeek = viewModel::showWeek,
             onSelectDate = viewModel::selectDate,
             onOpenSlot = viewModel::openSlot,
-            onDismissSlot = viewModel::dismissSlot,
-            onRescheduleSlot = viewModel::reschedule,
-            onDeleteSlot = viewModel::deleteSlot,
             onSlotAction = { slotId, action ->
                 val slot = state.weekSlots.firstOrNull { it.id == slotId }
                 val groupId = slot?.groupId
@@ -158,9 +158,6 @@ class RoutineTabActions(
     val onShowWeek: (Boolean) -> Unit = {},
     val onSelectDate: (LocalDate) -> Unit = {},
     val onOpenSlot: (String) -> Unit = {},
-    val onDismissSlot: () -> Unit = {},
-    val onRescheduleSlot: (LocalDate) -> Unit = {},
-    val onDeleteSlot: () -> Unit = {},
     val onSlotAction: (String, SlotAction) -> Unit = { _, _ -> },
     val onCreateRoutine: () -> Unit = {},
     val onDeleteRoutine: () -> Unit = {},
@@ -187,13 +184,6 @@ fun RoutineTabContent(
     val comingSoon = stringResource(R.string.feature_coming_soon)
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
 
-    state.openSlot?.let { slot ->
-        SlotDetailSheet(
-            slot = slot, label = state.labels[slot.id], now = now, canManage = state.canManage(slot),
-            lastDate = if (slot.groupId == null) state.routineEnd else null, isBusy = state.isSlotBusy,
-            onReschedule = actions.onRescheduleSlot, onDelete = actions.onDeleteSlot, onDismiss = actions.onDismissSlot,
-        )
-    }
     if (confirmDelete) {
         GroupConfirmDialog(
             title = stringResource(R.string.calendar_delete_routine_title), body = stringResource(R.string.calendar_delete_routine_body),

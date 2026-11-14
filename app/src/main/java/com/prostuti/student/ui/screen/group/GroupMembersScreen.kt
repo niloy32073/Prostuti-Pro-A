@@ -52,7 +52,6 @@ import com.prostuti.student.data.model.response.StudyGroupMember
 import com.prostuti.student.ui.component.BackButton
 import com.prostuti.student.ui.component.PullToRefreshErrorOverlayWrapper
 import com.prostuti.student.ui.component.adaptiveColumnCount
-import com.prostuti.student.ui.screen.group.component.AddMemberSheet
 import com.prostuti.student.ui.screen.group.component.GroupConfirmDialog
 import com.prostuti.student.ui.theme.ProstutiTypography
 import org.koin.compose.viewmodel.koinViewModel
@@ -62,6 +61,8 @@ import org.koin.core.parameter.parametersOf
 fun GroupMembersScreen(
     groupId: String,
     onBack: () -> Unit,
+    /** Admin's "add a member": the AddGroupMember sheet (it shares this screen's ViewModel). */
+    onOpenAddMember: () -> Unit = {},
     viewModel: GroupMembersViewModel = koinViewModel(parameters = { parametersOf(groupId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -75,21 +76,12 @@ fun GroupMembersScreen(
         }
     }
 
-    if (state.showAddSheet) {
-        AddMemberSheet(
-            isSubmitting = state.isAdding,
-            error = state.addError,
-            onAdd = viewModel::addMember,
-            onDismiss = viewModel::dismissAddSheet
-        )
-    }
-
     GroupMembersContent(
         state = state,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onQueryChange = viewModel::setQuery,
-        onAddMember = viewModel::openAddSheet,
+        onAddMember = onOpenAddMember,
         onMakeAdmin = viewModel::makeAdmin,
         onRemoveAdmin = viewModel::removeAdmin,
         onRemove = viewModel::remove,

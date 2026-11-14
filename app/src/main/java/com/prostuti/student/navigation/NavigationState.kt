@@ -59,6 +59,7 @@ fun NavigationState.toEntries(entryProvider: (NavKey) -> NavEntry<NavKey>): Snap
             entryDecorators = listOf(
                 rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
                 rememberViewModelStoreNavEntryDecorator<NavKey>(),
+                rememberFlowViewModelStoreNavEntryDecorator<NavKey>(), // multi-step flows (the practice builder)
             ),
             entryProvider = entryProvider,
         )

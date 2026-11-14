@@ -26,6 +26,7 @@ import com.prostuti.student.ui.screen.routine.slot.TAG_SLOT_CARD_PREFIX
 import com.prostuti.student.ui.screen.routine.slot.TAG_SLOT_DELETE
 import com.prostuti.student.ui.screen.routine.slot.TAG_SLOT_RESCHEDULE
 import com.prostuti.student.ui.screen.routine.slot.TAG_SLOT_SHEET
+import com.prostuti.student.ui.screen.routine.slot.SlotDetailSheet
 import com.prostuti.student.ui.theme.ProstutiTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -103,10 +104,23 @@ class GroupScheduleScreenTest {
         composeTestRule.onNodeWithTag(TAG_OPEN_CALENDAR).assertDoesNotExist()
     }
 
+    /** The slot sheet is a destination of its own (SlotDetail): here, its content as GroupDetail's state would feed it. */
+    private fun showSlotSheet(state: GroupDetailUiState) {
+        val slot = requireNotNull(state.openSlot)
+        composeTestRule.setContent {
+            ProstutiTheme {
+                SlotDetailSheet(
+                    slot = slot, label = state.labels[slot.id], now = now, canManage = state.isAdmin,
+                    lastDate = null, isBusy = false, onReschedule = {}, onDelete = {},
+                )
+            }
+        }
+    }
+
     @Test
     fun onlyAnAdminGetsMoveAndDeleteInTheSheet() {
         val base = GroupDetailUiState(isLoading = false, routineKnown = true, todaySlots = listOf(slot("s1")), openSlotId = "s1")
-        showDetail(base.copy(group = group(GroupRole.ADMIN)))
+        showSlotSheet(base.copy(group = group(GroupRole.ADMIN)))
         composeTestRule.onNodeWithTag(TAG_SLOT_SHEET).assertExists()
         composeTestRule.onNodeWithTag(TAG_SLOT_RESCHEDULE).assertExists()
         composeTestRule.onNodeWithTag(TAG_SLOT_DELETE).assertExists()
@@ -114,7 +128,7 @@ class GroupScheduleScreenTest {
 
     @Test
     fun memberSheetHasNoActions() {
-        showDetail(GroupDetailUiState(isLoading = false, group = group(GroupRole.MEMBER), routineKnown = true, todaySlots = listOf(slot("s1")), openSlotId = "s1"))
+        showSlotSheet(GroupDetailUiState(isLoading = false, group = group(GroupRole.MEMBER), routineKnown = true, todaySlots = listOf(slot("s1")), openSlotId = "s1"))
         composeTestRule.onNodeWithTag(TAG_SLOT_SHEET).assertExists()
         composeTestRule.onNodeWithTag(TAG_SLOT_RESCHEDULE).assertDoesNotExist()
         composeTestRule.onNodeWithTag(TAG_SLOT_DELETE).assertDoesNotExist()

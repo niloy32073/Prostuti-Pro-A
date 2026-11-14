@@ -87,6 +87,58 @@ class NavigatorTest {
     }
 
     @Test
+    fun `replaceTop swaps the top screen`() {
+        navigator.navigate(QB)
+        navigator.navigate(subject)
+        navigator.replaceTop(exams)
+
+        assertEquals(listOf<NavKey>(QB, exams), state.currentStack.toList())
+    }
+
+    @Test
+    fun `popToRoot and popUntil never remove the tab root`() {
+        navigator.navigate(QB)
+        navigator.navigate(subject)
+        navigator.navigate(exams)
+
+        navigator.popUntil { it == subject }
+        assertEquals(listOf<NavKey>(QB, subject), state.currentStack.toList())
+
+        navigator.popUntil { false }
+        assertEquals(listOf<NavKey>(QB), state.currentStack.toList())
+
+        navigator.navigate(subject)
+        navigator.popToRoot()
+        assertEquals(listOf<NavKey>(QB), state.currentStack.toList())
+    }
+
+    @Test
+    fun `removeEverywhere clears matching screens from every tab but keeps roots`() {
+        navigator.navigate(subject)          // on Home
+        navigator.navigate(QB)
+        navigator.navigate(subject)
+        navigator.navigate(exams)
+
+        navigator.removeEverywhere { it is SubjectType || it == QB }
+
+        assertEquals(listOf<NavKey>(Home), state.backStacks.getValue(Home).toList())
+        assertEquals(listOf<NavKey>(QB, exams), state.backStacks.getValue(QB).toList())
+    }
+
+    @Test
+    fun `openInTab replaces that tab's history and shows it`() {
+        navigator.navigate(QB)
+        navigator.navigate(subject)
+        navigator.navigate(Routine)
+
+        navigator.openInTab(QB, listOf(exams))
+
+        assertEquals(QB, state.topLevelRoute)
+        assertEquals(listOf<NavKey>(QB, exams), state.currentStack.toList())
+        assertEquals(true, navigator.anyOpen { it is MCQExamList })
+    }
+
+    @Test
     fun `back to the start tab keeps the left tab's history`() {
         navigator.navigate(QB)
         navigator.navigate(subject)
