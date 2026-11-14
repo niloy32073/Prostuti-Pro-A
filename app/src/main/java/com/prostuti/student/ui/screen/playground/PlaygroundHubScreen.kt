@@ -40,6 +40,8 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -64,6 +66,7 @@ import com.prostuti.student.ui.theme.ProstutiTypography
 fun PlaygroundHubScreen(
     onBack: () -> Unit,
     onOpenGraphBuilder: (savedGraphId: Long?) -> Unit,
+    onOpenCodeVisualizer: () -> Unit,
     viewModel: PlaygroundHubViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -73,6 +76,7 @@ fun PlaygroundHubScreen(
         state = state,
         onBack = onBack,
         onOpenGraph = { id -> openId = id; open() },
+        onOpenCodeVisualizer = dropUnlessResumed { onOpenCodeVisualizer() },
         onRename = viewModel::startRename,
         onDelete = viewModel::startDelete,
         onRenameConfirm = viewModel::rename,
@@ -86,6 +90,7 @@ fun PlaygroundHubContent(
     state: PlaygroundHubUiState,
     onBack: () -> Unit,
     onOpenGraph: (Long?) -> Unit,
+    onOpenCodeVisualizer: () -> Unit = {},
     onRename: (SavedGraphEntity) -> Unit = {},
     onDelete: (SavedGraphEntity) -> Unit = {},
     onRenameConfirm: (String) -> Unit = {},
@@ -132,6 +137,15 @@ fun PlaygroundHubContent(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 item(key = "graph_builder") { GraphBuilderCard { onOpenGraph(null) } }
+                item(key = "code_visualizer") {
+                    ToolCard(
+                        icon = Icons.Filled.AccountTree,
+                        title = stringResource(R.string.playground_code_visualizer),
+                        description = stringResource(R.string.playground_code_visualizer_desc),
+                        testTag = "playground_code_visualizer",
+                        onClick = onOpenCodeVisualizer,
+                    )
+                }
                 item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
                     Text(
                         stringResource(R.string.playground_more_soon),
@@ -167,7 +181,16 @@ fun PlaygroundHubContent(
 }
 
 @Composable
-private fun GraphBuilderCard(onClick: () -> Unit) {
+private fun GraphBuilderCard(onClick: () -> Unit) = ToolCard(
+    icon = Icons.AutoMirrored.Filled.ShowChart,
+    title = stringResource(R.string.playground_graph_builder),
+    description = stringResource(R.string.playground_graph_builder_desc),
+    testTag = "playground_graph_builder",
+    onClick = onClick,
+)
+
+@Composable
+private fun ToolCard(icon: ImageVector, title: String, description: String, testTag: String, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -175,24 +198,24 @@ private fun GraphBuilderCard(onClick: () -> Unit) {
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.primaryContainer)
             .clickable(onClick = onClick)
-            .testTag("playground_graph_builder")
+            .testTag(testTag)
             .padding(16.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary),
         ) {
-            Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                stringResource(R.string.playground_graph_builder),
+                title,
                 style = ProstutiTypography.bnTitleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
-                stringResource(R.string.playground_graph_builder_desc),
+                description,
                 style = ProstutiTypography.bnBodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                 modifier = Modifier.padding(top = 2.dp),

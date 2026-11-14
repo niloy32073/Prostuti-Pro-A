@@ -24,3 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Prostuti"
 include(":app")
+// Python for the code visualizer: Chaquopy lives in a library (it refuses dynamic-feature modules),
+// which only the on-demand feature module includes, so the base app stays Python-free.
+include(":pyruntime")
+include(":pyfeature")

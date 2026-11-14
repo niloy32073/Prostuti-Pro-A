@@ -61,6 +61,19 @@ import com.prostuti.student.domain.graph.plot.GraphPlotter
 import com.prostuti.student.domain.graph.space.SpacePlotter
 import com.prostuti.student.ui.screen.playground.graph.GraphBuilderViewModel
 import com.prostuti.student.ui.screen.playground.PlaygroundHubViewModel
+import com.prostuti.student.ui.screen.playground.code.CodeVisualizerViewModel
+import com.prostuti.student.domain.BuildCodeFlowUseCase
+import com.prostuti.student.domain.InstallPythonRuntimeUseCase
+import com.prostuti.student.domain.ObservePythonRuntimeUseCase
+import com.prostuti.student.domain.RunPythonUseCase
+import com.prostuti.student.domain.RunCUseCase
+import com.prostuti.student.domain.SendRunInputUseCase
+import com.prostuti.student.domain.SendTraceCommandUseCase
+import com.prostuti.student.data.repository.CodeRunRepository
+import com.prostuti.student.data.repository.CodeRunRepositoryImpl
+import com.prostuti.student.data.repository.PythonRuntimeRepository
+import com.prostuti.student.data.repository.PythonRuntimeRepositoryImpl
+import com.prostuti.student.data.service.python.PythonInstallConfirmation
 import com.prostuti.student.data.repository.SavedGraphRepository
 import com.prostuti.student.data.repository.SavedGraphRepositoryImpl
 import com.prostuti.student.domain.ObserveSavedGraphsUseCase
@@ -259,6 +272,7 @@ import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
+import org.koin.dsl.binds
 import org.koin.dsl.module
 import timber.log.Timber
 
@@ -585,6 +599,18 @@ val appModule = module {
         )
     }
     viewModel { PlaygroundHubViewModel(get(), get(), get()) }
+    // ── Playground · code visualizer ── parsing runs on the same CPU dispatcher as plotting.
+    factory { BuildCodeFlowUseCase() }
+    // Python runs in the `:py` process; its runtime is an on-demand Play module.
+    single { PythonRuntimeRepositoryImpl(androidContext()) } binds arrayOf(PythonRuntimeRepository::class, PythonInstallConfirmation::class)
+    single<CodeRunRepository> { CodeRunRepositoryImpl(androidContext()) }
+    factory { ObservePythonRuntimeUseCase(get()) }
+    factory { InstallPythonRuntimeUseCase(get()) }
+    factory { RunPythonUseCase(get()) }
+    factory { SendRunInputUseCase(get()) }
+    factory { SendTraceCommandUseCase(get()) }
+    factory { RunCUseCase(get()) }
+    viewModel { CodeVisualizerViewModel(get(), get(named(GRAPH_COMPUTE_DISPATCHER)), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { ScratchpadViewModel(get()) }
     viewModel { PracticeSubjectSelectViewModel(get()) }
     viewModel { PracticeSubjectChapterViewModel(get(), get(), get()) }

@@ -150,3 +150,5 @@ interface FullScreenRoute
 @Serializable data object PlaygroundHub : MainRoute
 /** [savedGraphId] opens a graph from "My graphs"; null starts a new one. */
 @Serializable data class GraphBuilder(val savedGraphId: Long? = null) : MainRoute
+/** Write C or Python code and see its flowchart. */
+@Serializable data object CodeVisualizer : MainRoute

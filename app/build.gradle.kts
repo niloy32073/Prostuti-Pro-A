@@ -28,6 +28,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Every module of the bundle must ship the same ABIs, and the Python module (:pyfeature) has
+        // these three; 32-bit x86 (no real phones) is dropped.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
     buildTypes {
@@ -53,6 +56,8 @@ android {
         compose = true
         buildConfig = true
     }
+    // Downloaded from Play on first use: the Python runtime (see :pyfeature).
+    dynamicFeatures += ":pyfeature"
 }
 
 // A ViewModel with an infinite ticker can spin runTest's virtual clock forever; fail instead of hanging.
@@ -114,6 +119,8 @@ dependencies {
     implementation(libs.latex.base)
     implementation(libs.latex.parser)
     implementation(libs.latex.renderer)
+    // On-demand module install (the Python runtime)
+    implementation(libs.play.feature.delivery)
     // Home screen widget
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)

@@ -79,6 +79,7 @@ import com.prostuti.student.ui.screen.live.LiveExamListScreen
 import com.prostuti.student.ui.screen.notification.NotificationsScreen
 import com.prostuti.student.ui.screen.playground.PlaygroundHubScreen
 import com.prostuti.student.ui.screen.playground.graph.GraphBuilderScreen
+import com.prostuti.student.ui.screen.playground.code.CodeVisualizerScreen
 import com.prostuti.student.ui.screen.practice.PracticeChapterSelectScreen
 import com.prostuti.student.ui.screen.practice.PracticeExamPropertiesScreen
 import com.prostuti.student.ui.screen.practice.PracticeFlowViewModel
@@ -159,8 +160,12 @@ fun EntryProviderScope<NavKey>.featureEntries(navigator: Navigator, windowAdapti
     entry<PlaygroundHub> {
         PlaygroundHubScreen(
             onBack = { navigator.goBack() },
-            onOpenGraphBuilder = { id -> navigator.navigate(GraphBuilder(id)) }
+            onOpenGraphBuilder = { id -> navigator.navigate(GraphBuilder(id)) },
+            onOpenCodeVisualizer = { navigator.navigate(CodeVisualizer) },
         )
+    }
+    entry<CodeVisualizer> {
+        CodeVisualizerScreen(onBack = { navigator.goBack() })
     }
     entry<GraphBuilder> { route ->
         GraphBuilderScreen(

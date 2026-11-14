@@ -51,6 +51,11 @@
         <meta-data
             android:name="firebase_crashlytics_collection_enabled"
             android:value="${crashlyticsEnabled}" />
+        <!-- Student Python code runs here, away from the app, so it can be killed (see PythonRunService). -->
+        <service
+            android:name=".data.service.python.PythonRunService"
+            android:exported="false"
+            android:process=":py" />
         <!-- FCM: receives token rotations (and push messages) from Firebase. -->
         <service
             android:name=".data.service.remote.PushMessagingService"

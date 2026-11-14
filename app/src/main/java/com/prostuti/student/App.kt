@@ -17,6 +17,9 @@ import timber.log.Timber
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        // The `:py` process only runs student Python code (PythonRunService): none of the app's
+        // start-up (Koin, widget sync, Crashlytics user) belongs there.
+        if (getProcessName().endsWith(PYTHON_PROCESS_SUFFIX)) return
         // Debug: logs go to Logcat. Release: nothing is logged on the device; errors and crashes
         // go to Crashlytics only.
         if (BuildConfig.DEBUG) {
@@ -34,5 +37,9 @@ class App : Application() {
         get<WidgetSync>().start()
         // Android 15+ widget picker: a preview with sample data (published once per app version).
         get<WidgetPreviewPublisher>().start()
+    }
+
+    private companion object {
+        const val PYTHON_PROCESS_SUFFIX = ":py"
     }
 }
